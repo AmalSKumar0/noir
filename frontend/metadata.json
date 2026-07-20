@@ -1,6 +1,6 @@
 {
-  "name": "NOIR Dashboard",
-  "description": "Autonomous reliability engineer dashboard.",
+  "name": "NOIR",
+  "description": "An autonomous reliability testing, fault injection, and AI-driven observability and simulation platform.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
