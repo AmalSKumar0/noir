@@ -1,18 +1,82 @@
-import React, { useState, useRef, MouseEvent } from 'react';
+import React, { useState, useEffect, useRef, MouseEvent } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Github, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Github, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import BackgroundBoids from '../components/BackgroundBoids';
+import { setAuthTokens } from '../utils/auth';
+import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
+
+const processedCodes = new Set<string>();
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize isGithubLoading to true if code or tokens are present in the URL on mount
+  const [isGithubLoading, setIsGithubLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return !!(params.get('code') || params.get('access') || params.get('access_token'));
+    }
+    return false;
+  });
+
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const accessParam = params.get('access') || params.get('access_token');
+    const refreshParam = params.get('refresh') || params.get('refresh_token');
+    const code = params.get('code');
+
+    if (accessParam) {
+      setAuthTokens(accessParam, refreshParam || undefined);
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
+    if (code) {
+      if (processedCodes.has(code)) return;
+      processedCodes.add(code);
+
+      const exchangeCode = async () => {
+        setIsGithubLoading(true);
+        setError('');
+        try {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+          const response = await fetch(`${baseUrl}/api/accounts/github/callback/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code }),
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || 'Failed to exchange GitHub authorization code.');
+          }
+
+          const data = await response.json();
+          if (data.access) {
+            setAuthTokens(data.access, data.refresh);
+          }
+
+          navigate('/dashboard', { replace: true });
+        } catch (err: any) {
+          setError(`Error in authentication using GitHub: ${err.message || 'Verification failed.'}`);
+          setIsGithubLoading(false);
+        }
+      };
+
+      exchangeCode();
+    }
+  }, [navigate]);
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!containerRef.current) return;
@@ -45,17 +109,15 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || errData.error || 'Invalid credentials');
       }
 
       const data = await response.json();
       
       // Store tokens
       if (data.access) {
-        localStorage.setItem('access_token', data.access);
-      }
-      if (data.refresh) {
-        localStorage.setItem('refresh_token', data.refresh);
+        setAuthTokens(data.access, data.refresh);
       }
 
       // Navigate to dashboard
@@ -68,13 +130,13 @@ export default function Login() {
   };
 
   const handleGithubLogin = () => {
-    // Example GitHub OAuth flow
-    window.location.href = '/api/auth/github/';
+    setIsGithubLoading(true);
+    setError('');
+    initiateGithubOAuth();
   };
 
   const handleGoogleLogin = () => {
-    // Example Google OAuth flow
-    window.location.href = '/api/auth/google/';
+    initiateGoogleOAuth();
   };
 
   return (
@@ -142,11 +204,21 @@ export default function Login() {
                 whileTap={{ scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 onClick={handleGithubLogin}
+                disabled={isGithubLoading}
                 type="button"
-                className="w-full py-3.5 rounded-full bg-stone-900/40 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300"
+                className="w-full py-3.5 rounded-full bg-stone-900/40 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Github className="w-5 h-5" />
-                GitHub
+                {isGithubLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                    <span className="truncate">Connecting to GitHub...</span>
+                  </>
+                ) : (
+                  <>
+                    <Github className="w-5 h-5 shrink-0" />
+                    <span>GitHub</span>
+                  </>
+                )}
               </motion.button>
 
               <motion.button
@@ -186,10 +258,16 @@ export default function Login() {
                </p>
             </div>
 
+            {/* Error Banner */}
             {error && (
-              <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono text-center">
-                {error}
-              </div>
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono flex items-center gap-3"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
+              </motion.div>
             )}
 
             <form onSubmit={handleAuth} className="flex flex-col gap-4 w-full">
@@ -228,10 +306,17 @@ export default function Login() {
                 whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={isLoading}
-                className="w-full mt-4 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-widest hover:bg-stone-200 transition-colors shadow-[0_5px_20px_rgba(139,92,246,0.15)] disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={isLoading || isGithubLoading}
+                className="w-full mt-4 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-widest hover:bg-stone-200 transition-colors shadow-[0_5px_20px_rgba(139,92,246,0.15)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </motion.button>
               
               <div className="mt-4 text-center">

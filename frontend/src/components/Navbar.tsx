@@ -1,41 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Menu, X, User, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthState, logout } from '../utils/auth';
 
 export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: boolean, setIsMenuOpen: (v: boolean) => void }) {
   const links = ['About', 'Contact', 'Workflow', 'Docs', 'Download Agent'];
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isAuthenticated = useAuthState();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    setIsAuthenticated(!!token);
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      if (refreshToken) {
-        await fetch(`${baseUrl}/api/accounts/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          },
-          body: JSON.stringify({ refresh: refreshToken }),
-        });
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      setIsAuthenticated(false);
-      navigate('/');
-    }
+  const handleLogoutClick = async () => {
+    setIsLoggingOut(true);
+    await logout(navigate);
+    setIsLoggingOut(false);
   };
 
   return (
@@ -103,7 +81,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
           )}
         </motion.button>
 
-        {/* Right: Accessories */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-4 md:gap-6">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
@@ -118,12 +96,18 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
                 </motion.button>
               </Link>
               <motion.button
-                onClick={handleLogout}
+                onClick={handleLogoutClick}
+                disabled={isLoggingOut}
                 whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] disabled:opacity-50"
+                title="Log out"
               >
-                <LogOut className="w-4 h-4 text-red-400" />
+                {isLoggingOut ? (
+                  <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <LogOut className="w-4 h-4 text-red-400" />
+                )}
               </motion.button>
             </div>
           ) : (

@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
 import { useEffect } from 'react';
 
-export default function Loader({ onComplete }: { onComplete: () => void; key?: string }) {
+export default function Loader({ onComplete }: { onComplete?: () => void; key?: string }) {
   useEffect(() => {
+    if (!onComplete) return;
     const timer = setTimeout(() => {
       onComplete();
     }, 2200);
