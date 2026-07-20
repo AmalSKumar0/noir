@@ -34,7 +34,7 @@ export default function Login() {
 
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-      const endpoint = `${baseUrl}/api/accounts/login`;
+      const endpoint = `${baseUrl}/api/accounts/login/`;
 
       const response = await fetch(endpoint, {
         method: 'POST',

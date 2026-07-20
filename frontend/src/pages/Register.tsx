@@ -42,7 +42,7 @@ export default function Register() {
 
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-      const response = await fetch(`${baseUrl}/api/accounts/register`, {
+      const response = await fetch(`${baseUrl}/api/accounts/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
