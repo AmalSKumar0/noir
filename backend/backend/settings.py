@@ -54,12 +54,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'corsheaders',
     'apps.accounts',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,7 +69,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    
 
 ]
 
@@ -138,6 +140,15 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Disallow the global wildcard
+CORS_ALLOWED_ALL_ORIGINS = False
 
-CORS_ALLOWED_ALL_ORIGINS = True
+# Explicitly whitelist your frontend URL(s)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Your React/Vue/Next.js dev server
+    "http://127.0.0.1:3000",
+    "https://aistudio.google.com"
+]
+
 CORS_ALLOW_CREDENTIALS = True
+
