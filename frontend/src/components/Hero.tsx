@@ -63,17 +63,66 @@ export default function Hero() {
           style={{ y: y1, opacity: opacity1 }}
           className="flex flex-col items-start text-left z-20 w-full mt-32 lg:mt-0 lg:col-span-7 xl:col-span-7"
         >
-          <motion.h1 
-            initial={{ y: 25, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5rem] tracking-tighter leading-[1.1] mb-8 text-white font-sans font-light max-w-2xl"
+          <motion.h1
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { 
+                  staggerChildren: 0.15, // Delay between each line appearing
+                  delayChildren: 0.1 
+                },
+              },
+            }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5rem] tracking-tighter leading-[1.1] mb-8 font-sans font-light max-w-3xl"
           >
-            The autonomous <br />
-            <span className="font-medium text-white drop-shadow-[0_0_30px_rgba(139,92,246,0.15)]">reliability engineer</span> <br />
-            for modern applications.
-          </motion.h1>
-          
+            {/* The Brand Name & Introducing Badge */}
+            <div className="flex items-center gap-4 flex-wrap mb-2">
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, scale: 0.9, y: 10 },
+                  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.6 } },
+                }}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-500/40 bg-violet-500/5 text-violet-300 text-xs md:text-sm font-mono tracking-widest uppercase backdrop-blur-md shadow-[0_0_20px_rgba(139,92,246,0.15)] hover:border-violet-500/70 transition-all duration-300 shrink-0"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>
+                Introducing
+              </motion.div>
+
+              <motion.span
+                variants={{
+                  hidden: { opacity: 0, y: 25 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.4, 0.1, 1] } },
+                }}
+                className="font-semibold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70"
+              >
+                NOIR
+              </motion.span>
+            </div>
+
+  {/* The Subtext */}
+  <motion.span
+    variants={{
+      hidden: { opacity: 0, y: 20 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
+    }}
+    className="block text-white/80"
+  >
+    The autonomous
+  </motion.span>
+  
+  <motion.span
+    variants={{
+      hidden: { opacity: 0, y: 20 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
+    }}
+    className="block text-white/80"
+  >
+    reliability engineer.
+  </motion.span>
+</motion.h1>
           <motion.p
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
