@@ -15,6 +15,7 @@ class GoogleOAuthService:
         Exchange Google's authorization code for an access token,
         fetch the user's profile, and return a Django User.
         """
+        redirect_uri = settings.BACKEND_BASE_URL
 
         # Exchange authorization code for access token
         token_response = requests.post(
@@ -23,7 +24,7 @@ class GoogleOAuthService:
                 "code": code,
                 "client_id": settings.GOOGLE_CLIENT_ID,
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "redirect_uri": f"{redirect_uri}/api/accounts/google/login/callback/",
                 "grant_type": "authorization_code",
             },
             timeout=10,

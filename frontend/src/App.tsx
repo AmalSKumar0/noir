@@ -7,7 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Logout from './pages/Logout';
 import Dashboard from './pages/Dashboard';
-import GithubCallback from './pages/GithubCallback';
+import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
@@ -76,8 +76,10 @@ function AnimatedRoutes() {
             </motion.div>
           } 
         />
+
+    
         <Route 
-          path="/github/callback" 
+          path="/auth/callback" 
           element={
             <motion.div
               initial={{ opacity: 0 }}
@@ -85,62 +87,11 @@ function AnimatedRoutes() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <GithubCallback />
+              <AuthCallback />
             </motion.div>
           } 
         />
-        <Route 
-          path="/github/callback/" 
-          element={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <GithubCallback />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/oauth/callback" 
-          element={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <GithubCallback />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/oauth/callback/" 
-          element={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <GithubCallback />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/api/accounts/github/callback/" 
-          element={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <GithubCallback />
-            </motion.div>
-          } 
-        />
+        
         <Route 
           path="/dashboard" 
           element={
