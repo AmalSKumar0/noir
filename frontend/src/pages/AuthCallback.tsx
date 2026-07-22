@@ -6,15 +6,14 @@ import Loader from '../components/Loader';
 import { setAuthTokens, isAuthenticated } from '../utils/auth';
 
 // Global single-flight set to prevent duplicate code exchange in React StrictMode
-const processedCodes = new Set<string>();
+const processedAuthCodes = new Set<string>();
 
-export default function GithubCallback() {
+export default function AuthCallback() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const mouseRef = useRef({ x: -1000, y: -1000 });
 
   useEffect(() => {
-    // If user is already authenticated, redirect to dashboard immediately
     if (isAuthenticated()) {
       navigate('/dashboard', { replace: true });
       return;
@@ -23,7 +22,7 @@ export default function GithubCallback() {
     const params = new URLSearchParams(window.location.search);
     const accessParam = params.get('access') || params.get('access_token');
     const refreshParam = params.get('refresh') || params.get('refresh_token');
-    const code = params.get('code');
+    const authcode = params.get('authcode');
 
     // Case 1: Tokens provided directly in URL
     if (accessParam) {
@@ -32,23 +31,24 @@ export default function GithubCallback() {
       return;
     }
 
-    // Case 2: Code parameter present to exchange via backend API
-    if (code) {
-      if (processedCodes.has(code)) {
+    if (authcode) {
+      if (processedAuthCodes.has(authcode)) {
         return;
       }
-      processedCodes.add(code);
+      processedAuthCodes.add(authcode);
 
       const processCallback = async () => {
         try {
+          console.time("Auth callback");
           const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-          const response = await fetch(`${baseUrl}/api/accounts/github/callback/`, {
+          const response = await fetch(`${baseUrl}/api/accounts/common-auth/callback/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ code: authcode }),
           });
+          console.timeEnd("Auth callback");
 
           if (!response.ok) {
             // Check if another parallel call set tokens in the meantime
@@ -57,10 +57,12 @@ export default function GithubCallback() {
               return;
             }
             const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.detail || errData.error || 'GitHub authentication failed');
+            throw new Error(errData.detail || errData.error || 'Authentication failed');
           }
 
+          console.time("JSON");
           const data = await response.json();
+          console.timeEnd("JSON");
           if (data.access) {
             setAuthTokens(data.access, data.refresh);
             navigate('/dashboard', { replace: true });
@@ -69,7 +71,9 @@ export default function GithubCallback() {
           }
         } catch (err: any) {
           if (isAuthenticated()) {
-            navigate('/dashboard', { replace: true });
+            console.time("Navigate");
+            navigate("/dashboard", { replace: true });
+            console.timeEnd("Navigate");
           } else {
             setError(err.message || 'Authentication failed');
           }
@@ -80,7 +84,7 @@ export default function GithubCallback() {
       return;
     }
 
-    // Fallback if no code or tokens were provided
+    // Fallback if no authcode or tokens were provided
     if (!isAuthenticated()) {
       navigate('/login', { replace: true });
     }
