@@ -1,7 +1,8 @@
 import typer
 
 import noir.commands.init as init
-import noir.commands.connect as connect
+import noir.commands.project as project
+import noir.commands.login as login
 
 app = typer.Typer(
     help="Noir CLI - AI-powered reliability engineering agent.",
@@ -9,7 +10,8 @@ app = typer.Typer(
 )
 
 app.add_typer(init.app, name="init")
-app.add_typer(init.app, name="connect")
+app.add_typer(project.app, name="project")
+app.add_typer(login.app, name="login")
 
 
 if __name__ == "__main__":
