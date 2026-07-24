@@ -32,3 +32,51 @@ noir/
 ├── tests
 └── uv.lock
 ```
+
+
+
+## Authentication in our CLI
+
+```
+               Noir CLI
+                   │
+                   │ 1. Generate PKCE verifier/challenge
+                   │
+                   ▼
+        Start localhost:53145
+                   │
+                   ▼
+             Open Browser
+                   │
+                   ▼
+        https://noir.ai/login?cli=1
+&redirect_uri=http://127.0.0.1:53145/callback
+              &code_challenge=...
+                   │
+                   ▼
+           React Login Page
+                   │
+                   ▼
+        Google / GitHub / Email
+                   │
+                   ▼
+         Django Authentication
+                   │
+                   ▼
+        Create authorization code
+        (valid for ~60 seconds)
+                   │
+                   ▼
+                Redirect
+
+http://127.0.0.1:53145/callback?code=abc123
+                   │
+                   ▼
+            CLI exchanges code
+                   │
+                   ▼
+            JWT Access + Refresh
+                   │
+                   ▼
+            Store Refresh Token
+```
