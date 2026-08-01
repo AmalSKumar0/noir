@@ -1,7 +1,8 @@
 from pathlib import Path
-
-import typer
+from noir.utils.CommandDisplay import CommandDisplay
 from rich import print
+import typer
+
 
 app = typer.Typer(
     help="Initialize Noir in the current project."
@@ -11,6 +12,9 @@ app = typer.Typer(
 @app.callback(invoke_without_command=True)
 def init():
     noir_dir = Path(".noir")
+    text = CommandDisplay()
+    text.banner()
+    print_noir()
 
     if noir_dir.exists():
         print("[yellow]Noir is already initialized in this project.[/yellow]")
