@@ -3,7 +3,7 @@
  */
 export function initiateGithubOAuth() {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  window.location.href = `${baseUrl}/api/accounts/github/login/`;
+  window.location.href = `${baseUrl}/api/accounts/github/login?client=frontend`;
 }
 
 /**
@@ -11,5 +11,5 @@ export function initiateGithubOAuth() {
  */
 export function initiateGoogleOAuth() {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  window.location.href = `${baseUrl}/api/accounts/google/login/`;
+  window.location.href = `${baseUrl}/api/accounts/google/login?client=frontend`;
 }
