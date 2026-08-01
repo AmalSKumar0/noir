@@ -46,78 +46,81 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
         </div>
       </div>
 
-      <nav className="absolute top-full left-0 right-0 flex items-center justify-between px-6 md:px-12 py-4 md:py-6 w-full max-w-[1400px] mx-auto z-40">
-        {/* Left: Logo */}
-        <Link
-          to="/"
-          className="flex items-center"
-        >
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex flex-col text-white font-bold leading-[0.8] tracking-tighter" style={{ fontSize: '28px' }}
+      {/* Nav Container */}
+      <nav className="absolute top-full left-0 right-0 flex items-center px-6 md:px-12 py-4 md:py-6 w-full max-w-[1400px] mx-auto z-40">
+        
+        {/* Left: Logo (flex-1 forces it to take equal space as the right side) */}
+        <div className="flex-1 flex justify-start">
+          <Link to="/" className="flex items-center">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex flex-col text-white font-bold leading-[0.8] tracking-tighter" style={{ fontSize: '28px' }}
+            >
+              <div className="relative">
+                <div className="absolute -top-2 left-0 w-4 h-[3px] bg-violet-600"></div>
+                NO
+              </div>
+              <div className="flex items-end">
+                IR<div className="w-4 h-[3px] bg-violet-600 ml-1 mb-1"></div>
+              </div>
+            </motion.div>
+          </Link>
+        </div>
+
+        {/* Center: Menu Button (Perfectly centered due to flex-1 on siblings) */}
+        <div className="flex shrink-0 justify-center">
+          <motion.button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-transparent border border-white/10 hover:border-white/20 hover:bg-black/60 transition-all font-medium uppercase tracking-widest text-[10px] md:text-xs text-stone-400 hover:text-white cursor-pointer"
           >
-            <div className="relative">
-              <div className="absolute -top-2 left-0 w-4 h-[3px] bg-violet-600"></div>
-              NO
-            </div>
-            <div className="flex items-end">
-              IR<div className="w-4 h-[3px] bg-violet-600 ml-1 mb-1"></div>
-            </div>
-          </motion.div>
-        </Link>
+            {isMenuOpen ? (
+              <>Close <X className="w-3.5 h-3.5" /></>
+            ) : (
+              <>Menu <Menu className="w-3.5 h-3.5" /></>
+            )}
+          </motion.button>
+        </div>
 
-        {/* Center: Menu Button */}
-        <motion.button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs md:text-sm text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]"
-        >
-          {isMenuOpen ? (
-            <>Close <X className="w-4 h-4 text-violet-400" /></>
-          ) : (
-            <>Menu <Menu className="w-4 h-4 text-violet-400" /></>
-          )}
-        </motion.button>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-4 md:gap-6">
+        {/* Right: Actions (flex-1 pushes everything to the right) */}
+        <div className="flex-1 flex items-center justify-end gap-3 md:gap-4">
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Link to="/dashboard">
                 <motion.button
-                  whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-transparent border border-white/10 hover:border-white/20 hover:bg-black/60 transition-all font-medium uppercase tracking-widest text-[10px] md:text-xs text-stone-400 hover:text-white cursor-pointer"
                 >
-                  <User className="w-4 h-4 text-violet-400" />
+                  <User className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Dashboard</span>
                 </motion.button>
               </Link>
               <motion.button
                 onClick={handleLogoutClick}
                 disabled={isLoggingOut}
-                whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] disabled:opacity-50"
+                className="flex items-center justify-center p-2 rounded-full bg-transparent border border-white/10 hover:border-red-500/30 hover:bg-black/60 transition-all text-stone-400 hover:text-red-400 cursor-pointer disabled:opacity-50"
                 title="Log out"
               >
                 {isLoggingOut ? (
-                  <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
                 ) : (
-                  <LogOut className="w-4 h-4 text-red-400" />
+                  <LogOut className="w-3.5 h-3.5" />
                 )}
               </motion.button>
             </div>
           ) : (
             <Link to="/login">
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(124,58,237,0.2)" }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all font-semibold uppercase tracking-widest text-xs text-stone-200 hover:text-white cursor-pointer shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-transparent border border-white/10 hover:border-white/20 hover:bg-black/60 transition-all font-medium uppercase tracking-widest text-[10px] md:text-xs text-stone-400 hover:text-white cursor-pointer"
               >
-                <User className="w-4 h-4 text-violet-400" />
+                <User className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Login</span>
               </motion.button>
             </Link>
