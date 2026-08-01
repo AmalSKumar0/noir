@@ -50,8 +50,8 @@ REST_FRAMEWORK = {
     ],
 }
 
-SIMPLER_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=12),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'apps.accounts',
+    'apps.CommandLineInterface.apps.CommandLineInterfaceConfig'
 ]
 
 MIDDLEWARE = [
