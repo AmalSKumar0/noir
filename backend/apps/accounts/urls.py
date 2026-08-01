@@ -1,6 +1,5 @@
 from django.urls import path,include
-from .views import CreateUserView, LogoutView, EmailTokenObtainPairView, github_login,github_callback, google_login, social_auth,google_callback
-from rest_framework_simplejwt.views import TokenRefreshView
+from .views import *
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -14,5 +13,6 @@ urlpatterns = [
     path('google/login/', google_login, name='google_login'),
     path('google/login/callback/', google_callback, name='google_callback'),
     path('common-auth/callback/', social_auth, name='common_social_auth'),
+    path('me/', whoami, name="whoami")
 ]
 
