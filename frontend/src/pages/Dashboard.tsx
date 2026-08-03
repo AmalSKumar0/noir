@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Plus, Download, Terminal, Settings, Activity, Clock, Folder, Code2, Copy, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { getUserRole } from '../utils/auth';
 
 interface Project {
   id: string;
@@ -19,6 +20,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Redirect admin to admin dashboard
+    const role = getUserRole();
+    if (role === 'admin') {
+      navigate('/admin/dashboard', { replace: true });
+      return;
+    }
+
     // Check authentication
     const token = localStorage.getItem('access_token');
     if (!token) {

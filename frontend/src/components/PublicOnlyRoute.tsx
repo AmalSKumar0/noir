@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuthState } from '../utils/auth';
+import { useAuthState, getUserRole } from '../utils/auth';
 
 interface PublicOnlyRouteProps {
   children: React.ReactNode;
@@ -13,6 +13,10 @@ export default function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   const hasOAuthCode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code');
 
   if (authed && !hasOAuthCode) {
+    const role = getUserRole();
+    if (role === 'admin') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
