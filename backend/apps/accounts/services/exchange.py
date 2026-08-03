@@ -1,7 +1,9 @@
 import secrets
 
 from apps.accounts.redis import redis_client
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ExchangeService:

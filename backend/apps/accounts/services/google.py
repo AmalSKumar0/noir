@@ -1,8 +1,9 @@
 from django.conf import settings
-from django.contrib.auth.models import User
-
+from django.contrib.auth import get_user_model
+from apps.accounts.models import SocialAuth
 import requests
 
+User = get_user_model()
 
 class GoogleOAuthService:
 
@@ -49,20 +50,26 @@ class GoogleOAuthService:
 
         email = profile["email"]
 
-        # Create or retrieve Django user
-        user, created = User.objects.get_or_create(
-            username=email,
-            defaults={
-                "email": email,
-                "first_name": profile.get("given_name", ""),
-                "last_name": profile.get("family_name", ""),
-            },
+        user = User.objects.filter(email=email).first()
+
+        if user is None:
+            username = email.split("@")[0]
+            first_name = profile.get("given_name", "")
+            last_name = profile.get("family_name", "")
+
+            user = User.objects.create_user(
+                email=email,
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+        social = SocialAuth.objects.get_or_create(
+            user=user,
+            provider="google",
+            provider_id=f"{profile['id']}"
         )
 
-        # Update profile fields if they've changed
-        user.first_name = profile.get("given_name", "")
-        user.last_name = profile.get("family_name", "")
-        user.email = email
-        user.save()
+        user.social = social
 
         return user
