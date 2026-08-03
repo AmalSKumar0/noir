@@ -7,11 +7,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Logout from './pages/Logout';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminManageProjects from './pages/AdminManageProjects';
+import AdminManageUsers from './pages/AdminManageUsers';
 import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
-import { getRefreshToken, setAuthTokens, clearAuthTokens } from './utils/auth';
+import { checkAndRefreshToken } from './utils/auth';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -107,6 +110,51 @@ function AnimatedRoutes() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute adminOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <AdminDashboard />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/users" 
+          element={
+            <ProtectedRoute adminOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <AdminManageUsers />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/projects" 
+          element={
+            <ProtectedRoute adminOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <AdminManageProjects />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </AnimatePresence>
   );
@@ -116,35 +164,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const refreshAuthToken = async () => {
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        try {
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-          const response = await fetch(`${baseUrl}/api/accounts/token/refresh/`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ refresh: refreshToken }),
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.access) {
-              setAuthTokens(data.access, data.refresh);
-            }
-          } else {
-            // If the refresh token is invalid or expired, clear the auth state
-            clearAuthTokens();
-          }
-        } catch (error) {
-          console.error('Error refreshing token:', error);
-        }
-      }
-    };
-    
-    refreshAuthToken();
+    checkAndRefreshToken();
   }, []);
 
   useEffect(() => {
