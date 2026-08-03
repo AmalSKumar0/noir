@@ -7,3 +7,9 @@ coverage/
 .env*
 !.env.example
 db.sqlite3
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.env.*
+db.sqlite3
