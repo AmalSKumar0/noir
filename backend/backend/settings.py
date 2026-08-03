@@ -20,6 +20,12 @@ REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_DB = os.getenv("REDIS_DB")
 
+# DataBase
+PSQL_NAME = os.getenv("PSQL_NAME")
+PSQL_USER = os.getenv("PSQL_USER")
+PSQL_PASSWORD = os.getenv("PSQL_PASSWORD")
+PSQL_HOST = os.getenv("PSQL_HOST")
+PSQL_PORT = os.getenv("PSQL_PORT")
 
 
 
@@ -48,10 +54,22 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "30/min",
+        "user": "30/min",
+        "login": "3/min",
+        "register": "3/min",
+        "user_delete": "5/min",
+    }
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=12),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -79,7 +97,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'apps.accounts',
-    'apps.CommandLineInterface.apps.CommandLineInterfaceConfig'
+    'apps.cli',
+    'apps.projects',
+    'apps.users',
 ]
 
 MIDDLEWARE = [
@@ -91,8 +111,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
-
+    "core.middleware.RequestTimingMiddleware"
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -119,12 +138,22 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": PSQL_NAME,
+        "USER": PSQL_USER,
+        "PASSWORD": PSQL_PASSWORD,
+        "HOST": PSQL_HOST,
+        "PORT": PSQL_PORT,
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -174,3 +203,4 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+AUTH_USER_MODEL = "accounts.User"

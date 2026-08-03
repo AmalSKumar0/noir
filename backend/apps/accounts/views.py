@@ -1,34 +1,80 @@
 from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UserSerializer, EmailTokenObtainPairSerializer
+from .serializers import RegisterSerializer, EmailTokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from django.conf import settings
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes,throttle_classes
 from django.contrib.auth import get_user_model
+from .models import SocialAuth
 from rest_framework_simplejwt.exceptions import TokenError
-
 from .services.google import GoogleOAuthService
 from .services.exchange import ExchangeService
 from .services.github import GithubOAuthService
+
+from .throttles import LoginThrottle,RegisterThrottle
 
 import requests
 import secrets
 
 User = get_user_model()
 
-
-# Create your views here.
-class CreateUserView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class RegisterView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [RegisterThrottle]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email=email).first()
+
+        if user:
+
+            if SocialAuth.objects.filter(
+                user=user,
+                provider=SocialAuth.Type.PASSWORD
+            ).exists():
+
+                return Response(
+                    {
+                        "detail": "User already has password login."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user.set_password(serializer.validated_data["password"])
+            user.save()
+
+            SocialAuth.objects.create(
+                user=user,
+                provider=SocialAuth.Type.PASSWORD,
+            )
+
+            return Response(
+                {"message": "Password login linked."},
+                status=status.HTTP_200_OK,
+            )
+
+        user = serializer.save()
+
+        SocialAuth.objects.create(
+            user=user,
+            provider=SocialAuth.Type.PASSWORD,
+        )
+
+        return Response(
+            UserSerializer(user).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LogoutView(APIView):
@@ -61,9 +107,10 @@ class LogoutView(APIView):
 
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
+    throttle_classes = [LoginThrottle]
 
 
-
+@throttle_classes([LoginThrottle])
 def github_login(request):
     client = request.GET.get("client")
     github_client_id = settings.GITHUB_CLIENT_ID
@@ -106,6 +153,7 @@ def github_callback(request):
 
     return redirect(url)
 
+@throttle_classes([LoginThrottle])
 def google_login(request):
     google_client_id = settings.GOOGLE_CLIENT_ID
     redirect_uri = settings.BACKEND_BASE_URL
@@ -160,9 +208,19 @@ def social_auth(request):
 
     refresh = RefreshToken.for_user(user)
 
+    userdata = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": "admin" if user.is_superuser else user.role,
+        }
+
     return Response({
         "access": str(refresh.access_token),
         "refresh": str(refresh),
+        "user" : userdata
     })
 
 @api_view(["GET"])

@@ -1,19 +1,18 @@
-from django.contrib.auth.models import User
+from apps.accounts.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 
-class UserSerializer(serializers.ModelSerializer):
+class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ["username", "email", "password"]
         extra_kwargs = {
-            'password': {'write_only': True}
+            "password": {"write_only": True}
         }
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
     
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -29,9 +28,19 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         try:
             user = User.objects.get(email=email)
+
         except User.DoesNotExist:
             raise AuthenticationFailed("No active account found with the given credentials", code="authorization")
             
         attrs[self.username_field] = user.username
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        data["user"] = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": "admin" if user.is_superuser else user.role,
+        }
+        return data

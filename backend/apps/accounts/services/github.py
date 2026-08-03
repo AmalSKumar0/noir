@@ -1,8 +1,10 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from apps.accounts.models import SocialAuth
 import uuid
 import requests
 
+User = get_user_model()
 
 class GithubOAuthService:
     @classmethod
@@ -110,5 +112,13 @@ class GithubOAuthService:
                 first_name=first_name,
                 last_name=last_name,
             )
+
+        social = SocialAuth.objects.get_or_create(
+            user=user,
+            provider="github",
+            provider_id=f"{github_user['id']}"
+        )
+
+        user.social = social
 
         return user
