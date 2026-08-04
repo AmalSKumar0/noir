@@ -98,8 +98,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.accounts',
     'apps.cli',
-    'apps.projects',
     'apps.users',
+    'apps.projects',
 ]
 
 MIDDLEWARE = [

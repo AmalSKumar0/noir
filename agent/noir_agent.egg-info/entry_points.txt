@@ -1,0 +1,2 @@
+[console_scripts]
+noir = noir.cli:app

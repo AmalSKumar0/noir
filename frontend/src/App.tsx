@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Logout from './pages/Logout';
 import Dashboard from './pages/Dashboard';
+import UserProjects from './pages/UserProjects';
+import ProjectDetail from './pages/ProjectDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManageProjects from './pages/AdminManageProjects';
 import AdminManageUsers from './pages/AdminManageUsers';
@@ -106,6 +108,36 @@ function AnimatedRoutes() {
                 transition={{ duration: 0.8 }}
               >
                 <Dashboard />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <UserProjects />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <ProjectDetail />
               </motion.div>
             </ProtectedRoute>
           } 

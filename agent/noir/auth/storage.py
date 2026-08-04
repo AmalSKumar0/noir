@@ -21,8 +21,8 @@ def delete_token():
     except Exception:
         pass
 
-def is_token_valid():
-    if keyring.get_password(SERVICE, "refresh") or keyring.get_password(SERVICE, "access"):
-        return False
-    else:
-        return True
+def has_tokens() -> bool:
+    return (
+        keyring.get_password(SERVICE, "access") is not None
+        and keyring.get_password(SERVICE, "refresh") is not None
+    )

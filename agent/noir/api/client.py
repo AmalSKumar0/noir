@@ -5,7 +5,7 @@ import webbrowser
 import json
 
 from dotenv import load_dotenv
-from noir.auth.storage import save_token,get_access_token,get_refresh_token,is_token_valid
+from noir.auth.storage import save_token,get_access_token,get_refresh_token,has_tokens
 
 load_dotenv()
 
@@ -65,7 +65,7 @@ class ApiClient:
             raise e
     
     def send_request_to_backend(self,url: str,method: str,data: dict | None = None,retry=True):
-        if is_token_valid():
+        if not has_tokens():
             typer.echo('User data Not found try "noir login"')
             exit()
             

@@ -34,4 +34,4 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
 
         return [throttle() for throttle in throttle_classes]
 
-
+    

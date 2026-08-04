@@ -25,5 +25,5 @@ class CommandDisplay:
 
         self.console.print(text)
     
-    def print_failure(self,data):
+    
 

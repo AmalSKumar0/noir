@@ -1,0 +1,28 @@
+{
+    "id": 2,
+    "connection_code": "NR-5BG6IXEL",
+    "owner": {
+        "id": 9,
+        "username": "AmalSKumar0"
+    },
+    "title": "hehehe",
+    "description": "sgnfnfgnd",
+    "architecture": "monolith",
+    "visibility": "private",
+    "analysis_mode": "manual",
+    "status": "active",
+    "profile": {
+        "framework": {
+            "id": 1,
+            "name": "Django",
+            "language": "Python",
+            "supported": true
+        },
+        "runtime_version": "3.14.3",
+        "package_manager": "uv",
+        "operating_system": "Arch Linux",
+        "detected_at": "2026-08-04T11:27:51.020128Z"
+    },
+    "created_at": "2026-08-04T10:47:27.540476Z",
+    "updated_at": "2026-08-04T10:47:27.540485Z"
+}

@@ -20,11 +20,10 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
     <div className="w-full flex flex-col font-sans transition-colors duration-500 bg-transparent text-white relative z-50">
       {/* Top Sliding Tray */}
       <div
-        className={`w-full overflow-hidden transition-all duration-500 ease-in-out z-30 bg-black/40 backdrop-blur-2xl ${
-          isMenuOpen
+        className={`w-full overflow-hidden transition-all duration-500 ease-in-out z-30 bg-black/40 backdrop-blur-2xl ${isMenuOpen
             ? 'h-[260px] md:h-16 border-b border-white/10 pointer-events-auto'
             : 'h-0 pointer-events-none'
-        }`}
+          }`}
       >
         <div className="w-full h-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 pt-6 md:pt-0">
           {links.map((link, idx) => (
@@ -48,7 +47,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
 
       {/* Nav Container */}
       <nav className="absolute top-full left-0 right-0 flex items-center px-6 md:px-12 py-4 md:py-6 w-full max-w-[1400px] mx-auto z-40">
-        
+
         {/* Left: Logo (flex-1 forces it to take equal space as the right side) */}
         <div className="flex-1 flex justify-start">
           <Link to="/" className="flex items-center">

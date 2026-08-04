@@ -8,7 +8,6 @@ dependencies = [
     "docker>=7.2.0",
     "httpx>=0.28.1",
     "keyring>=25.7.0",
-    "noir>=22.1.0.0",
     "psutil>=7.2.2",
     "pyjwt>=2.13.0",
     "python-dotenv>=1.2.2",
