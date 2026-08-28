@@ -31,7 +31,7 @@ export default function AdminDashboard() {
     
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 150);
     return () => clearTimeout(timer);
   }, [navigate]);
 

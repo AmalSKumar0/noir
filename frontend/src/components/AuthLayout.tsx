@@ -59,7 +59,7 @@ export default function AuthLayout({
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+        transition={{ duration: 0.05, delay: 0.02 }}
         className="absolute top-8 left-8 z-50"
       >
         <Link to="/" className="flex items-center gap-2 text-stone-400 hover:text-white transition-colors text-sm font-mono tracking-wide">
@@ -74,7 +74,7 @@ export default function AuthLayout({
         <motion.div 
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.08, ease: "easeOut" }}
           className="flex flex-col justify-center h-full relative z-20"
         >
           <div className="relative z-10 w-full max-w-lg">

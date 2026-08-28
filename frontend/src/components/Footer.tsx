@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { ArrowUpRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -26,13 +27,15 @@ export default function Footer() {
               The new Marketplace for all your apps. Innovate, collaborate and shape tomorrow.
            </p>
            
-           <motion.button
-              whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(124,58,237,0.3)" }}
-              whileTap={{ scale: 0.95 }}
-              className="mt-12 px-8 py-4 rounded-full bg-white text-black font-semibold uppercase tracking-widest text-xs md:text-sm flex items-center gap-2 hover:bg-stone-200 transition-colors shadow-[0_15px_45px_rgba(139,92,246,0.15)]"
-           >
-              Get Started <ArrowUpRight className="w-4 h-4" />
-           </motion.button>
+           <Link to="/register">
+             <motion.button
+               whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(124,58,237,0.3)" }}
+               whileTap={{ scale: 0.95 }}
+               className="mt-12 px-8 py-4 rounded-full bg-white text-black font-semibold uppercase tracking-widest text-xs md:text-sm flex items-center gap-2 hover:bg-stone-200 transition-colors shadow-[0_15px_45px_rgba(139,92,246,0.15)] cursor-pointer"
+             >
+               Get Started <ArrowUpRight className="w-4 h-4" />
+             </motion.button>
+           </Link>
         </div>
 
         <div className="z-10 w-full max-w-[1400px] mt-32 grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 border-t border-white/10 pt-12">

@@ -26,6 +26,7 @@ export function clearAuthTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem('user_role');
   localStorage.removeItem('user');
+  localStorage.removeItem('noir_user_projects');
   window.dispatchEvent(new Event(AUTH_EVENT_NAME));
 }
 

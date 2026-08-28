@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Logout from './pages/Logout';
+import JoinCompany from './pages/JoinCompany';
 import Dashboard from './pages/Dashboard';
 import UserProjects from './pages/UserProjects';
 import ProjectDetail from './pages/ProjectDetail';
@@ -17,6 +18,8 @@ import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { checkAndRefreshToken } from './utils/auth';
+
+const pageTransition = { duration: 0.08 };
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -32,7 +35,7 @@ function AnimatedRoutes() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={pageTransition}
             >
               <Home />
             </motion.div>
@@ -46,7 +49,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <Login />
               </motion.div>
@@ -61,7 +64,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <Register />
               </motion.div>
@@ -75,9 +78,22 @@ function AnimatedRoutes() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={pageTransition}
             >
               <Logout />
+            </motion.div>
+          } 
+        />
+        <Route 
+          path="/join-company" 
+          element={
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={pageTransition}
+            >
+              <JoinCompany />
             </motion.div>
           } 
         />
@@ -90,7 +106,7 @@ function AnimatedRoutes() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={pageTransition}
             >
               <AuthCallback />
             </motion.div>
@@ -105,7 +121,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <Dashboard />
               </motion.div>
@@ -120,7 +136,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <UserProjects />
               </motion.div>
@@ -135,7 +151,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <ProjectDetail />
               </motion.div>
@@ -150,7 +166,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <AdminDashboard />
               </motion.div>
@@ -165,7 +181,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <AdminManageUsers />
               </motion.div>
@@ -180,7 +196,7 @@ function AnimatedRoutes() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={pageTransition}
               >
                 <AdminManageProjects />
               </motion.div>

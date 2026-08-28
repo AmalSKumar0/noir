@@ -14,7 +14,8 @@ import {
   Shield,
   Zap,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Building2
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -23,6 +24,7 @@ import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
 import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
+import { getUserProjects, getCachedProjects, Project, formatLastUpdated } from '../utils/projectCache';
 
 interface Project {
   id: string;
@@ -92,26 +94,13 @@ const defaultAnalytics = [
   { time: '20:00', users: 2600, requests: 2000 },
   { time: '24:00', users: 2100, requests: 1600 },
 ];
-export function formatLastUpdated(dateStr: string): string {
-  try {
-    const diffMs = Date.now() - new Date(dateStr).getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  } catch (e) {
-    return 'Just now';
-  }
-}
+export { formatLastUpdated };
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('prj-1');
+  const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => projects[0]?.id || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [isCopiedKey, setIsCopiedKey] = useState(false);
@@ -138,94 +127,24 @@ export default function Dashboard() {
       return;
     }
 
-    // Load projects from localStorage or seed defaults
-    const savedProjects = localStorage.getItem('noir_user_projects');
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
-    } else {
-      const defaultPrjs: Project[] = [
-        {
-          id: 'prj-1',
-          name: 'Nexus API Gateway',
-          status: 'active',
-          lastUpdated: '2 hours ago',
-          environments: 3
-        },
-        {
-          id: 'prj-2',
-          name: 'Quantum Worker Pool',
-          status: 'error',
-          lastUpdated: '1 day ago',
-          environments: 1
-        },
-        {
-          id: 'prj-3',
-          name: 'Starlight Frontend App',
-          status: 'active',
-          lastUpdated: '3 days ago',
-          environments: 2
-        },
-        {
-          id: 'prj-4',
-          name: 'Athena Cache Cluster',
-          status: 'active',
-          lastUpdated: '4 hours ago',
-          environments: 4
-        },
-        {
-          id: 'prj-5',
-          name: 'Helios Database Proxy',
-          status: 'archived',
-          lastUpdated: '5 days ago',
-          environments: 1
-        }
-      ];
-      setProjects(defaultPrjs);
-      localStorage.setItem('noir_user_projects', JSON.stringify(defaultPrjs));
-    }
-
-    const fetchProjects = async () => {
-      try {
-        const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-        const response = await apiFetch(`${baseUrl}/api/project/my/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
+    const loadProjects = async () => {
+      const prjs = await getUserProjects();
+      setProjects(prjs);
+      if (prjs.length > 0) {
+        setSelectedProjectId(prev => {
+          if (prjs.some(m => m.id === prev)) return prev;
+          return prjs[0].id;
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          const mapped: Project[] = data.results.map((p: any) => ({
-            id: String(p.id),
-            name: p.title,
-            status: p.status === 'active' ? 'active' : p.status === 'error' ? 'error' : 'archived',
-            lastUpdated: p.updated_at ? formatLastUpdated(p.updated_at) : 'Just now',
-            environments: 1,
-            connectionCode: p.connection_code || ''
-          }));
-          setProjects(mapped);
-          localStorage.setItem('noir_user_projects', JSON.stringify(mapped));
-          
-          if (mapped.length > 0) {
-            setSelectedProjectId(prev => {
-              if (mapped.some(m => m.id === prev)) return prev;
-              return mapped[0].id;
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch projects:', err);
+      } else {
+        setSelectedProjectId('');
       }
     };
 
-    fetchProjects();
+    loadProjects();
 
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1200);
+    }, 120);
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -396,15 +315,15 @@ export default function Dashboard() {
                   <div className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-violet-500/30 transition-colors">
                     <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">Active Spans</p>
                     <p className="text-3xl font-bold text-white">
-                      {selectedProjectId === 'prj-2' ? '142' : '3,200'}
-                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ 12%</span>
+                      {selectedProject ? '3,200' : '0'}
+                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ {selectedProject ? '12%' : '0%'}</span>
                     </p>
                   </div>
                   <div className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-pink-500/30 transition-colors">
                     <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">Ingested Vol</p>
                     <p className="text-3xl font-bold text-white">
-                      {selectedProjectId === 'prj-2' ? '0.4k' : '2.6k'}
-                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ 8%</span>
+                      {selectedProject ? '2.6k' : '0k'}
+                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ {selectedProject ? '8%' : '0%'}</span>
                     </p>
                   </div>
                 </>
@@ -685,6 +604,41 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Enterprise Company Partnership Banner (Bottom of Developer Dashboard) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="mt-8 mb-10 mx-2 md:mx-6 p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-r from-violet-950/40 via-black to-purple-950/30 border border-violet-500/20 backdrop-blur-md shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-violet-500/40 transition-all"
+      >
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0 group-hover:scale-105 transition-transform">
+            <Building2 className="w-7 h-7" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[9px] font-mono uppercase tracking-widest mb-1.5">
+              Enterprise Partnership
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+              Looking to deploy NOIR across your organization?
+            </h3>
+            <p className="text-xs text-stone-400 font-mono mt-1 max-w-xl">
+              Register as a company partner to access centralized workspace governance, priority telemetry bandwidth, and custom SLA support.
+            </p>
+          </div>
+        </div>
+
+        <Link to="/join-company" className="shrink-0">
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            className="px-8 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-stone-200 transition-colors shadow-lg shadow-violet-500/10 cursor-pointer"
+          >
+            <Building2 className="w-4 h-4 text-violet-600" /> Join as a Company
+          </motion.button>
+        </Link>
+      </motion.div>
 
       {/* MODAL 1: Create Project Modal */}
       <Modal

@@ -17,21 +17,12 @@ import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
 import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
-import { formatLastUpdated } from './Dashboard';
-
-interface Project {
-  id: string;
-  name: string;
-  status: 'active' | 'archived' | 'error';
-  lastUpdated: string;
-  environments: number;
-  connectionCode?: string;
-}
+import { getUserProjects, getCachedProjects, setCachedProjects, Project } from '../utils/projectCache';
 
 export default function UserProjects() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal State
@@ -55,87 +46,16 @@ export default function UserProjects() {
       return;
     }
 
-    // Load from localStorage or set default
-    const savedProjects = localStorage.getItem('noir_user_projects');
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
-    } else {
-      const defaultPrjs: Project[] = [
-        {
-          id: 'prj-1',
-          name: 'Nexus API Gateway',
-          status: 'active',
-          lastUpdated: '2 hours ago',
-          environments: 3
-        },
-        {
-          id: 'prj-2',
-          name: 'Quantum Worker Pool',
-          status: 'error',
-          lastUpdated: '1 day ago',
-          environments: 1
-        },
-        {
-          id: 'prj-3',
-          name: 'Starlight Frontend App',
-          status: 'active',
-          lastUpdated: '3 days ago',
-          environments: 2
-        },
-        {
-          id: 'prj-4',
-          name: 'Athena Cache Cluster',
-          status: 'active',
-          lastUpdated: '4 hours ago',
-          environments: 4
-        },
-        {
-          id: 'prj-5',
-          name: 'Helios Database Proxy',
-          status: 'archived',
-          lastUpdated: '5 days ago',
-          environments: 1
-        }
-      ];
-      setProjects(defaultPrjs);
-      localStorage.setItem('noir_user_projects', JSON.stringify(defaultPrjs));
-    }
-
-    const fetchProjects = async () => {
-      try {
-        const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-        const response = await apiFetch(`${baseUrl}/api/project/my/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const mapped: Project[] = data.results.map((p: any) => ({
-            id: String(p.id),
-            name: p.title,
-            status: p.status === 'active' ? 'active' : p.status === 'error' ? 'error' : 'archived',
-            lastUpdated: p.updated_at ? formatLastUpdated(p.updated_at) : 'Just now',
-            environments: 1,
-            connectionCode: p.connection_code || ''
-          }));
-          setProjects(mapped);
-          localStorage.setItem('noir_user_projects', JSON.stringify(mapped));
-        }
-      } catch (err) {
-        console.error('Failed to fetch projects:', err);
-      }
+    const loadProjects = async () => {
+      const prjs = await getUserProjects();
+      setProjects(prjs);
     };
 
-    fetchProjects();
+    loadProjects();
 
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -181,7 +101,9 @@ export default function UserProjects() {
 
         const updated = [newPrj, ...projects];
         setProjects(updated);
-        localStorage.setItem('noir_user_projects', JSON.stringify(updated));
+        setCachedProjects(updated);
+        // Force refresh from backend to ensure full sync on new project creation
+        getUserProjects({ forceRefresh: true }).then(fresh => setProjects(fresh));
         
         // Reset form fields
         setNewProjectTitle('');
@@ -206,7 +128,7 @@ export default function UserProjects() {
     if (window.confirm('Are you sure you want to delete this project and clear all associated telemetry streams?')) {
       const updated = projects.filter(p => p.id !== projectId);
       setProjects(updated);
-      localStorage.setItem('noir_user_projects', JSON.stringify(updated));
+      setCachedProjects(updated);
     }
   };
 

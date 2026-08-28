@@ -18,7 +18,7 @@ export default function Logout() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.05 }}
         className="flex flex-col items-center gap-6 max-w-md text-center"
       >
         <div className="relative flex items-center justify-center w-16 h-16">
