@@ -11,8 +11,8 @@ export default function UserNavBar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleLogout = async () => {
-    await logout(navigate);
+  const handleLogout = () => {
+    navigate('/logout');
   };
 
   const NavButton = ({ to, icon: Icon, label, onClick }: { to?: string, icon: any, label: string, onClick?: () => void }) => {

@@ -21,8 +21,8 @@ import { getUserProjects, getCachedProjects, setCachedProjects, Project } from '
 
 export default function UserProjects() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal State
@@ -49,15 +49,10 @@ export default function UserProjects() {
     const loadProjects = async () => {
       const prjs = await getUserProjects();
       setProjects(prjs);
+      setIsLoading(false);
     };
 
     loadProjects();
-
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
   }, [navigate]);
 
   const handleCreateProject = async (e: React.FormEvent) => {

@@ -19,7 +19,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { checkAndRefreshToken } from './utils/auth';
 
-const pageTransition = { duration: 0.08 };
+const pageTransition = { 
+  duration: 0.16,
+  ease: [0.25, 0.1, 0.25, 1.0]
+};
 
 function AnimatedRoutes() {
   const location = useLocation();

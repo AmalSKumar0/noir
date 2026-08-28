@@ -145,7 +145,7 @@ export default function Register() {
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.07, ease: "easeOut", delay: 0.02 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
         className="relative w-full max-w-[440px] p-8 md:p-12 rounded-[2rem] bg-white/5 backdrop-blur-3xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col"
       >
         <div className="flex flex-col mb-10">

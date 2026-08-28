@@ -98,8 +98,8 @@ export { formatLastUpdated };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => projects[0]?.id || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
@@ -138,15 +138,10 @@ export default function Dashboard() {
       } else {
         setSelectedProjectId('');
       }
+      setIsLoading(false);
     };
 
     loadProjects();
-
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 120);
-
-    return () => clearTimeout(timer);
   }, [navigate]);
 
   // Terminal logs feed simulation

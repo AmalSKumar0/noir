@@ -1,6 +1,8 @@
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'motion/react';
 import { useRef, MouseEvent, useState } from 'react';
 import BackgroundBoids from './BackgroundBoids';
+import { Link } from 'react-router-dom';
+
 
 export default function Hero() {
   const containerRef = useRef<HTMLElement>(null);
@@ -204,6 +206,7 @@ export default function Hero() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
+            <Link to="/login">
             <motion.button
               whileHover={{ 
                 scale: 1.05, 
@@ -215,6 +218,7 @@ export default function Hero() {
             >
              GET STARTED
             </motion.button>
+            </Link>
           </motion.div>
         </div>
       </div>
