@@ -15,7 +15,9 @@ import {
   Zap,
   Sparkles,
   RefreshCw,
-  Building2
+  Building2,
+  UserCheck,
+  X
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -26,14 +28,6 @@ import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, Project, formatLastUpdated } from '../utils/projectCache';
 
-interface Project {
-  id: string;
-  name: string;
-  status: 'active' | 'archived' | 'error';
-  lastUpdated: string;
-  environments: number;
-  connectionCode?: string;
-}
 
 // Analytics data mapped per project to make the dashboard dynamic
 const projectAnalyticsData: Record<string, Array<{ time: string; users: number; requests: number }>> = {
@@ -116,16 +110,76 @@ export default function Dashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Company Requests State for Developer
+  const [companyRequests, setCompanyRequests] = useState<any[]>([]);
+  const [developerCompany, setDeveloperCompany] = useState<any>(null);
+
   // Terminal log stream state
   const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
 
+  const fetchDeveloperCompanyInfo = async () => {
+    try {
+      const token = await checkAndRefreshToken();
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+      // Whoami info
+      const whoRes = await apiFetch(`${baseUrl}/api/accounts/me/`, { headers });
+      if (whoRes.ok) {
+        const who = await whoRes.json();
+        if (who.company) {
+          setDeveloperCompany(who.company);
+        }
+      }
+
+      // Pending invitations
+      const reqRes = await apiFetch(`${baseUrl}/api/accounts/developer/company-requests/`, { headers });
+      if (reqRes.ok) {
+        const reqs = await reqRes.json();
+        setCompanyRequests(reqs.filter((r: any) => r.status === 'pending'));
+      }
+    } catch (err) {
+      console.error('Error fetching developer company info:', err);
+    }
+  };
+
+  const handleRespondCompanyRequest = async (requestId: number, action: 'accept' | 'reject') => {
+    try {
+      const token = await checkAndRefreshToken();
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+
+      const res = await apiFetch(`${baseUrl}/api/accounts/developer/company-requests/${requestId}/respond/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action })
+      });
+
+      if (res.ok) {
+        fetchDeveloperCompanyInfo();
+      }
+    } catch (err) {
+      console.error('Error responding to company request:', err);
+    }
+  };
+
   useEffect(() => {
+    const userRole = localStorage.getItem('user_role');
+    if (userRole === 'company') {
+      navigate('/company/dashboard');
+      return;
+    }
+
     // Check authentication
     const token = localStorage.getItem('access_token');
     if (!token) {
       navigate('/login');
       return;
     }
+
+    fetchDeveloperCompanyInfo();
 
     const loadProjects = async () => {
       const prjs = await getUserProjects();
@@ -143,6 +197,7 @@ export default function Dashboard() {
 
     loadProjects();
   }, [navigate]);
+
 
   // Terminal logs feed simulation
   useEffect(() => {
@@ -276,13 +331,69 @@ export default function Dashboard() {
 
   return (
     <UserLayout>
-      {/* Real-time Analytics Summary Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-6 md:mt-10 px-2 md:px-6"
+        className="mt-6 md:mt-10 px-2 md:px-6 space-y-6"
       >
+        {/* Company Affiliation Banner / Pending Invitations */}
+        {developerCompany ? (
+          <div className="w-full bg-gradient-to-r from-violet-900/30 via-purple-900/20 to-black/40 border border-violet-500/20 rounded-2xl p-4 px-6 backdrop-blur-md flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest text-violet-300">Organization Affiliation</p>
+                <p className="text-sm font-bold text-white">{developerCompany.company_name} <span className="text-xs text-emerald-400 font-mono font-normal ml-2">✓ Verified Team Member</span></p>
+              </div>
+            </div>
+          </div>
+        ) : companyRequests.length > 0 ? (
+          <div className="space-y-3">
+            {companyRequests.map((req) => (
+              <div 
+                key={req.id}
+                className="w-full bg-gradient-to-r from-amber-950/60 via-purple-950/40 to-black/60 border border-amber-500/40 rounded-2xl p-4 px-6 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Company Invitation from {req.company_name}</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">Action Required</span>
+                    </h3>
+                    <p className="text-xs text-stone-300/80 mt-0.5 italic">"{req.message || `${req.company_name} wants to invite you to join their engineering team.`}"</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleRespondCompanyRequest(req.id, 'accept')}
+                    className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Accept & Join</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRespondCompanyRequest(req.id, 'reject')}
+                    className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-rose-500/20 hover:border-rose-500/30 text-rose-300 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Decline</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Real-time Analytics Summary Card */}
         <div className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-6 md:p-8 backdrop-blur-md shadow-lg flex flex-col lg:flex-row gap-8 lg:items-center">
           {/* KPI Metrics */}
           <div className="flex flex-col gap-6 lg:w-1/3">
@@ -600,40 +711,7 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Enterprise Company Partnership Banner (Bottom of Developer Dashboard) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="mt-8 mb-10 mx-2 md:mx-6 p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-r from-violet-950/40 via-black to-purple-950/30 border border-violet-500/20 backdrop-blur-md shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-violet-500/40 transition-all"
-      >
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0 group-hover:scale-105 transition-transform">
-            <Building2 className="w-7 h-7" />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[9px] font-mono uppercase tracking-widest mb-1.5">
-              Enterprise Partnership
-            </div>
-            <h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-              Looking to deploy NOIR across your organization?
-            </h3>
-            <p className="text-xs text-stone-400 font-mono mt-1 max-w-xl">
-              Register as a company partner to access centralized workspace governance, priority telemetry bandwidth, and custom SLA support.
-            </p>
-          </div>
-        </div>
 
-        <Link to="/join-company" className="shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            className="px-8 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-stone-200 transition-colors shadow-lg shadow-violet-500/10 cursor-pointer"
-          >
-            <Building2 className="w-4 h-4 text-violet-600" /> Join as a Company
-          </motion.button>
-        </Link>
-      </motion.div>
 
       {/* MODAL 1: Create Project Modal */}
       <Modal

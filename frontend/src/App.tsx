@@ -1,18 +1,27 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Lenis from 'lenis';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CompanyRegister from './pages/CompanyRegister';
+import CompanyDashboard from './pages/CompanyDashboard';
+import CompanyStatus from './pages/CompanyStatus';
+import CompanyProjects from './pages/CompanyProjects';
+import CompanyProjectDetail from './pages/CompanyProjectDetail';
+import CompanyDevelopers from './pages/CompanyDevelopers';
 import Logout from './pages/Logout';
-import JoinCompany from './pages/JoinCompany';
+import Contact from './pages/Contact';
 import Dashboard from './pages/Dashboard';
 import UserProjects from './pages/UserProjects';
 import ProjectDetail from './pages/ProjectDetail';
+import OrganizationProfile from './pages/OrganizationProfile';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManageProjects from './pages/AdminManageProjects';
 import AdminManageUsers from './pages/AdminManageUsers';
+import AdminManageCompanies from './pages/AdminManageCompanies';
+
 import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -75,6 +84,111 @@ function AnimatedRoutes() {
           } 
         />
         <Route 
+          path="/register/company" 
+          element={
+            <PublicOnlyRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyRegister />
+              </motion.div>
+            </PublicOnlyRoute>
+          } 
+        />
+        <Route 
+          path="/join-company" 
+          element={
+            <PublicOnlyRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyRegister />
+              </motion.div>
+            </PublicOnlyRoute>
+          } 
+        />
+        <Route 
+          path="/company/dashboard" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyDashboard />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/projects" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyProjects />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/projects/:projectId" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyProjectDetail />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/developers" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyDevelopers />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/status" 
+          element={
+            <ProtectedRoute allowPendingCompany>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <CompanyStatus />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/logout" 
           element={
             <motion.div
@@ -88,7 +202,7 @@ function AnimatedRoutes() {
           } 
         />
         <Route 
-          path="/join-company" 
+          path="/contact" 
           element={
             <motion.div
               initial={{ opacity: 0 }}
@@ -96,10 +210,24 @@ function AnimatedRoutes() {
               exit={{ opacity: 0 }}
               transition={pageTransition}
             >
-              <JoinCompany />
+              <Contact />
             </motion.div>
           } 
         />
+        <Route 
+          path="/contact/" 
+          element={
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={pageTransition}
+            >
+              <Contact />
+            </motion.div>
+          } 
+        />
+
 
     
         <Route 
@@ -142,6 +270,21 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <UserProjects />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/organization" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <OrganizationProfile />
               </motion.div>
             </ProtectedRoute>
           } 
@@ -192,6 +335,22 @@ function AnimatedRoutes() {
           } 
         />
         <Route 
+          path="/admin/companies" 
+          element={
+            <ProtectedRoute adminOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <AdminManageCompanies />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
           path="/admin/projects" 
           element={
             <ProtectedRoute adminOnly>
@@ -206,6 +365,8 @@ function AnimatedRoutes() {
             </ProtectedRoute>
           } 
         />
+        {/* Wildcard catch-all fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   );

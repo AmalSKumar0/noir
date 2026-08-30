@@ -623,7 +623,7 @@ export default function AdminManageUsers() {
                 >
                   <option value="admin">Admin</option>
                   <option value="developer">Developer</option>
-                  <option value="user">User</option>
+                  <option value="company">Company</option>
                 </select>
               </div>
               <div>

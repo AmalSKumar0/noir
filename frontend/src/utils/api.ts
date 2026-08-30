@@ -36,6 +36,20 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   const urlString = typeof input === 'string' ? input : (input as any).url || input.toString();
   const method = init?.method || 'GET';
 
+  // Auto-inject Authorization header if not already present and token exists
+  const headers = new Headers(init?.headers || {});
+  if (!headers.has('Authorization') && !headers.has('authorization')) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
+  const updatedInit: RequestInit = {
+    ...init,
+    headers,
+  };
+
   // 1. If currently throttled, and it's a GET request, serve from cache if available
   if (currentThrottle.isThrottled && method.toUpperCase() === 'GET') {
     const cachedData = responseCache.get(urlString);
@@ -54,7 +68,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   // 2. Perform the fetch request
   let response: Response;
   try {
-    response = await fetch(input, init);
+    response = await fetch(input, updatedInit);
   } catch (err) {
     // If request failed entirely (network down), fallback to cache for GET
     if (method.toUpperCase() === 'GET') {

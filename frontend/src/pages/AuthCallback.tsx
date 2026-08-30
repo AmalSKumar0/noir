@@ -66,6 +66,10 @@ export default function AuthCallback() {
           console.timeEnd("JSON");
           if (data.access) {
             setAuthTokens(data.access, data.refresh);
+            if (data.user && data.user.role) {
+              localStorage.setItem('user_role', data.user.role);
+              localStorage.setItem('user', JSON.stringify(data.user));
+            }
             navigate('/dashboard', { replace: true });
           } else {
             throw new Error('No access token returned from server');

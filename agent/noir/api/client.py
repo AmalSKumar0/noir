@@ -13,9 +13,12 @@ load_dotenv()
 class ApiClient:
 
     def __init__(self):
-        self.client = httpx.Client(
-            base_url=os.getenv("API_KEY")
-        )
+        raw_url = os.getenv("API_KEY") or os.getenv("NOIR_API_URL") or "http://127.0.0.1:8000/api"
+        self.base_url = raw_url.rstrip('/')
+        self.client = httpx.Client()
+
+    def _url(self, path: str) -> str:
+        return f"{self.base_url}/{path.lstrip('/')}"
         
     def _headers(self):
         return {
@@ -25,7 +28,7 @@ class ApiClient:
 
     def login(self, email: str, password: str):
         response = self.client.post(
-            "/accounts/login/",
+            self._url("/accounts/login/"),
             json={
                 "email": email,
                 "password": password,
@@ -38,24 +41,24 @@ class ApiClient:
     
     def github_login(self):
         try:
-            webbrowser.open(f"{self.client.base_url}accounts/github/login/?client=cli")
+            webbrowser.open(self._url("/accounts/github/login/?client=cli"))
         except Exception as e:
             typer.echo(f"Error occurred while opening GitHub login page: {e}")
             raise e
     
     def google_login(self):
         try:
-            webbrowser.open(f"{self.client.base_url}accounts/google/login/?client=cli")
+            webbrowser.open(self._url("/accounts/google/login/?client=cli"))
         except Exception as e:
-            typer.echo(f"Error occurred while opening GitHub login page: {e}")
+            typer.echo(f"Error occurred while opening Google login page: {e}")
             raise e
 
     def obtain_tokens(self, code: str):
         try:
             response = self.client.post(
-                "/accounts/common-auth/callback/",
+                self._url("/accounts/common-auth/callback/"),
                 json={
-                    'code':code
+                    'code': code
                 }
             )
             response.raise_for_status()
@@ -64,54 +67,43 @@ class ApiClient:
             typer.echo(f"Error occurred while obtaining tokens: {e}")
             raise e
     
-    def send_request_to_backend(self,url: str,method: str,data: dict | None = None,retry=True):
+    def send_request_to_backend(self, url: str, method: str, data: dict | None = None, retry=True):
         if not has_tokens():
-            typer.echo('User data Not found try "noir login"')
-            exit()
+            typer.echo('User data not found. Please run "noir login".')
+            raise typer.Exit(1)
             
-
+        full_url = self._url(url)
         try:
-
-            
-            match method:
+            match method.upper():
                 case "GET":
-                    response = self.client.get(url,headers=self._headers())
+                    response = self.client.get(full_url, headers=self._headers())
                 case "DELETE":
-                    response = self.client.delete(url,headers=self._headers())
+                    response = self.client.delete(full_url, headers=self._headers())
                 case "POST":
-                    response = self.client.post(url,json=data,headers=self._headers())
+                    response = self.client.post(full_url, json=data, headers=self._headers())
                 case "PUT":
-                    response = self.client.put(url,json=data,headers=self._headers())
+                    response = self.client.put(full_url, json=data, headers=self._headers())
                 case "PATCH":
-                    response = self.client.patch(url,json=data,headers=self._headers())
+                    response = self.client.patch(full_url, json=data, headers=self._headers())
                 case _:
                     raise ValueError(f"Unsupported HTTP method: {method}")
             response.raise_for_status()
 
-
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                error = e.response.json()
-                if error.get("code") == "token_not_valid":
-                    try:
-                        response = self.client.post(
-                            "/accounts/token/refresh/",
-                            json={
-                                "refresh":get_refresh_token()
-                            }
-                        )
-                        response.raise_for_status()
-                    except httpx.HTTPStatusError:
-                        typer.echo("Session expired. Please run 'noir login'.")
-                        raise
-                    save_token(response.json())
+                try:
+                    refresh_resp = self.client.post(
+                        self._url("/accounts/token/refresh/"),
+                        json={"refresh": get_refresh_token()}
+                    )
+                    refresh_resp.raise_for_status()
+                    save_token(refresh_resp.json())
                     if retry:
-                        return self.send_request_to_backend(url,method,data,False)
-                    raise RuntimeError("Authentication failed after refreshing token.")
-                else:
-                    raise 
-            else:
-                raise 
+                        return self.send_request_to_backend(url, method, data, False)
+                except Exception:
+                    typer.echo("Session expired. Please run 'noir login'.")
+                    raise
+            raise
 
         return response.json()
 

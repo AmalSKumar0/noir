@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Users, Wallet, Hexagon, HelpCircle, LogOut, Home } from 'lucide-react';
+import { Clock, Users, Wallet, Hexagon, HelpCircle, LogOut, Home, Building2 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function AdminNavbar() {
@@ -67,9 +68,10 @@ export default function AdminNavbar() {
     <div className="fixed left-4 md:left-6 top-0 bottom-0 py-6 flex flex-col justify-between w-14 z-50">
       <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-4 shadow-2xl border border-white/10">
         <NavButton to="/admin/dashboard" icon={Home} label="Overview" />
-        {/* <NavButton to="/admin/dashboard" icon={Clock} label="Recent Activity" /> */}
         <NavButton to="/admin/users" icon={Users} label="Manage Users" />
+        <NavButton to="/admin/companies" icon={Building2} label="Manage Companies" />
         <NavButton to="/admin/projects" icon={Wallet} label="Manage Projects" />
+
         {/* <NavButton to="#" icon={Hexagon} label="Integrations" /> */}
       </div>
 

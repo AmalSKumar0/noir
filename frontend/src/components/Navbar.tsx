@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthState, logout } from '../utils/auth';
 
 export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: boolean, setIsMenuOpen: (v: boolean) => void }) {
-  const links = ['About', 'Contact', 'Workflow', 'Docs', 'Download Agent'];
+  const links = ['About', 'Contact', 'Join as a Company', 'Workflow', 'Docs', 'Download Agent'];
   const isAuthenticated = useAuthState();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
@@ -28,15 +28,43 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
         <div className="w-full h-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 pt-6 md:pt-0">
           {links.map((link, idx) => (
             <div key={link} className="flex items-center">
-              <motion.a
-                href={`#${link.toLowerCase().replace(' ', '-')}`}
-                onClick={() => setIsMenuOpen(false)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-stone-300 hover:text-violet-400"
-              >
-                {link}
-              </motion.a>
+              {link === 'Contact' ? (
+                <Link
+                  to="/contact"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <motion.span
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-stone-300 hover:text-violet-400 block cursor-pointer"
+                  >
+                    {link}
+                  </motion.span>
+                </Link>
+              ) : link === 'Join as a Company' ? (
+                <Link
+                  to="/register/company"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <motion.span
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-violet-400 hover:text-white block cursor-pointer"
+                  >
+                    {link}
+                  </motion.span>
+                </Link>
+              ) : (
+                <motion.a
+                  href={`#${link.toLowerCase().replace(' ', '-')}`}
+                  onClick={() => setIsMenuOpen(false)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-stone-300 hover:text-violet-400"
+                >
+                  {link}
+                </motion.a>
+              )}
               {idx < links.length - 1 && (
                 <span className="hidden md:block text-white/20 ml-8">|</span>
               )}

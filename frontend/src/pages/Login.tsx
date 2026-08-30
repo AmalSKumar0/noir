@@ -50,9 +50,16 @@ export default function Login() {
         }
       }
 
-      // Navigate to dashboard based on role
+      // Navigate based on role and company status
       if (data.user && data.user.role === 'admin') {
         navigate('/admin/dashboard');
+      } else if (data.user && data.user.role === 'company') {
+        const status = data.user.company_profile?.status;
+        if (status === 'pending' || status === 'rejected') {
+          navigate('/company/status');
+        } else {
+          navigate('/company/dashboard');
+        }
       } else {
         navigate('/dashboard');
       }
@@ -81,7 +88,14 @@ export default function Login() {
           <span className="font-medium text-white drop-shadow-[0_0_30px_rgba(139,92,246,0.15)]">your workspace.</span>
         </>
       }
-      description="The autonomous reliability engineer for modern applications. Sign in to monitor cascades and access telemetry."
+      description={
+        <>
+          The autonomous reliability engineer for modern applications. Sign in to monitor cascades and access telemetry.{' '}
+          <Link to="/register/company" className="inline-flex items-center gap-1 font-mono text-xs text-violet-400 hover:text-violet-300 underline underline-offset-4 font-normal">
+            Join as a Company &rarr;
+          </Link>
+        </>
+      }
       isGithubLoading={isGithubLoading}
       isGoogleLoading={isGoogleLoading}
       onGithubLogin={handleGithubLogin}

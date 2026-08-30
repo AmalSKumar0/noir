@@ -6,7 +6,7 @@ import BackgroundBoids from './BackgroundBoids';
 
 interface AuthLayoutProps {
   title: React.ReactNode;
-  description: string;
+  description: React.ReactNode;
   children: React.ReactNode;
   isGithubLoading?: boolean;
   isGoogleLoading?: boolean;

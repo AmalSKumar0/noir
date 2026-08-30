@@ -12,9 +12,9 @@ def login(ctx: typer.Context):
     if ctx.invoked_subcommand:
         return
     email = ""
-    while '@' not in email and '.' not in email:
+    while '@' not in email or '.' not in email:
         email = Prompt.ask("Email")
-        if '@' not in email and '.' not in email:
+        if '@' not in email or '.' not in email:
             typer.echo("Invalid email address. Please try again.")
     
     password = ""
@@ -30,10 +30,10 @@ def login(ctx: typer.Context):
 
     try:
         tokens = client.login(email, password)
-        save_refresh_token(tokens["refresh"])
+        save_token(tokens)
         typer.echo("Login successful!")
     except Exception as e:
-        typer.echo(f"Invalid credentials")
+        typer.echo("Invalid credentials")
 
 @app.command()
 def github():

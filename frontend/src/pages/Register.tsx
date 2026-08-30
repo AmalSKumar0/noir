@@ -137,7 +137,14 @@ export default function Register() {
           <span className="font-medium text-white drop-shadow-[0_0_30px_rgba(139,92,246,0.15)]">workspace.</span>
         </>
       }
-      description="The autonomous reliability engineer for modern applications. Register to monitor cascades and access telemetry."
+      description={
+        <>
+          The autonomous reliability engineer for modern applications. Register to monitor cascades and access telemetry.{' '}
+          <Link to="/register/company" className="inline-flex items-center gap-1 font-mono text-xs text-violet-400 hover:text-violet-300 underline underline-offset-4 font-normal">
+            Join as a Company &rarr;
+          </Link>
+        </>
+      }
       isGithubLoading={isGithubLoading}
       onGithubLogin={handleGithubLogin}
       onGoogleLogin={handleGoogleLogin}

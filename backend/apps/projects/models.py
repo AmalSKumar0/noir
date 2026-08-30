@@ -71,4 +71,33 @@ class ProjectProfile(models.Model):
     class Meta:
         ordering = ['-detected_at']
 
+
+class TestRun(models.Model):
+    class Status(models.TextChoices):
+        PASSED = "passed", "Passed"
+        FAILED = "failed", "Failed"
+        RUNNING = "running", "Running"
+        ERROR = "error", "Error"
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="test_runs")
+    executor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="executed_test_runs")
+    team = models.ForeignKey('accounts.DeveloperTeam', on_delete=models.SET_NULL, null=True, blank=True, related_name="test_runs")
+    suite_name = models.CharField(max_length=255, default="Default Integration Suite")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PASSED)
+    command = models.CharField(max_length=255, default="npm test")
+    total_tests = models.IntegerField(default=0)
+    passed_tests = models.IntegerField(default=0)
+    failed_tests = models.IntegerField(default=0)
+    skipped_tests = models.IntegerField(default=0)
+    duration_ms = models.IntegerField(default=0)
+    logs = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"TestRun #{self.id} on {self.project.title} by {self.executor.username} ({self.status})"
+
+
         

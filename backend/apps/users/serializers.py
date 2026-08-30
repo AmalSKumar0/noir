@@ -26,3 +26,25 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "date_joined",
         ]
+
+    def create(self, validated_data):
+        user = super().create(validated_data)
+        if user.role == User.Role.COMPANY and not hasattr(user, "company_profile"):
+            from apps.accounts.models import CompanyProfile
+            CompanyProfile.objects.create(
+                user=user,
+                company_name=f"{user.username}'s Company",
+                status=CompanyProfile.Status.APPROVED
+            )
+        return user
+
+    def update(self, instance, validated_data):
+        user = super().update(instance, validated_data)
+        if user.role == User.Role.COMPANY and not hasattr(user, "company_profile"):
+            from apps.accounts.models import CompanyProfile
+            CompanyProfile.objects.create(
+                user=user,
+                company_name=f"{user.username}'s Company",
+                status=CompanyProfile.Status.APPROVED
+            )
+        return user
