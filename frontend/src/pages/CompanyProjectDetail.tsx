@@ -173,6 +173,13 @@ export default function CompanyProjectDetail() {
 
   useEffect(() => {
     fetchProjectDetails();
+    const handleRunCompleted = () => {
+      fetchProjectDetails();
+    };
+    window.addEventListener('noir_run_completed', handleRunCompleted);
+    return () => {
+      window.removeEventListener('noir_run_completed', handleRunCompleted);
+    };
   }, [projectId]);
 
   const handleCopy = () => {
@@ -299,7 +306,7 @@ export default function CompanyProjectDetail() {
             {activeTab === 'monitoring' && (
               <div className="space-y-8">
                 {/* Real-time Telemetry & Container Stream Terminal */}
-                <LiveStreamTerminal connectionCode={project.connection_code} />
+                <LiveStreamTerminal connectionCode={project.connection_code} onRunEnd={fetchProjectDetails} />
 
                 {/* Bottom Section: Minor Details of Project */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">

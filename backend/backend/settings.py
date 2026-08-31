@@ -218,3 +218,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = "accounts.User"
+
+# Max upload sizes (2 MB) to prevent RequestDataTooBig exceptions
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2097152
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2097152

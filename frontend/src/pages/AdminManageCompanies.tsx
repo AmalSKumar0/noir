@@ -245,7 +245,11 @@ export default function AdminManageCompanies() {
                         <div className="flex items-center gap-3">
                           {company.logo ? (
                             <img 
-                              src={company.logo} 
+                              src={
+                                company.logo.startsWith('data:') || company.logo.startsWith('http://') || company.logo.startsWith('https://')
+                                  ? company.logo
+                                  : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${company.logo.startsWith('/') ? '' : '/'}${company.logo}`
+                              } 
                               alt={company.company_name} 
                               className="w-9 h-9 rounded-xl object-cover border border-white/10 bg-black/40"
                             />
@@ -421,7 +425,15 @@ export default function AdminManageCompanies() {
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
               {currentCompany?.logo ? (
-                <img src={currentCompany.logo} alt={currentCompany.company_name} className="w-14 h-14 rounded-2xl object-cover border border-white/10" />
+                <img 
+                  src={
+                    currentCompany.logo.startsWith('data:') || currentCompany.logo.startsWith('http://') || currentCompany.logo.startsWith('https://')
+                      ? currentCompany.logo
+                      : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${currentCompany.logo.startsWith('/') ? '' : '/'}${currentCompany.logo}`
+                  } 
+                  alt={currentCompany.company_name} 
+                  className="w-14 h-14 rounded-2xl object-cover border border-white/10" 
+                />
               ) : (
                 <div className="w-14 h-14 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
                   <Building2 className="w-7 h-7" />

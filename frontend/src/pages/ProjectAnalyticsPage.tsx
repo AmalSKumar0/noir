@@ -79,6 +79,10 @@ export default function ProjectAnalyticsPage({ isCompanyView = false }: { isComp
     };
 
     fetchData();
+    window.addEventListener('noir_run_completed', fetchData);
+    return () => {
+      window.removeEventListener('noir_run_completed', fetchData);
+    };
   }, [projectId]);
 
   return (

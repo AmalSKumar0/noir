@@ -13,12 +13,18 @@ load_dotenv()
 class ApiClient:
 
     def __init__(self):
-        raw_url = os.getenv("API_KEY") or os.getenv("NOIR_API_URL") or "http://127.0.0.1:8000/api"
-        self.base_url = raw_url.rstrip('/')
+        raw_url = os.getenv("API_KEY") or os.getenv("NOIR_API_URL") or "http://127.0.0.1:8000"
+        clean_url = raw_url.rstrip('/')
+        if clean_url.endswith('/api'):
+            clean_url = clean_url[:-4]
+        self.base_host = clean_url
         self.client = httpx.Client()
 
     def _url(self, path: str) -> str:
-        return f"{self.base_url}/{path.lstrip('/')}"
+        clean_path = path.lstrip('/')
+        if clean_path.startswith('api/'):
+            return f"{self.base_host}/{clean_path}"
+        return f"{self.base_host}/api/{clean_path}"
         
     def _headers(self):
         return {

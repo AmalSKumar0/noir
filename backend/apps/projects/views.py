@@ -259,35 +259,40 @@ class StreamProjectLogsAPIView(APIView):
         if identifier.isdigit():
             project = get_object_or_404(Project, pk=identifier)
         else:
-            project = get_object_or_404(Project, connection_code=identifier)
+            project = get_object_or_404(Project, connection_code__iexact=identifier)
 
         log_line = request.data.get("log", "")
         stream_type = request.data.get("stream", "stdout")
         timestamp = request.data.get("timestamp")
         event = request.data.get("event")
 
-        # Mark project stream as active in cache for 35 seconds
-        cache_key = f"core_active_stream_{project.connection_code}"
+        code_upper = project.connection_code.upper()
+        code_lower = project.connection_code.lower()
+
+        # Mark project stream as active in cache for 120 seconds
+        cache_key_upper = f"core_active_stream_{code_upper}"
+        cache_key_lower = f"core_active_stream_{code_lower}"
         if event in ["run_end", "analysis_end"]:
-            cache.delete(cache_key)
+            cache.delete(cache_key_upper)
+            cache.delete(cache_key_lower)
         else:
-            cache.set(cache_key, True, timeout=35)
+            cache.set(cache_key_upper, True, timeout=120)
+            cache.set(cache_key_lower, True, timeout=120)
 
         channel_layer = get_channel_layer()
         if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                f"project_{project.connection_code}",
-                {
-                    "type": "log_message",
-                    "data": {
-                        "project_code": project.connection_code,
-                        "log": log_line,
-                        "stream": stream_type,
-                        "timestamp": timestamp,
-                        "event": event,
-                    }
+            payload = {
+                "type": "log_message",
+                "data": {
+                    "project_code": project.connection_code,
+                    "log": log_line,
+                    "stream": stream_type,
+                    "timestamp": timestamp,
+                    "event": event,
                 }
-            )
+            }
+            async_to_sync(channel_layer.group_send)(f"project_{code_upper}", payload)
+            async_to_sync(channel_layer.group_send)(f"project_{code_lower}", payload)
 
         return Response({"status": "broadcasted", "project_code": project.connection_code}, status=status.HTTP_200_OK)
 
@@ -300,10 +305,11 @@ class ProjectStreamStatusAPIView(APIView):
         if identifier.isdigit():
             project = get_object_or_404(Project, pk=identifier)
         else:
-            project = get_object_or_404(Project, connection_code=identifier)
+            project = get_object_or_404(Project, connection_code__iexact=identifier)
 
-        cache_key = f"core_active_stream_{project.connection_code}"
-        is_active = bool(cache.get(cache_key))
+        code_upper = project.connection_code.upper()
+        code_lower = project.connection_code.lower()
+        is_active = bool(cache.get(f"core_active_stream_{code_upper}") or cache.get(f"core_active_stream_{code_lower}"))
 
         return Response({
             "is_active": is_active,

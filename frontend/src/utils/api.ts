@@ -33,8 +33,27 @@ const responseCache = new Map<string, any>();
  * and tracks a global throttle countdown timer.
  */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const urlString = typeof input === 'string' ? input : (input as any).url || input.toString();
+  let urlString = typeof input === 'string' ? input : (input as any).url || input.toString();
   const method = init?.method || 'GET';
+
+  // Base domain host from env (e.g. "http://127.0.0.1:8000")
+  let rawBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  let host = rawBase.replace(/\/$/, '');
+  if (host.endsWith('/api')) {
+    host = host.replace(/\/api$/, '');
+  }
+
+  if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
+    const cleanPath = urlString.replace(/^\//, '');
+    if (cleanPath.startsWith('api/')) {
+      urlString = `${host}/${cleanPath}`;
+    } else {
+      urlString = `${host}/api/${cleanPath}`;
+    }
+  }
+
+  // Deduplicate any accidental /api/api/ pattern
+  urlString = urlString.replace(/\/api\/api\//g, '/api/');
 
   // Auto-inject Authorization header if not already present and token exists
   const headers = new Headers(init?.headers || {});
@@ -68,7 +87,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   // 2. Perform the fetch request
   let response: Response;
   try {
-    response = await fetch(input, updatedInit);
+    response = await fetch(urlString, updatedInit);
   } catch (err) {
     // If request failed entirely (network down), fallback to cache for GET
     if (method.toUpperCase() === 'GET') {

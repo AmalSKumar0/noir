@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Terminal, Activity } from 'lucide-react';
 import { apiFetch } from '../utils/api';
 
-export default function LiveStreamTerminal({ connectionCode }: { connectionCode: string }) {
+export default function LiveStreamTerminal({ 
+  connectionCode, 
+  onRunEnd 
+}: { 
+  connectionCode: string; 
+  onRunEnd?: () => void; 
+}) {
   const [logs, setLogs] = useState<Array<{ log: string; timestamp?: string; stream?: string }>>([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [isRunActive, setIsRunActive] = useState(false);
-  const [isManualConnect, setIsManualConnect] = useState(false);
   
   const terminalRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const lastLogTimeRef = useRef<number>(Date.now());
 
-  // Function to connect WebSocket
+  // Function to connect backend telemetry stream
   const connectWs = () => {
     if (!connectionCode || wsRef.current) return;
 
@@ -46,18 +51,22 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
 
           if (data.event === 'run_end' || data.event === 'analysis_end') {
             setIsRunActive(false);
-            // Close WebSocket after 5s grace period following run completion
+            if (onRunEnd) {
+              onRunEnd();
+            }
+            window.dispatchEvent(new CustomEvent('noir_run_completed', { detail: { connectionCode } }));
+            // Close stream after 3s grace period following task completion
             setTimeout(() => {
               disconnectWs();
-            }, 5000);
+            }, 3000);
           }
         } catch (err) {
-          console.error('WS parse error:', err);
+          console.error('Stream parse error:', err);
         }
       };
 
       ws.onerror = (err) => {
-        console.warn('WS Connection error:', err);
+        console.warn('Stream connection error:', err);
         setIsWsConnected(false);
       };
 
@@ -66,21 +75,20 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
         wsRef.current = null;
       };
     } catch (e) {
-      console.warn('WS Init error:', e);
+      console.warn('Stream init error:', e);
     }
   };
 
-  // Function to disconnect WebSocket
+  // Function to disconnect telemetry stream
   const disconnectWs = () => {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
     setIsWsConnected(false);
-    setIsManualConnect(false);
   };
 
-  // Poll backend stream status every 3 seconds to auto-connect only when CLI agent is active
+  // Poll backend stream status every 3 seconds to auto-connect when CLI agent runs or analyzes
   useEffect(() => {
     if (!connectionCode) return;
 
@@ -92,7 +100,8 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
           const active = !!data.is_active;
           setIsRunActive(active);
 
-          if (active && !wsRef.current) {
+          if (active && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED || wsRef.current.readyState === WebSocket.CLOSING)) {
+            wsRef.current = null;
             connectWs();
           }
         }
@@ -102,17 +111,17 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
     };
 
     checkStreamStatus();
-    const statusInterval = setInterval(checkStreamStatus, 3000);
+    const statusInterval = setInterval(checkStreamStatus, 1500);
 
     return () => {
       clearInterval(statusInterval);
     };
   }, [connectionCode]);
 
-  // Timeout auto-disconnect if no log received for 30s while connected and CLI inactive
+  // Timeout auto-disconnect if no log received for 30s while CLI is inactive
   useEffect(() => {
     const idleCheck = setInterval(() => {
-      if (isWsConnected && !isRunActive && !isManualConnect) {
+      if (isWsConnected && !isRunActive) {
         const timeSinceLastLog = Date.now() - lastLogTimeRef.current;
         if (timeSinceLastLog > 30000) {
           disconnectWs();
@@ -121,7 +130,7 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
     }, 5000);
 
     return () => clearInterval(idleCheck);
-  }, [isWsConnected, isRunActive, isManualConnect]);
+  }, [isWsConnected, isRunActive]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -139,25 +148,16 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
     }
   }, [logs]);
 
-  const toggleManualConnect = () => {
-    if (isWsConnected) {
-      disconnectWs();
-    } else {
-      setIsManualConnect(true);
-      connectWs();
-    }
-  };
-
   return (
     <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
             <Terminal className="w-5 h-5 text-violet-400" />
-            Real-Time Telemetry & Live Container Output
+            Real-Time Telemetry & Live Output
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            WebSocket connects automatically when <code className="text-violet-300 font-mono">noir run</code> or <code className="text-violet-300 font-mono">noir analyze</code> executes.
+            Automatically streams live logs when <code className="text-violet-300 font-mono">noir run</code> or <code className="text-violet-300 font-mono">noir analyze</code> executes.
           </p>
         </div>
 
@@ -169,21 +169,8 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
               : 'bg-stone-800/80 border-white/10 text-gray-400'
           }`}>
             <span className={`w-2 h-2 rounded-full ${isWsConnected ? 'bg-emerald-400 animate-ping' : 'bg-gray-500'}`} />
-            {isWsConnected ? 'WEBSOCKET ACTIVE' : 'WS IDLE (WAITING FOR RUN)'}
+            {isWsConnected ? 'LIVE STREAM ACTIVE' : 'STREAM IDLE (WAITING FOR RUN)'}
           </span>
-
-          {/* Manual Connect Toggle */}
-          <button
-            onClick={toggleManualConnect}
-            className={`flex items-center gap-1.5 text-[10px] font-mono px-3 py-1 rounded-lg border transition-all cursor-pointer ${
-              isWsConnected
-                ? 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300'
-                : 'bg-violet-600/20 hover:bg-violet-600/30 border-violet-500/30 text-violet-300'
-            }`}
-          >
-            {isWsConnected ? <WifiOff className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-            <span>{isWsConnected ? 'Disconnect' : 'Connect Stream'}</span>
-          </button>
 
           {logs.length > 0 && (
             <button
@@ -204,10 +191,10 @@ export default function LiveStreamTerminal({ connectionCode }: { connectionCode:
           <div className="h-full flex flex-col items-center justify-center text-center text-white/30 space-y-2">
             <Activity className={`w-8 h-8 text-violet-400/30 ${isWsConnected ? 'animate-pulse' : ''}`} />
             <p className="text-xs font-medium text-gray-400">
-              {isWsConnected ? 'WebSocket connected. Waiting for live container output...' : 'WebSocket connection is idle to optimize backend performance.'}
+              {isWsConnected ? 'Live stream connected. Waiting for output...' : 'Stream automatically activates when an agent task begins.'}
             </p>
             <p className="text-[10px] font-mono text-white/30">
-              Run <span className="text-violet-300">$ noir run</span> or <span className="text-violet-300">$ noir analyze</span> in your workspace to auto-activate the WebSocket stream.
+              Run <span className="text-violet-300">$ noir run</span> or <span className="text-violet-300">$ noir analyze</span> in your connected workspace to view live telemetry.
             </p>
           </div>
         ) : (

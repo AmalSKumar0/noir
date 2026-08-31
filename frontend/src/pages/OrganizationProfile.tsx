@@ -177,7 +177,11 @@ export default function OrganizationProfile() {
                 <div className="w-24 h-24 rounded-3xl bg-black/60 border border-white/15 p-2 flex items-center justify-center shadow-xl flex-shrink-0">
                   {company.logo ? (
                     <img
-                      src={company.logo.startsWith('http') ? company.logo : `${import.meta.env.VITE_API_BASE_URL || ''}${company.logo}`}
+                      src={
+                        company.logo.startsWith('data:') || company.logo.startsWith('http://') || company.logo.startsWith('https://')
+                          ? company.logo
+                          : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${company.logo.startsWith('/') ? '' : '/'}${company.logo}`
+                      }
                       alt={company.company_name}
                       className="w-full h-full object-contain rounded-2xl"
                     />
