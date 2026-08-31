@@ -43,6 +43,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
+import TestHistoryAnalytics from '../components/TestHistoryAnalytics';
 import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, Project } from '../utils/projectCache';
@@ -144,6 +145,8 @@ export default function CompanyDashboard() {
   const [activeDevs, setActiveDevs] = useState<ActiveDeveloper[]>([]);
   const [teams, setTeams] = useState<DeveloperTeamItem[]>([]);
   const [companyProjects, setCompanyProjects] = useState<CompanyProjectSimple[]>([]);
+  const [companyTestRuns, setCompanyTestRuns] = useState<any[]>([]);
+  const [isLoadingTestRuns, setIsLoadingTestRuns] = useState<boolean>(true);
 
   // Invite Modal State
   const [selectedDev, setSelectedDev] = useState<AvailableDeveloper | null>(null);
@@ -253,15 +256,32 @@ export default function CompanyDashboard() {
         setCompanyProjects(prjData);
       }
 
+      // 7. Fetch Test Runs for Organization Audit
+      const testRunsRes = await apiFetch(`${baseUrl}/api/project/test-runs/`, { headers });
+      if (testRunsRes.ok) {
+        const testRunsData = await testRunsRes.json();
+        setCompanyTestRuns(testRunsData);
+      }
+
     } catch (err) {
       console.error('Error fetching company dashboard details:', err);
     } finally {
       setIsLoading(false);
+      setIsLoadingTestRuns(false);
     }
   };
 
   useEffect(() => {
     loadAllData();
+
+    const handleRunCompleted = () => {
+      loadAllData();
+    };
+
+    window.addEventListener('noir_run_completed', handleRunCompleted);
+    return () => {
+      window.removeEventListener('noir_run_completed', handleRunCompleted);
+    };
   }, [navigate]);
 
   // Search developer handler
@@ -1234,6 +1254,11 @@ export default function CompanyDashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* SECTION: Developer Activity & Organization Test Audit Stream */}
+      <div className="mt-8 px-2 md:px-6 pb-12">
+        <TestHistoryAnalytics testRuns={companyTestRuns} isLoading={isLoadingTestRuns} />
       </div>
 
       {/* MODAL 1: Create Project Modal */}

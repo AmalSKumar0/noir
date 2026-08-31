@@ -51,6 +51,7 @@ interface TestHistoryAnalyticsProps {
 
 export default function TestHistoryAnalytics({ testRuns, isLoading = false }: TestHistoryAnalyticsProps) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'passed' | 'failed'>('all');
+  const [developerFilter, setDeveloperFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRun, setSelectedRun] = useState<TestRunItem | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -65,6 +66,23 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
   // Total individual failed tests across all runs
   const totalIndividualFailedTests = testRuns.reduce((acc, r) => acc + r.failed_tests, 0);
 
+  // Extract unique developers for developer filter dropdown
+  const uniqueDevelopers = Array.from(
+    new Map(
+      testRuns
+        .filter(r => r.executor_id || r.executor_username)
+        .map(r => [
+          r.executor_id || r.executor_username,
+          {
+            id: String(r.executor_id || r.executor_username),
+            username: r.executor_username,
+            name: `${r.executor_first_name || ''} ${r.executor_last_name || ''}`.trim() || r.executor_username,
+            email: r.executor_email
+          }
+        ])
+    ).values()
+  );
+
   // Filtered runs
   const filteredRuns = testRuns.filter((run) => {
     const matchesStatus = 
@@ -72,15 +90,23 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
       statusFilter === 'passed' ? run.status === 'passed' :
       (run.status === 'failed' || run.status === 'error');
 
+    const matchesDev = 
+      developerFilter === 'all' ? true :
+      String(run.executor_id) === developerFilter || run.executor_username === developerFilter;
+
     const query = searchQuery.toLowerCase();
     const matchesQuery = 
       !query ||
       run.suite_name.toLowerCase().includes(query) ||
       run.command.toLowerCase().includes(query) ||
+      (run.project_title && run.project_title.toLowerCase().includes(query)) ||
       (run.executor_username && run.executor_username.toLowerCase().includes(query)) ||
+      (run.executor_email && run.executor_email.toLowerCase().includes(query)) ||
+      (run.executor_first_name && run.executor_first_name.toLowerCase().includes(query)) ||
+      (run.executor_last_name && run.executor_last_name.toLowerCase().includes(query)) ||
       (run.logs && run.logs.toLowerCase().includes(query));
 
-    return matchesStatus && matchesQuery;
+    return matchesStatus && matchesDev && matchesQuery;
   });
 
   const handleCopyLogs = (logs: string) => {
@@ -191,6 +217,22 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
               />
             </div>
 
+            {/* Developer Filter Dropdown */}
+            {uniqueDevelopers.length > 0 && (
+              <select
+                value={developerFilter}
+                onChange={(e) => setDeveloperFilter(e.target.value)}
+                className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-violet-300 font-mono focus:outline-none focus:border-violet-500/50 transition-all"
+              >
+                <option value="all">All Developers ({uniqueDevelopers.length})</option>
+                {uniqueDevelopers.map((dev) => (
+                  <option key={dev.id} value={dev.id}>
+                    {dev.name} (@{dev.username})
+                  </option>
+                ))}
+              </select>
+            )}
+
             {/* Status Filter Buttons */}
             <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 font-mono text-[10px]">
               <button
@@ -233,7 +275,7 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
             <FlaskConical className="w-10 h-10 text-white/20 mx-auto mb-3" />
             <h4 className="text-sm font-semibold text-white/80">No Test Runs Found</h4>
             <p className="text-xs text-white/40 mt-1 max-w-[320px] mx-auto font-mono">
-              {searchQuery || statusFilter !== 'all' 
+              {searchQuery || statusFilter !== 'all' || developerFilter !== 'all'
                 ? 'No test execution runs match your selected filter criteria.'
                 : 'Execute tests via "$ noir run" or "$ noir test" to record test runs in the backend.'}
             </p>
@@ -242,6 +284,7 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
           <div className="space-y-3">
             {filteredRuns.map((run) => {
               const isPassed = run.status === 'passed';
+              const fullName = `${run.executor_first_name || ''} ${run.executor_last_name || ''}`.trim();
               return (
                 <div
                   key={run.id}
@@ -262,13 +305,23 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
                         {run.status}
                       </span>
                       <span className="font-bold text-white text-sm font-mono">{run.suite_name}</span>
+                      {run.project_title && (
+                        <span className="text-[10px] font-mono text-violet-300 bg-violet-500/10 px-2 py-0.5 rounded-lg border border-violet-500/20">
+                          {run.project_title}
+                        </span>
+                      )}
                       <span className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
                         ${run.command}
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-white/40">
-                      <span>Executor: <strong className="text-violet-300">{run.executor_username || 'CLI Agent'}</strong></span>
+                      <span>
+                        Developer: <strong className="text-violet-300">
+                          {fullName ? `${fullName} (@${run.executor_username})` : (run.executor_username || 'CLI Agent')}
+                        </strong>
+                      </span>
+                      {run.executor_email && <span className="text-white/30">({run.executor_email})</span>}
                       {run.team_name && <span>Team: <strong className="text-purple-300">{run.team_name}</strong></span>}
                       <span>Logged: {new Date(run.created_at).toLocaleString()}</span>
                     </div>

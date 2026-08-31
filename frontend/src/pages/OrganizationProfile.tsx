@@ -16,7 +16,9 @@ import {
   Layers, 
   FolderGit2,
   RefreshCw,
-  Server
+  Server,
+  BarChart3,
+  ArrowRight
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -326,10 +328,14 @@ export default function OrganizationProfile() {
                                   className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-3"
                                 >
                                   <div>
-                                    <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                                    <Link
+                                      to={`/dashboard/projects/${p.id}`}
+                                      className="text-xs font-bold text-white hover:text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                    >
                                       <Server className="w-3.5 h-3.5 text-violet-400" />
-                                      {p.title}
-                                    </h4>
+                                      <span>{p.title}</span>
+                                      <ArrowRight className="w-3 h-3 text-violet-400 opacity-80" />
+                                    </Link>
                                     <p className="text-[9px] font-mono text-white/40 uppercase mt-0.5">
                                       Arch: {p.architecture} • Status: {p.status}
                                     </p>
@@ -396,11 +402,15 @@ export default function OrganizationProfile() {
                     >
                       <div>
                         <div className="flex items-center justify-between gap-3 mb-2">
-                          <h3 className="text-base font-bold text-white flex items-center gap-2 truncate">
+                          <Link
+                            to={`/dashboard/projects/${prj.id}`}
+                            className="text-base font-bold text-white hover:text-violet-300 transition-colors flex items-center gap-2 truncate cursor-pointer group"
+                          >
                             <Server className="w-4 h-4 text-violet-400" />
-                            {prj.title}
-                          </h3>
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-mono uppercase font-semibold">
+                            <span className="truncate">{prj.title}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-violet-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                          </Link>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-mono uppercase font-semibold shrink-0">
                             {prj.status}
                           </span>
                         </div>
@@ -427,7 +437,7 @@ export default function OrganizationProfile() {
                         )}
                       </div>
 
-                      <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                      <div className="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-1.5 text-xs font-mono text-white/80">
                           <span className="text-white/40 text-[10px]">Key:</span>
                           <span className="bg-black/60 px-2 py-1 rounded-md border border-white/10 text-[10px]">
@@ -444,6 +454,23 @@ export default function OrganizationProfile() {
                               <Copy className="w-3 h-3" />
                             )}
                           </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/dashboard/projects/${prj.id}`}
+                            className="px-3 py-1 rounded-full bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 text-violet-300 hover:text-white text-[10px] font-mono font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            <span>Open Workspace</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                          <Link
+                            to={`/dashboard/projects/${prj.id}/analytics`}
+                            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all cursor-pointer"
+                            title="View Analytics"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
+                          </Link>
                         </div>
                       </div>
                     </motion.div>

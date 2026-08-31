@@ -7,8 +7,6 @@ noir/api/__init__.py
 noir/api/browser.py
 noir/api/client.py
 noir/auth/__init__.py
-noir/auth/auth.py
-noir/auth/jwt.py
 noir/auth/storage.py
 noir/commands/__init__.py
 noir/commands/analyze.py
@@ -16,10 +14,8 @@ noir/commands/config.py
 noir/commands/connect.py
 noir/commands/disconnect.py
 noir/commands/doctor.py
-noir/commands/init.py
 noir/commands/login.py
 noir/commands/logout.py
-noir/commands/project.py
 noir/commands/run.py
 noir/commands/status.py
 noir/commands/sync.py
@@ -35,7 +31,7 @@ noir/lynx_engine/profiler.py
 noir/lynx_engine/scoring_engine.py
 noir/utils/CommandDisplay.py
 noir/utils/__init__.py
-noir/utils/logger.py
+noir/utils/test_detector.py
 noir_agent.egg-info/PKG-INFO
 noir_agent.egg-info/SOURCES.txt
 noir_agent.egg-info/dependency_links.txt

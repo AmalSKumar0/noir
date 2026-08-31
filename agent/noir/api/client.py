@@ -18,6 +18,7 @@ class ApiClient:
         if clean_url.endswith('/api'):
             clean_url = clean_url[:-4]
         self.base_host = clean_url
+        self.base_url = clean_url
         self.client = httpx.Client()
 
     def _url(self, path: str) -> str:

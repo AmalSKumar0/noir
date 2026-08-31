@@ -12,6 +12,7 @@ class ProjectUserSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = ProjectUserSerializer(read_only=True)
+    assigned_teams = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
 
     class Meta:
         model = Project
@@ -26,7 +27,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
-            "connection_code"
+            "connection_code",
+            "assigned_teams",
         ]
 
 class FrameworkSerializer(serializers.ModelSerializer):
@@ -56,6 +58,7 @@ class SingleProjectSerializer(serializers.ModelSerializer):
 
     owner = ProjectUserSerializer(read_only=True)
     profile = ProjectProfileSerializer(read_only=True)
+    assigned_teams = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
 
     class Meta:
         model = Project
@@ -72,6 +75,7 @@ class SingleProjectSerializer(serializers.ModelSerializer):
             "profile",
             "created_at",
             "updated_at",
+            "assigned_teams",
         ]
 
 

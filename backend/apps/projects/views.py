@@ -90,14 +90,16 @@ class TestRunListCreateView(APIView):
         status_filter = request.GET.get("status")
 
         if user.role == User.Role.COMPANY and hasattr(user, "company_profile"):
-            queryset = TestRun.objects.filter(project__owner=user)
+            queryset = TestRun.objects.filter(
+                Q(project__owner=user) | Q(project__owner__company=user.company_profile) | Q(project__assigned_teams__company=user.company_profile)
+            ).distinct().order_by("-created_at")
         elif user.role == User.Role.DEVELOPER and user.company:
             company_owner = user.company.user
             queryset = TestRun.objects.filter(
                 Q(project__owner=company_owner) | Q(project__assigned_teams__members=user) | Q(executor=user)
-            ).distinct()
+            ).distinct().order_by("-created_at")
         else:
-            queryset = TestRun.objects.filter(Q(project__owner=user) | Q(executor=user)).distinct()
+            queryset = TestRun.objects.filter(Q(project__owner=user) | Q(executor=user)).distinct().order_by("-created_at")
 
         if project_id:
             queryset = queryset.filter(project_id=project_id)
