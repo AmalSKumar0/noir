@@ -1,29 +1,38 @@
 import typer
+from rich import print
 from rich.prompt import Prompt
 
 from noir.api.client import ApiClient
-from noir.auth.storage import save_token
-from noir.api.browser import Server
-app = typer.Typer()
+from noir.auth.storage import save_token, has_tokens
+from noir.utils.CommandDisplay import CommandDisplay
+
+app = typer.Typer(help="Authenticate Noir developer session.")
 
 
 @app.callback(invoke_without_command=True)
 def login(ctx: typer.Context):
     if ctx.invoked_subcommand:
         return
+
+    text = CommandDisplay()
+    text.print_banner()
+
+    if has_tokens():
+        print("[yellow]Notice: Already authenticated. Re-authenticating will replace current session.[/yellow]\n")
+
     email = ""
     while '@' not in email or '.' not in email:
-        email = Prompt.ask("Email")
+        email = Prompt.ask("[cyan]Enter Email[/cyan]")
         if '@' not in email or '.' not in email:
-            typer.echo("Invalid email address. Please try again.")
-    
+            print("[red]Invalid email format. Please enter a valid email address.[/red]")
+
     password = ""
     while not password:
-        password = Prompt.ask("Password", password=True)
+        password = Prompt.ask("[cyan]Enter Password[/cyan]", password=True)
         if not password:
-            typer.echo("Password cannot be empty. Please try again.")
-        if len(password) < 6:
-            typer.echo("Password must be at least 6 characters long. Please try again.")
+            print("[red]Password cannot be empty.[/red]")
+        elif len(password) < 6:
+            print("[red]Password must be at least 6 characters.[/red]")
             password = ""
 
     client = ApiClient()
@@ -31,35 +40,7 @@ def login(ctx: typer.Context):
     try:
         tokens = client.login(email, password)
         save_token(tokens)
-        typer.echo("Login successful!")
+        print("\n[bold green]✔ Authenticated successfully! Credentials stored securely.[/bold green]\n")
     except Exception as e:
-        typer.echo("Invalid credentials")
-
-@app.command()
-def github():
-    client = ApiClient()
-    tokens = client.github_login()
-    try:
-        typer.echo("Opening browser for GitHub login...")
-        s = Server()
-        s.start()
-    except Exception as e:
-        typer.echo(f"Error occurred: {e}")
-        return
-    typer.echo("Login successful!")
-
-@app.command()
-def google():
-    client = ApiClient()
-    tokens = client.google_login()
-    try:
-        typer.echo("Opening browser for Google login...")
-        s = Server()
-        s.start()
-    except Exception as e:
-        typer.echo(f"Error occurred: {e}")
-        return
-    typer.echo("Login successful!")
-
-
-    
+        print(f"\n[bold red]✖ Authentication failed: Invalid email or password ({e})[/bold red]\n")
+        raise typer.Exit(1)

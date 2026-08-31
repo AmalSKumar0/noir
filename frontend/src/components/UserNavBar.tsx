@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Folder, Code2, Users, LogOut, Bell, Building2 } from 'lucide-react';
+import { Home, Folder, Code2, Users, LogOut, Bell, Building2, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getUserRole, checkAndRefreshToken } from '../utils/auth';
 import { apiFetch } from '../utils/api';
@@ -54,13 +54,15 @@ export default function UserNavBar() {
     icon: Icon, 
     label, 
     onClick,
-    badge
+    badge,
+    size = 'md'
   }: { 
     to?: string, 
     icon: any, 
     label: string, 
     onClick?: () => void,
-    badge?: number
+    badge?: number,
+    size?: 'md' | 'sm'
   }) => {
     const active = to ? isActive(to) : false;
     
@@ -71,15 +73,16 @@ export default function UserNavBar() {
         onMouseLeave={() => setHoveredLabel(null)}
       >
         <div className={`
-          p-2.5 rounded-full transition-all duration-300 backdrop-blur-md cursor-pointer relative
+          rounded-full transition-all duration-300 backdrop-blur-md cursor-pointer relative flex items-center justify-center
+          ${size === 'sm' ? 'p-1.5' : 'p-2.5'}
           ${active 
             ? 'bg-white text-violet-600 shadow-lg scale-105' 
             : 'bg-transparent text-white/60 hover:bg-white/10 hover:text-white'}
         `}>
-          <Icon className="w-5 h-5" strokeWidth={1.5} />
+          <Icon className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={1.5} />
           
           {badge !== undefined && badge > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 bg-rose-500 text-white text-[9px] font-bold font-mono rounded-full flex items-center justify-center border-2 border-[#0A0718] animate-pulse shadow-lg">
+            <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 bg-rose-500 text-white text-[8px] font-bold font-mono rounded-full flex items-center justify-center border border-[#0A0718] animate-pulse shadow-lg">
               {badge > 99 ? '99+' : badge}
             </span>
           )}
@@ -119,33 +122,37 @@ export default function UserNavBar() {
   return (
     <>
       <div className="fixed left-4 md:left-6 top-0 bottom-0 py-6 flex flex-col justify-between w-14 z-50">
-        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-4 shadow-2xl border border-white/10">
+        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-3.5 shadow-2xl border border-white/10">
           {isCompany ? (
             <>
               <NavButton to="/company/dashboard" icon={Home} label="Overview" />
               <NavButton to="/company/projects" icon={Folder} label="Projects" />
               <NavButton to="/company/developers" icon={Users} label="Add & Manage Devs" />
+              <NavButton to="/company/quickstart" icon={Code2} label="Quick Start Guide" />
+              <NavButton to="/profile" icon={User} label="My Profile" />
             </>
           ) : (
             <>
               <NavButton to="/dashboard" icon={Home} label="Overview" />
               <NavButton to="/dashboard/projects" icon={Folder} label="Projects" />
               <NavButton to="/organization" icon={Building2} label="Organization & Teams" />
-              <NavButton to="/dashboard#quickstart" icon={Code2} label="Quick Start" />
+              <NavButton to="/quickstart" icon={Code2} label="Quick Start Guide" />
+              <NavButton to="/profile" icon={User} label="My Profile" />
             </>
           )}
         </div>
 
-        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-4 shadow-2xl border border-white/10">
-          {/* Notifications Bell */}
+        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-3 gap-2.5 shadow-2xl border border-white/10">
+          {/* Notifications Bell (compact) */}
           <NavButton 
             icon={Bell} 
             label="Notifications & Inbox" 
             onClick={() => setIsInboxOpen(true)}
             badge={unreadCount}
+            size="sm"
           />
-          {/* Logout Button */}
-          <NavButton icon={LogOut} label="Log Out" onClick={handleLogout} />
+          {/* Logout Button (compact) */}
+          <NavButton icon={LogOut} label="Log Out" onClick={handleLogout} size="sm" />
         </div>
       </div>
 

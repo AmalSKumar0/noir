@@ -62,6 +62,7 @@ class ProjectProfile(models.Model):
     runtime_version = models.CharField(max_length=30,blank=True)
     package_manager = models.CharField(max_length=30,blank=True)
     operating_system = models.CharField(max_length=50)
+    analysis_data = models.JSONField(default=dict, blank=True)
 
     detected_at = models.DateTimeField(auto_now=True)
 

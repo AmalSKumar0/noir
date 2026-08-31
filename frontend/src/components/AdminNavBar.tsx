@@ -15,7 +15,7 @@ export default function AdminNavbar() {
     navigate('/logout');
   };
 
-  const NavButton = ({ to, icon: Icon, label, onClick }: { to?: string, icon: any, label: string, onClick?: () => void }) => {
+  const NavButton = ({ to, icon: Icon, label, onClick, size = 'md' }: { to?: string, icon: any, label: string, onClick?: () => void, size?: 'md' | 'sm' }) => {
     const active = to ? isActive(to) : false;
     
     const content = (
@@ -25,12 +25,13 @@ export default function AdminNavbar() {
         onMouseLeave={() => setHoveredLabel(null)}
       >
         <div className={`
-          p-2.5 rounded-full transition-all duration-300 backdrop-blur-md
+          rounded-full transition-all duration-300 backdrop-blur-md flex items-center justify-center
+          ${size === 'sm' ? 'p-1.5' : 'p-2.5'}
           ${active 
             ? 'bg-white text-violet-600 shadow-lg' 
             : 'bg-transparent text-white/60 hover:bg-white/10 hover:text-white'}
         `}>
-          <Icon className="w-5 h-5" strokeWidth={1.5} />
+          <Icon className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={1.5} />
         </div>
         
         <AnimatePresence>
@@ -71,13 +72,10 @@ export default function AdminNavbar() {
         <NavButton to="/admin/users" icon={Users} label="Manage Users" />
         <NavButton to="/admin/companies" icon={Building2} label="Manage Companies" />
         <NavButton to="/admin/projects" icon={Wallet} label="Manage Projects" />
-
-        {/* <NavButton to="#" icon={Hexagon} label="Integrations" /> */}
       </div>
 
-      <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-4 shadow-2xl border border-white/10">
-        {/* <NavButton to="#" icon={HelpCircle} label="Help & Support" /> */}
-        <NavButton icon={LogOut} label="Log Out" onClick={handleLogout} />
+      <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-3 gap-2.5 shadow-2xl border border-white/10">
+        <NavButton icon={LogOut} label="Log Out" onClick={handleLogout} size="sm" />
       </div>
     </div>
   );

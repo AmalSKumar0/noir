@@ -439,6 +439,79 @@ def whoami(request):
     })
 
 
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        company_data = None
+        if hasattr(user, "company_profile"):
+            from .serializers import CompanyProfileSerializer
+            company_data = CompanyProfileSerializer(user.company_profile).data
+        
+        dev_company_data = None
+        if user.company:
+            from .serializers import CompanyProfileSerializer
+            dev_company_data = CompanyProfileSerializer(user.company).data
+
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": "admin" if user.is_superuser else user.role,
+            "date_joined": user.date_joined,
+            "company_profile": company_data,
+            "company": dev_company_data,
+            "social_accounts": [s.provider for s in user.social_accounts.all()]
+        })
+
+    def patch(self, request):
+        user = request.user
+        data = request.data
+
+        if "first_name" in data:
+            user.first_name = data["first_name"].strip()
+        if "last_name" in data:
+            user.last_name = data["last_name"].strip()
+        if "username" in data and data["username"].strip():
+            new_username = data["username"].strip()
+            if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+                return Response({"detail": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+            user.username = new_username
+        if "email" in data and data["email"].strip():
+            new_email = data["email"].strip()
+            if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                return Response({"detail": "Email is already registered by another account."}, status=status.HTTP_400_BAD_REQUEST)
+            user.email = new_email
+
+        old_password = data.get("current_password")
+        new_password = data.get("new_password")
+        if new_password:
+            if not old_password or not user.check_password(old_password):
+                return Response({"detail": "Current password provided is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+
+        user.save()
+
+        if hasattr(user, "company_profile") and "company_profile" in data:
+            from .serializers import CompanyProfileSerializer
+            cp_data = data["company_profile"]
+            cp = user.company_profile
+            cp_serializer = CompanyProfileSerializer(cp, data=cp_data, partial=True)
+            if cp_serializer.is_valid():
+                cp_serializer.save()
+
+        return self.get(request)
+
+    def delete(self, request):
+        user = request.user
+        user.is_active = False
+        user.save()
+        return Response({"message": "Account deactivated successfully."}, status=status.HTTP_200_OK)
+
+
 from django.db.models import Q
 from .models import CompanyDeveloperRequest, Notification, DeveloperTeam
 from .serializers import DeveloperUserSerializer, CompanyDeveloperRequestSerializer, NotificationSerializer, DeveloperTeamSerializer, CompanyProfileSerializer
@@ -803,6 +876,7 @@ class NotificationDeleteView(APIView):
 
 class NotificationUnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = []
 
     def get(self, request):
         user = request.user

@@ -16,7 +16,10 @@ import Contact from './pages/Contact';
 import Dashboard from './pages/Dashboard';
 import UserProjects from './pages/UserProjects';
 import ProjectDetail from './pages/ProjectDetail';
+import ProjectAnalyticsPage from './pages/ProjectAnalyticsPage';
 import OrganizationProfile from './pages/OrganizationProfile';
+import UserProfile from './pages/UserProfile';
+import QuickstartPage from './pages/QuickstartPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManageProjects from './pages/AdminManageProjects';
 import AdminManageUsers from './pages/AdminManageUsers';
@@ -159,6 +162,21 @@ function AnimatedRoutes() {
           } 
         />
         <Route 
+          path="/company/projects/:projectId/analytics" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ProjectAnalyticsPage isCompanyView />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/company/developers" 
           element={
             <ProtectedRoute companyOnly>
@@ -290,6 +308,68 @@ function AnimatedRoutes() {
           } 
         />
         <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <UserProfile />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/company/profile" element={<Navigate to="/profile" replace />} />
+        <Route path="/dashboard/profile" element={<Navigate to="/profile" replace />} />
+        <Route 
+          path="/quickstart" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <QuickstartPage />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/quickstart" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <QuickstartPage />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/quickstart" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <QuickstartPage isCompanyView />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/dashboard/projects/:projectId" 
           element={
             <ProtectedRoute>
@@ -300,6 +380,21 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <ProjectDetail />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/analytics" 
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ProjectAnalyticsPage />
               </motion.div>
             </ProtectedRoute>
           } 

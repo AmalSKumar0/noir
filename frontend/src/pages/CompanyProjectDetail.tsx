@@ -21,10 +21,14 @@ import {
   FlaskConical,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Info
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
+import LiveStreamTerminal from '../components/LiveStreamTerminal';
+import TestHistoryAnalytics from '../components/TestHistoryAnalytics';
 import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
@@ -93,6 +97,7 @@ export default function CompanyProjectDetail() {
   const [project, setProject] = useState<ProjectDetailData | null>(null);
   const [testRuns, setTestRuns] = useState<TestRunItem[]>([]);
   const [isCopied, setIsCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'specs'>('monitoring');
   const [error, setError] = useState<string | null>(null);
 
   const fetchProjectDetails = async () => {
@@ -249,213 +254,273 @@ export default function CompanyProjectDetail() {
               </div>
             </div>
 
-            {/* Main Layout Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Left & Middle Column: Stack Profiler & Guide */}
-              <div className="lg:col-span-2 space-y-6">
-                
-                {/* Auto Detected System Profile Card */}
-                <div className="relative overflow-hidden bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg">
-                  {/* Neon radial light */}
-                  <div className="absolute -top-12 -right-12 w-48 h-48 bg-violet-500/10 blur-3xl rounded-full pointer-events-none" />
+            {/* Sub-Page Navigation Tabs */}
+            <div className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-4 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('monitoring')}
+                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'monitoring'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                }`}
+              >
+                <Activity className="w-4 h-4 text-emerald-400" />
+                Live Telemetry Monitoring
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('specs')}
+                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'specs'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                }`}
+              >
+                <Cpu className="w-4 h-4 text-violet-400" />
+                System Stack & Specs
+              </button>
+
+              <Link
+                to={`/company/projects/${projectId}/analytics`}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <BarChart3 className="w-4 h-4 text-violet-400" />
+                Test Analytics & Failure Logs
+                <span className="bg-violet-500/20 text-violet-300 text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 font-bold">
+                  {testRuns.length}
+                </span>
+              </Link>
+            </div>
+
+            {/* DEFAULT TAB: LIVE MONITORING */}
+            {activeTab === 'monitoring' && (
+              <div className="space-y-8">
+                {/* Real-time Telemetry & Container Stream Terminal */}
+                <LiveStreamTerminal connectionCode={project.connection_code} />
+
+                {/* Bottom Section: Minor Details of Project */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
                   
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <Cpu className="w-5 h-5 text-violet-400" />
-                      Company Runtime Stack
-                    </h2>
-                    {project.profile && (
-                      <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                        SYNCED
-                      </span>
+                  {/* Card 1: Connection & Agent Quick Run */}
+                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
+                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
+                      <Terminal className="w-4 h-4" />
+                      Company Agent Link
+                    </h3>
+                    <div className="bg-black/60 border border-white/5 rounded-xl p-3 font-mono text-[11px] text-stone-300 space-y-1">
+                      <div className="text-white/40"># Run container & stream telemetry</div>
+                      <div className="text-emerald-400 font-bold">$ noir run</div>
+                      <div className="text-white/40 pt-1"># Connect workspace</div>
+                      <div className="text-violet-300">$ noir connect {project.connection_code}</div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Company Scanned Stack */}
+                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
+                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
+                      <Cpu className="w-4 h-4" />
+                      Runtime Environment
+                    </h3>
+                    {project.profile ? (
+                      <div className="space-y-2 font-mono text-xs">
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
+                          <span className="text-white/40">Language</span>
+                          <span className="text-white font-semibold">{project.profile.framework?.language || 'Python / Node'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
+                          <span className="text-white/40">Framework</span>
+                          <span className="text-white font-semibold">{project.profile.framework?.name || 'Custom'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-white/40">Package Mgr</span>
+                          <span className="text-violet-300 uppercase">{project.profile.package_manager || 'pip/npm'}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-mono text-white/40 py-2">No runtime scanned yet. Run <code className="text-violet-300">noir connect</code>.</p>
                     )}
                   </div>
 
-                  {project.profile ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Language</p>
-                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-violet-400" />
-                          <span className="text-sm font-semibold">{project.profile.framework?.language || 'Unknown'}</span>
-                        </div>
+                  {/* Card 3: Project Specifications */}
+                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
+                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Project Specifications
+                    </h3>
+                    <div className="space-y-2 font-mono text-xs">
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span className="text-white/40">Architecture</span>
+                        <span className="text-white font-semibold uppercase">{project.architecture}</span>
                       </div>
-
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Framework</p>
-                        <div className="flex items-center gap-2">
-                          <Globe className="w-4 h-4 text-violet-400" />
-                          <span className="text-sm font-semibold">{project.profile.framework?.name || 'Vanilla'}</span>
-                        </div>
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span className="text-white/40">Analysis Mode</span>
+                        <span className="text-white font-semibold uppercase">{project.analysis_mode}</span>
                       </div>
-
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Runtime Version</p>
-                        <div className="flex items-center gap-2">
-                          <Cpu className="w-4 h-4 text-violet-400" />
-                          <span className="text-sm font-mono font-semibold">{project.profile.runtime_version}</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Package Manager</p>
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-violet-400" />
-                          <span className="text-sm font-semibold uppercase font-mono">{project.profile.package_manager}</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Operating System</p>
-                        <div className="flex items-center gap-2">
-                          <Laptop className="w-4 h-4 text-violet-400" />
-                          <span className="text-sm font-semibold">{project.profile.operating_system}</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all col-span-2 sm:col-span-1">
-                        <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Profile Scanned</p>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-violet-400" />
-                          <span className="text-xs font-mono">{new Date(project.profile.detected_at).toLocaleDateString()}</span>
-                        </div>
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-white/40">Created</span>
+                        <span className="text-white/70">{new Date(project.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="py-8 flex flex-col items-center justify-center text-center bg-black/20 border border-white/5 rounded-2xl p-6">
-                      <Sparkles className="w-8 h-8 text-white/20 mb-3 animate-pulse" />
-                      <h4 className="text-sm font-semibold text-white/80">No runtime profile detected</h4>
-                      <p className="text-xs text-white/40 mt-1 max-w-[340px]">
-                        Deploy company CLI daemon to stream telemetry profiles into this workspace node.
-                      </p>
-                    </div>
-                  )}
+                  </div>
+
                 </div>
+              </div>
+            )}
 
-                {/* Technical Integration CLI Card */}
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Terminal className="w-5 h-5 text-violet-400" />
-                    Company Telemetry Stream Registration
-                  </h2>
-                  <p className="text-xs text-white/50 leading-relaxed font-light">
-                    Run the central agent in your company cluster or deployment pipeline:
-                  </p>
+            {/* OPTIONAL TAB 2: SYSTEM STACK & SPECS */}
+            {activeTab === 'specs' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left & Middle Column: Stack Profiler & Guide */}
+                <div className="lg:col-span-2 space-y-6">
                   
-                  <div className="bg-black/60 border border-white/5 rounded-xl p-4 font-mono text-xs text-violet-300 space-y-2 overflow-x-auto">
-                    <div># 1. Install Noir Agent</div>
-                    <div className="text-stone-300">$ npm install -g @noir/agent</div>
-                    
-                    <div className="pt-2"># 2. Connect project to company telemetry endpoint</div>
-                    <div className="text-stone-300">$ noir-agent connect --code={project.connection_code} --company</div>
-                  </div>
-                </div>
-
-                {/* Test Execution Telemetry Card */}
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <FlaskConical className="w-5 h-5 text-emerald-400" />
-                      Project Test Execution History
-                    </h2>
-                    <span className="text-xs font-mono text-white/40">
-                      {testRuns.length} runs recorded
-                    </span>
-                  </div>
-
-                  {testRuns.length === 0 ? (
-                    <div className="py-6 text-center bg-black/20 border border-white/5 rounded-2xl p-4">
-                      <FlaskConical className="w-6 h-6 text-white/20 mx-auto mb-2" />
-                      <p className="text-xs text-white/50 font-mono">No test executions logged for this workload yet.</p>
+                  {/* Auto Detected System Profile Card */}
+                  <div className="relative overflow-hidden bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Cpu className="w-5 h-5 text-violet-400" />
+                        Company Runtime Stack
+                      </h2>
+                      {project.profile && (
+                        <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                          SYNCED
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {testRuns.map((tr) => (
-                        <div
-                          key={tr.id}
-                          className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 font-mono text-xs"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                tr.status === 'passed'
-                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                  : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                              }`}>
-                                {tr.status}
-                              </span>
-                              <span className="font-bold text-white text-xs">{tr.suite_name}</span>
-                            </div>
-                            <p className="text-[10px] text-white/40 mt-1">
-                              Executor: <span className="text-white/80">{tr.executor_username}</span> • Team: <span className="text-purple-300">{tr.team_name || 'Individual'}</span>
-                            </p>
-                          </div>
 
-                          <div className="text-left sm:text-right">
-                            <p className="text-emerald-400 font-bold text-xs">
-                              {tr.passed_tests}/{tr.total_tests} passed <span className="text-white/40 font-normal">({(tr.duration_ms/1000).toFixed(2)}s)</span>
-                            </p>
-                            <p className="text-[9px] text-white/30 mt-0.5">
-                              {new Date(tr.created_at).toLocaleString()}
-                            </p>
+                    {project.profile ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Language</p>
+                          <div className="flex items-center gap-2">
+                            <Code className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-semibold">{project.profile.framework?.language || 'Unknown'}</span>
                           </div>
                         </div>
-                      ))}
+
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Framework</p>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-semibold">{project.profile.framework?.name || 'Vanilla'}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Runtime Version</p>
+                          <div className="flex items-center gap-2">
+                            <Cpu className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-mono font-semibold">{project.profile.runtime_version}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Package Manager</p>
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-semibold uppercase font-mono">{project.profile.package_manager}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Operating System</p>
+                          <div className="flex items-center gap-2">
+                            <Laptop className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-semibold">{project.profile.operating_system}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all col-span-2 sm:col-span-1">
+                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Profile Scanned</p>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-violet-400" />
+                            <span className="text-xs font-mono">{new Date(project.profile.detected_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-8 flex flex-col items-center justify-center text-center bg-black/20 border border-white/5 rounded-2xl p-6">
+                        <Sparkles className="w-8 h-8 text-white/20 mb-3 animate-pulse" />
+                        <h4 className="text-sm font-semibold text-white/80">No runtime profile detected</h4>
+                        <p className="text-xs text-white/40 mt-1 max-w-[340px]">
+                          Deploy company CLI daemon to stream telemetry profiles into this workspace node.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Technical Integration CLI Card */}
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Terminal className="w-5 h-5 text-violet-400" />
+                      Company Telemetry Stream Registration
+                    </h2>
+                    <p className="text-xs text-white/50 leading-relaxed font-light">
+                      Run the central agent in your company cluster or deployment pipeline:
+                    </p>
+                    
+                    <div className="bg-black/60 border border-white/5 rounded-xl p-4 font-mono text-xs text-violet-300 space-y-2 overflow-x-auto">
+                      <div># 1. Install Noir Agent</div>
+                      <div className="text-stone-300">$ npm install -g @noir/agent</div>
+                      
+                      <div className="pt-2"># 2. Connect project to company telemetry endpoint</div>
+                      <div className="text-stone-300">$ noir-agent connect --code={project.connection_code} --company</div>
                     </div>
-                  )}
+                  </div>
                 </div>
+
+                {/* Right Column: Spec Sidebar */}
+                <div className="space-y-6">
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-6">
+                    <h3 className="text-base font-bold flex items-center gap-2 border-b border-white/5 pb-4">
+                      <Settings className="w-4 h-4 text-violet-400" />
+                      Specifications
+                    </h3>
+
+                    <div className="space-y-4 font-mono text-xs">
+                      <div>
+                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Deployment Type</span>
+                        <span className="text-white font-semibold uppercase">{project.architecture}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Visibility Mode</span>
+                        <span className="text-white font-semibold uppercase">{project.visibility}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Analysis Routine</span>
+                        <span className="text-white font-semibold uppercase">{project.analysis_mode}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Workspace Owner</span>
+                        <span className="text-white font-semibold">{project.owner?.username || 'Unknown'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-4 font-mono text-xs">
+                    <div className="flex items-center gap-2.5 text-white/50">
+                      <Calendar className="w-4 h-4 text-violet-400" />
+                      <div>
+                        <span className="block text-[8px] uppercase text-white/30 tracking-wider">Created</span>
+                        <span>{new Date(project.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-white/50 border-t border-white/5 pt-3">
+                      <Clock className="w-4 h-4 text-violet-400" />
+                      <div>
+                        <span className="block text-[8px] uppercase text-white/30 tracking-wider">Last Sync</span>
+                        <span>{new Date(project.updated_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-
-
-              {/* Right Column: Spec Sidebar */}
-              <div className="space-y-6">
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-6">
-                  <h3 className="text-base font-bold flex items-center gap-2 border-b border-white/5 pb-4">
-                    <Building2 className="w-4 h-4 text-violet-400" />
-                    Specifications
-                  </h3>
-
-                  <div className="space-y-4 font-mono text-xs">
-                    <div>
-                      <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Architecture</span>
-                      <span className="text-white font-semibold uppercase">{project.architecture}</span>
-                    </div>
-                    <div>
-                      <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Visibility Mode</span>
-                      <span className="text-white font-semibold uppercase">{project.visibility}</span>
-                    </div>
-                    <div>
-                      <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Analysis Routine</span>
-                      <span className="text-white font-semibold uppercase">{project.analysis_mode}</span>
-                    </div>
-                    <div>
-                      <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Organization Owner</span>
-                      <span className="text-white font-semibold">{project.owner?.username || 'Company Owner'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-4 font-mono text-xs">
-                  <div className="flex items-center gap-2.5 text-white/50">
-                    <Calendar className="w-4 h-4 text-violet-400" />
-                    <div>
-                      <span className="block text-[8px] uppercase text-white/30 tracking-wider">Created</span>
-                      <span>{new Date(project.created_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-white/50 border-t border-white/5 pt-3">
-                    <Clock className="w-4 h-4 text-violet-400" />
-                    <div>
-                      <span className="block text-[8px] uppercase text-white/30 tracking-wider">Last Sync</span>
-                      <span>{new Date(project.updated_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
+            )}
           </motion.div>
         )}
       </div>

@@ -60,11 +60,11 @@ REST_FRAMEWORK = {
     ],
 
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "30/min",
-        "user": "30/min",
-        "login": "3/min",
-        "register": "3/min",
-        "user_delete": "5/min",
+        "anon": "300/min",
+        "user": "1200/min",
+        "login": "10/min",
+        "register": "10/min",
+        "user_delete": "20/min",
     }
 }
 

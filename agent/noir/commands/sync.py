@@ -77,12 +77,13 @@ def sync(
         table.add_column("Property", style="bold cyan")
         table.add_column("Synced Value", style="white")
 
-        table.add_row("Framework", profile_data.get("framework_name"))
-        table.add_row("Primary Language", profile_data.get("language"))
-        table.add_row("Runtime Version", profile_data.get("runtime_version"))
-        table.add_row("Package Manager", profile_data.get("package_manager"))
-        table.add_row("Operating System", profile_data.get("operating_system"))
+        table.add_row("Framework", profile_data.get("framework_name", "Generic"))
+        table.add_row("Primary Language", profile_data.get("language", "Python"))
+        table.add_row("Runtime Version", profile_data.get("runtime_version", "Unknown"))
+        table.add_row("Package Manager", profile_data.get("package_manager", "npm"))
+        table.add_row("Operating System", profile_data.get("operating_system", "Linux"))
 
+        print()
         print(table)
         print("\n[bold green]✔ Project profile successfully synced to Noir backend![/bold green]\n")
 

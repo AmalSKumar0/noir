@@ -38,7 +38,7 @@ import {
   Edit3,
   Server
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -116,6 +116,7 @@ interface CompanyProjectSimple {
 
 export default function CompanyDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Projects & Search State
   const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
@@ -168,6 +169,12 @@ export default function CompanyDashboard() {
   // Create Project Modal & Quickstart
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isQuickstartOpen, setIsQuickstartOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.hash === '#quickstart') {
+      setIsQuickstartOpen(true);
+    }
+  }, [location.hash]);
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectArch, setNewProjectArch] = useState('monolith');
@@ -668,7 +675,7 @@ export default function CompanyDashboard() {
                 <span>+ Create Team</span>
               </button>
               <button
-                onClick={() => setIsQuickstartOpen(true)}
+                onClick={() => navigate('/company/quickstart')}
                 className="px-3.5 py-1.5 rounded-full bg-stone-700/40 hover:bg-stone-700/60 border border-white/10 text-stone-200 text-[10px] font-mono uppercase tracking-wider transition-all flex items-center gap-1.5 font-bold cursor-pointer"
               >
                 <Terminal className="w-3.5 h-3.5 text-stone-300" />
@@ -1164,7 +1171,7 @@ export default function CompanyDashboard() {
             </span>
 
             <button
-              onClick={() => setIsQuickstartOpen(true)}
+              onClick={() => navigate('/company/quickstart')}
               className="px-3 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-full text-[9px] font-mono font-bold uppercase transition-all flex items-center gap-1 cursor-pointer shadow"
             >
               <Terminal className="w-3 h-3" />
@@ -1219,7 +1226,7 @@ export default function CompanyDashboard() {
           <div className="relative z-10 mt-auto pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-white/40 font-mono">
             <span>Daemon Status: Active</span>
             <button
-              onClick={() => setIsQuickstartOpen(true)}
+              onClick={() => navigate('/company/quickstart')}
               className="text-violet-400 hover:underline cursor-pointer"
             >
               Full Guide &rarr;
@@ -1338,85 +1345,7 @@ export default function CompanyDashboard() {
         </form>
       </Modal>
 
-      {/* MODAL 2: Quickstart Setup Guide */}
-      <Modal
-        isOpen={isQuickstartOpen}
-        onClose={() => setIsQuickstartOpen(false)}
-        title="Company Telemetry Deployment Guide"
-      >
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-violet-400">
-            <Terminal className="w-4 h-4" />
-            <span className="text-xs uppercase font-mono tracking-wider font-bold">Noir CLI Enterprise Setup</span>
-          </div>
 
-          <p className="text-xs text-stone-400 leading-relaxed font-light">
-            Deploy the autonomous reliability agent locally or on CI/CD pipelines to stream company telemetry metrics instantly.
-          </p>
-
-          <div className="space-y-4">
-            {/* Step 1 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">01</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Install via NPM</span>
-              </div>
-              <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-300 overflow-x-auto">
-                <code>npm install -g noir-agent</code>
-              </pre>
-            </div>
-
-            {/* Step 2 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">02</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Company API Key Configuration</span>
-              </div>
-              <div className="relative group">
-                <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-400 overflow-x-auto pr-16 select-all">
-                  <code>NOIR_COMPANY_TOKEN={companyProfile?.tax_id || 'nr_live_company_8f93a102b54c8e71...'}</code>
-                </pre>
-                <button
-                  type="button"
-                  onClick={copyApiKey}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 border border-white/5 text-stone-400 hover:text-white transition-all cursor-pointer"
-                  title="Copy API key"
-                >
-                  {isCopiedKey ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">03</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Start Daemon</span>
-              </div>
-              <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-300 overflow-x-auto">
-                <code>noir-agent start --company</code>
-              </pre>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={copyCommand}
-              className="flex-1 py-3 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-violet-600/20"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Commands Copied!' : 'Copy NPM Commands'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsQuickstartOpen(false)}
-              className="px-6 py-3 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* MODAL 3: Send Developer Invite */}
       <Modal

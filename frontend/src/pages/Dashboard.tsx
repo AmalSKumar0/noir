@@ -19,7 +19,7 @@ import {
   UserCheck,
   X
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -92,6 +92,7 @@ export { formatLastUpdated };
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => projects[0]?.id || '');
@@ -102,6 +103,12 @@ export default function Dashboard() {
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isQuickstartOpen, setIsQuickstartOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.hash === '#quickstart') {
+      setIsQuickstartOpen(true);
+    }
+  }, [location.hash]);
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectArch, setNewProjectArch] = useState('monolith');
@@ -699,7 +706,7 @@ export default function Dashboard() {
           </div>
 
           <button
-            onClick={() => setIsQuickstartOpen(true)}
+            onClick={() => navigate('/quickstart')}
             className="mt-8 flex items-center gap-2 text-sm font-bold w-fit group text-white bg-transparent border-none cursor-pointer focus:outline-none"
           >
             Quickstart Guide
@@ -820,101 +827,6 @@ export default function Dashboard() {
             </button>
           </div>
         </form>
-      </Modal>
-
-      {/* MODAL 2: Quickstart Setup Guide */}
-      <Modal
-        isOpen={isQuickstartOpen}
-        onClose={() => setIsQuickstartOpen(false)}
-        title="Agent Deployment Guide"
-      >
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-violet-400">
-            <Terminal className="w-4 h-4" />
-            <span className="text-xs uppercase font-mono tracking-wider font-bold">Noir CLI Agent Setup</span>
-          </div>
-
-          <p className="text-xs text-stone-400 leading-relaxed font-light">
-            Deploy the autonomous reliability agent locally or on build pipelines to start streaming system metrics instantly.
-          </p>
-
-          <div className="space-y-4">
-            {/* Step 1 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">01</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Install via NPM</span>
-              </div>
-              <div className="relative group">
-                <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-300 overflow-x-auto">
-                  <code>npm install -g noir-agent</code>
-                </pre>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">02</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Authenticate Cluster</span>
-              </div>
-              <div className="relative">
-                <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-300 overflow-x-auto">
-                  <code>noir-agent auth</code>
-                </pre>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">03</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Project API Key Configuration</span>
-              </div>
-              <div className="relative group">
-                <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-400 overflow-x-auto pr-16 select-all">
-                  <code>NOIR_API_KEY=nr_live_83ba9a102bc0f...</code>
-                </pre>
-                <button
-                  type="button"
-                  onClick={copyApiKey}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 border border-white/5 text-stone-400 hover:text-white transition-all cursor-pointer"
-                  title="Copy API key"
-                >
-                  {isCopiedKey ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center text-[10px] font-bold font-mono">04</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-200">Start Daemon</span>
-              </div>
-              <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-[11px] font-mono text-stone-300 overflow-x-auto">
-                <code>noir-agent start</code>
-              </pre>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={copyCommand}
-              className="flex-1 py-3 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-violet-600/20"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'CLI Commands Copied!' : 'Copy NPM Commands'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsQuickstartOpen(false)}
-              className="px-6 py-3 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-        </div>
       </Modal>
 
     </UserLayout>

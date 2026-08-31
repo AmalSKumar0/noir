@@ -226,6 +226,8 @@ class ProjectProfileUpdateAPIView(APIView):
             framework.language = language
             framework.save()
 
+        analysis_data = request.data.get("analysis_data") or request.data.get("summary") or {}
+
         profile, _ = ProjectProfile.objects.update_or_create(
             project=project,
             defaults={
@@ -233,6 +235,7 @@ class ProjectProfileUpdateAPIView(APIView):
                 "runtime_version": runtime_version,
                 "package_manager": package_manager,
                 "operating_system": operating_system,
+                "analysis_data": analysis_data,
             }
         )
 
@@ -244,11 +247,13 @@ class ProjectProfileUpdateAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+from django.core.cache import cache
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 class StreamProjectLogsAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = []
 
     def post(self, request, identifier):
         if identifier.isdigit():
@@ -259,6 +264,14 @@ class StreamProjectLogsAPIView(APIView):
         log_line = request.data.get("log", "")
         stream_type = request.data.get("stream", "stdout")
         timestamp = request.data.get("timestamp")
+        event = request.data.get("event")
+
+        # Mark project stream as active in cache for 35 seconds
+        cache_key = f"core_active_stream_{project.connection_code}"
+        if event in ["run_end", "analysis_end"]:
+            cache.delete(cache_key)
+        else:
+            cache.set(cache_key, True, timeout=35)
 
         channel_layer = get_channel_layer()
         if channel_layer:
@@ -271,8 +284,28 @@ class StreamProjectLogsAPIView(APIView):
                         "log": log_line,
                         "stream": stream_type,
                         "timestamp": timestamp,
+                        "event": event,
                     }
                 }
             )
 
         return Response({"status": "broadcasted", "project_code": project.connection_code}, status=status.HTTP_200_OK)
+
+
+class ProjectStreamStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = []
+
+    def get(self, request, identifier):
+        if identifier.isdigit():
+            project = get_object_or_404(Project, pk=identifier)
+        else:
+            project = get_object_or_404(Project, connection_code=identifier)
+
+        cache_key = f"core_active_stream_{project.connection_code}"
+        is_active = bool(cache.get(cache_key))
+
+        return Response({
+            "is_active": is_active,
+            "project_code": project.connection_code
+        }, status=status.HTTP_200_OK)

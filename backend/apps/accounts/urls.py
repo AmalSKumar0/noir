@@ -19,6 +19,7 @@ urlpatterns = [
     path('google/login/callback/', google_callback, name='google_callback'),
     path('common-auth/callback/', social_auth, name='common_social_auth'),
     path('me/', whoami, name="whoami"),
+    path('profile/', UserProfileView.as_view(), name='user_profile'),
 
     # Company & Developer Management
     path('company/available-developers/', CompanyAvailableDevelopersView.as_view(), name='company_available_developers'),

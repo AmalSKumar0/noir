@@ -7,9 +7,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidthClass?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, maxWidthClass = 'max-w-lg' }: ModalProps) {
   // Prevent click inside modal content from closing it
   const handleContentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,7 +36,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: 'spring', duration: 0.4 }}
             onClick={handleContentClick}
-            className="relative w-full max-w-lg overflow-hidden rounded-[2rem] bg-stone-950/90 border border-white/10 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl z-10"
+            className={`relative w-full ${maxWidthClass} overflow-hidden rounded-[2rem] bg-stone-950/90 border border-white/10 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl z-10 my-8`}
           >
             {/* Top Glow Decor */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent" />
