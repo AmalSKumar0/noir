@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from apps.users.permissions import IsAdmin
 from apps.accounts.models import User, DeveloperTeam, CompanyProfile
-from .models import Project, TestRun
+from .models import Project, TestRun, ProjectProfile, Framework
 from .serializers import ProjectSerializer, SingleProjectSerializer, TestRunSerializer
 from core.pagination import DefaultPagination
 from apps.users.throttles import UserListThrottle, UserDeleteThrottle
@@ -118,8 +118,11 @@ class TestRunListCreateView(APIView):
             return Response({"detail": "Project ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
+            if str(project_id).isdigit():
+                project = Project.objects.get(id=int(project_id))
+            else:
+                project = Project.objects.get(connection_code=project_id)
+        except (Project.DoesNotExist, ValueError):
             return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Detect team
@@ -176,3 +179,100 @@ class TestRunDetailView(APIView):
             return Response({"message": "Test run deleted successfully."})
         except TestRun.DoesNotExist:
             return Response({"detail": "Test run not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ProjectProfileUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier):
+        user = request.user
+
+        project = None
+        if str(identifier).isdigit():
+            project = Project.objects.filter(id=int(identifier)).first()
+        if not project:
+            project = Project.objects.filter(connection_code=identifier).first()
+
+        if not project:
+            return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == User.Role.COMPANY:
+            if project.owner != user and getattr(user, 'company_profile', None) != project.owner.company:
+                pass
+        elif user.role == User.Role.DEVELOPER and user.company:
+            company_owner = user.company.user
+            if project.owner != user and project.owner != company_owner and not project.assigned_teams.filter(members=user).exists():
+                return Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+        elif project.owner != user:
+            return Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+        framework_name = request.data.get("framework_name") or request.data.get("framework") or "Generic"
+        language = request.data.get("language") or "Python"
+        runtime_version = request.data.get("runtime_version") or "Unknown"
+        package_manager = request.data.get("package_manager") or "npm"
+        operating_system = request.data.get("operating_system") or "Linux"
+
+        default_test = "pytest" if "python" in language.lower() else "npm test"
+        framework, _ = Framework.objects.get_or_create(
+            name=framework_name,
+            defaults={
+                "language": language,
+                "default_test_command": default_test,
+                "detection_file": "Lynx Auto-Detector",
+                "supported": True
+            }
+        )
+        if framework.language != language:
+            framework.language = language
+            framework.save()
+
+        profile, _ = ProjectProfile.objects.update_or_create(
+            project=project,
+            defaults={
+                "framework": framework,
+                "runtime_version": runtime_version,
+                "package_manager": package_manager,
+                "operating_system": operating_system,
+            }
+        )
+
+        return Response({
+            "message": "Project profile updated successfully",
+            "project_id": project.id,
+            "connection_code": project.connection_code,
+            "profile": SingleProjectSerializer(project).data.get("profile")
+        }, status=status.HTTP_200_OK)
+
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+class StreamProjectLogsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier):
+        if identifier.isdigit():
+            project = get_object_or_404(Project, pk=identifier)
+        else:
+            project = get_object_or_404(Project, connection_code=identifier)
+
+        log_line = request.data.get("log", "")
+        stream_type = request.data.get("stream", "stdout")
+        timestamp = request.data.get("timestamp")
+
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"project_{project.connection_code}",
+                {
+                    "type": "log_message",
+                    "data": {
+                        "project_code": project.connection_code,
+                        "log": log_line,
+                        "stream": stream_type,
+                        "timestamp": timestamp,
+                    }
+                }
+            )
+
+        return Response({"status": "broadcasted", "project_code": project.connection_code}, status=status.HTTP_200_OK)

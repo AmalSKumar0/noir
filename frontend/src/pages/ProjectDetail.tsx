@@ -58,6 +58,120 @@ interface ProjectDetailData {
   updated_at: string;
 }
 
+function LiveStreamTerminal({ connectionCode }: { connectionCode: string }) {
+  const [logs, setLogs] = useState<Array<{ log: string; timestamp?: string; stream?: string }>>([]);
+  const [isWsConnected, setIsWsConnected] = useState(false);
+  const terminalRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!connectionCode) return;
+
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    let host = apiBase.replace(/^https?:\/\//, '');
+    if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
+    const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${host}/ws/project/${connectionCode}/logs/`;
+
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setIsWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.log) {
+            setLogs((prev) => [...prev.slice(-300), {
+              log: data.log,
+              timestamp: data.timestamp || new Date().toLocaleTimeString(),
+              stream: data.stream || 'stdout'
+            }]);
+          }
+        } catch (err) {
+          console.error('WS parse error:', err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn('WS Connection error:', err);
+        setIsWsConnected(false);
+      };
+
+      ws.onclose = () => {
+        setIsWsConnected(false);
+      };
+    } catch (e) {
+      console.warn('WS Init error:', e);
+    }
+
+    return () => {
+      if (ws) ws.close();
+    };
+  }, [connectionCode]);
+
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Terminal className="w-5 h-5 text-violet-400" />
+          Real-Time Telemetry & Live Container Output
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className={`flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1 rounded-full border ${
+            isWsConnected 
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isWsConnected ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
+            {isWsConnected ? 'WEBSOCKET LIVE' : 'WAITING FOR NOIR RUN'}
+          </span>
+          {logs.length > 0 && (
+            <button
+              onClick={() => setLogs([])}
+              className="text-[10px] font-mono text-white/40 hover:text-white px-2 py-1 bg-white/5 rounded-lg border border-white/5 transition-all"
+            >
+              Clear Logs
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div 
+        ref={terminalRef}
+        className="bg-black/80 border border-white/10 rounded-2xl p-4 font-mono text-xs text-stone-300 h-64 overflow-y-auto space-y-1 shadow-inner scrollbar-thin scrollbar-thumb-white/10"
+      >
+        {logs.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center text-white/30 space-y-2">
+            <Activity className="w-8 h-8 text-violet-400/30 animate-pulse" />
+            <p>No container execution stream active.</p>
+            <p className="text-[10px] font-mono text-white/20">Execute <span className="text-violet-300">$ noir run</span> in your workspace to stream live telemetry.</p>
+          </div>
+        ) : (
+          logs.map((item, idx) => (
+            <div key={idx} className="flex items-start gap-2 hover:bg-white/5 p-0.5 rounded transition-colors">
+              <span className="text-violet-400/60 text-[10px] select-none min-w-[55px] font-mono">
+                {item.timestamp}
+              </span>
+              <span className={item.stream === 'stderr' ? 'text-rose-400' : 'text-emerald-300'}>
+                {item.log}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -333,13 +447,16 @@ export default function ProjectDetail() {
                   </p>
                   
                   <div className="bg-black/60 border border-white/5 rounded-xl p-4 font-mono text-xs text-violet-300 space-y-2 overflow-x-auto">
-                    <div># 1. Install agent package globally or locally</div>
-                    <div className="text-stone-300">$ npm install -g @noir/agent</div>
+                    <div># 1. Connect workspace</div>
+                    <div className="text-stone-300">$ noir connect {project.connection_code}</div>
                     
-                    <div className="pt-2"># 2. Start telemetry reporting with your connection code</div>
-                    <div className="text-stone-300">$ noir-agent connect --code={project.connection_code}</div>
+                    <div className="pt-2"># 2. Run container with live WebSocket telemetry stream</div>
+                    <div className="text-stone-300">$ noir run</div>
                   </div>
                 </div>
+
+                {/* Real-time Telemetry & Container Stream Terminal */}
+                <LiveStreamTerminal connectionCode={project.connection_code} />
               </div>
 
               {/* Right Column: Spec Sidebar */}
