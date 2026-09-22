@@ -194,7 +194,7 @@ function AnimatedRoutes() {
         <Route 
           path="/company/status" 
           element={
-            <ProtectedRoute allowPendingCompany>
+            <ProtectedRoute companyOnly allowPendingCompany>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -265,7 +265,7 @@ function AnimatedRoutes() {
         <Route 
           path="/dashboard" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -280,7 +280,7 @@ function AnimatedRoutes() {
         <Route 
           path="/dashboard/projects" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -295,7 +295,7 @@ function AnimatedRoutes() {
         <Route 
           path="/organization" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -327,7 +327,7 @@ function AnimatedRoutes() {
         <Route 
           path="/quickstart" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -342,7 +342,7 @@ function AnimatedRoutes() {
         <Route 
           path="/dashboard/quickstart" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -372,7 +372,7 @@ function AnimatedRoutes() {
         <Route 
           path="/dashboard/projects/:projectId" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -387,7 +387,7 @@ function AnimatedRoutes() {
         <Route 
           path="/dashboard/projects/:projectId/analytics" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute developerOnly>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

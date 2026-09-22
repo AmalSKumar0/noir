@@ -63,6 +63,7 @@ class ProjectProfile(models.Model):
     package_manager = models.CharField(max_length=30,blank=True)
     operating_system = models.CharField(max_length=50)
     analysis_data = models.JSONField(default=dict, blank=True)
+    docker_containers = models.JSONField(default=list, blank=True)
 
     detected_at = models.DateTimeField(auto_now=True)
 
@@ -99,6 +100,45 @@ class TestRun(models.Model):
 
     def __str__(self):
         return f"TestRun #{self.id} on {self.project.title} by {self.executor.username} ({self.status})"
+
+
+class FaultInjection(models.Model):
+    class FaultType(models.TextChoices):
+        CONTAINER_STOP = "container_stop", "Container Stop"
+        CONTAINER_RESTART = "container_restart", "Container Restart"
+        NETWORK_DELAY = "network_delay", "Network Delay"
+        NETWORK_LOSS = "network_loss", "Network Loss"
+        CPU_STRESS = "cpu_stress", "CPU Stress"
+        MEMORY_STRESS = "memory_stress", "Memory Stress"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="fault_injections")
+    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requested_faults")
+    fault_type = models.CharField(max_length=50, choices=FaultType.choices)
+    target = models.CharField(max_length=100)
+    parameters = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    requested_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    result = models.JSONField(default=dict, null=True, blank=True)
+    error_message = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['project', 'status', 'requested_at']),
+        ]
+
+    def __str__(self):
+        return f"FaultInjection #{self.id} ({self.fault_type} on {self.target} - {self.status})"
+
 
 
         

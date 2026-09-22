@@ -18,15 +18,28 @@ import {
   Code,
   Globe,
   Info,
-  BarChart3
+  BarChart3,
+  Zap,
+  Boxes
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import LiveStreamTerminal from '../components/LiveStreamTerminal';
 import TestHistoryAnalytics, { TestRunItem } from '../components/TestHistoryAnalytics';
+import FaultInjectionPanel from '../components/FaultInjectionPanel';
 import { apiFetch } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { formatLastUpdated } from './Dashboard';
+
+export interface DockerContainerData {
+  id: string;
+  name: string;
+  service: string;
+  image: string;
+  status: string;
+  ports?: string[];
+  source?: string;
+}
 
 interface FrameworkData {
   id: number;
@@ -42,6 +55,7 @@ interface ProfileData {
   package_manager: string;
   detected_at: string;
   framework: FrameworkData | null;
+  docker_containers?: DockerContainerData[];
 }
 
 interface ProjectDetailData {
@@ -67,7 +81,7 @@ export default function ProjectDetail() {
   const [testRuns, setTestRuns] = useState<TestRunItem[]>([]);
   const [isLoadingTestRuns, setIsLoadingTestRuns] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'specs'>('monitoring');
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'specs' | 'faults'>('monitoring');
   const [error, setError] = useState<string | null>(null);
 
   const fetchProjectDetails = async () => {
@@ -267,6 +281,19 @@ export default function ProjectDetail() {
                 System Stack & Specs
               </button>
 
+              <button
+                type="button"
+                onClick={() => setActiveTab('faults')}
+                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'faults'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                }`}
+              >
+                <Zap className="w-4 h-4 text-amber-400" />
+                Manual Fault Injection
+              </button>
+
               <Link
                 to={`/dashboard/projects/${projectId}/analytics`}
                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all flex items-center gap-2 cursor-pointer"
@@ -318,9 +345,16 @@ export default function ProjectDetail() {
                           <span className="text-white/40">Framework</span>
                           <span className="text-white font-semibold">{project.profile.framework?.name || 'Custom'}</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
                           <span className="text-white/40">Package Mgr</span>
                           <span className="text-violet-300 uppercase">{project.profile.package_manager || 'pip/npm'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-white/40">Containers</span>
+                          <span className="text-cyan-300 font-semibold flex items-center gap-1.5">
+                            <Boxes className="w-3.5 h-3.5 text-cyan-400" />
+                            {project.profile.docker_containers?.length || 0} Detected
+                          </span>
                         </div>
                       </div>
                     ) : (
@@ -437,6 +471,109 @@ export default function ProjectDetail() {
                     )}
                   </div>
 
+                  {/* Docker Containers & Microservices Section */}
+                  <div className="relative overflow-hidden bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Boxes className="w-5 h-5 text-cyan-400" />
+                        Docker Containers & Microservices
+                      </h2>
+                      {project.profile?.docker_containers && project.profile.docker_containers.length > 0 ? (
+                        <span className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                          {project.profile.docker_containers.length} DETECTED
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-white/40">
+                          0 DETECTED
+                        </span>
+                      )}
+                    </div>
+
+                    {project.profile?.docker_containers && project.profile.docker_containers.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {project.profile.docker_containers.map((c, idx) => {
+                          const isRunning = c.status?.toLowerCase() === 'running';
+                          const isDefined = c.status?.toLowerCase() === 'defined';
+                          return (
+                            <div
+                              key={c.id && c.id !== '-' ? c.id : `${c.name}-${idx}`}
+                              className="p-5 rounded-2xl bg-black/30 border border-white/10 hover:border-cyan-500/30 transition-all space-y-3"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`w-2 h-2 rounded-full ${
+                                      isRunning
+                                        ? 'bg-emerald-400 animate-pulse'
+                                        : isDefined
+                                        ? 'bg-amber-400'
+                                        : 'bg-stone-500'
+                                    }`}
+                                  />
+                                  <span className="text-sm font-bold text-white font-mono">{c.name}</span>
+                                </div>
+                                <span
+                                  className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded-full border ${
+                                    isRunning
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                      : isDefined
+                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                      : 'bg-white/5 text-white/50 border-white/10'
+                                  }`}
+                                >
+                                  {c.status || 'unknown'}
+                                </span>
+                              </div>
+
+                              <div className="space-y-1 text-xs font-mono text-white/60">
+                                <div className="flex justify-between">
+                                  <span className="text-white/40">Service</span>
+                                  <span className="text-white/80">{c.service || '-'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-white/40">Image</span>
+                                  <span className="text-cyan-300 truncate max-w-[180px]">{c.image || '-'}</span>
+                                </div>
+                                {c.id && c.id !== '-' && (
+                                  <div className="flex justify-between">
+                                    <span className="text-white/40">Container ID</span>
+                                    <span className="text-white/50">{c.id}</span>
+                                  </div>
+                                )}
+                                {c.ports && c.ports.length > 0 && (
+                                  <div className="flex justify-between">
+                                    <span className="text-white/40">Ports</span>
+                                    <span className="text-violet-300">{c.ports.join(', ')}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="pt-2 border-t border-white/5 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveTab('faults')}
+                                  className="text-[10px] font-mono text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Zap className="w-3 h-3" />
+                                  Target for Chaos Injection →
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-8 flex flex-col items-center justify-center text-center bg-black/20 border border-white/5 rounded-2xl p-6">
+                        <Boxes className="w-8 h-8 text-white/20 mb-3" />
+                        <h4 className="text-sm font-semibold text-white/80">No Docker containers detected</h4>
+                        <p className="text-xs text-white/40 mt-1 max-w-[360px]">
+                          Run <code className="text-cyan-300">noir scan</code> or <code className="text-cyan-300">noir connect</code> in your project workspace with Docker or Compose running to automatically discover containers.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Technical Integration CLI Card */}
                   <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
                     <h2 className="text-xl font-bold flex items-center gap-2">
@@ -504,6 +641,15 @@ export default function ProjectDetail() {
                 </div>
 
               </div>
+            )}
+
+            {/* FAULT INJECTION TAB */}
+            {activeTab === 'faults' && (
+              <FaultInjectionPanel 
+                projectIdentifier={project.id || projectId || project.connection_code} 
+                projectCode={project.connection_code} 
+                initialContainers={project.profile?.docker_containers || []}
+              />
             )}
           </motion.div>
         )}

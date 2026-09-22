@@ -174,6 +174,10 @@ agent/
 | `test` | `noir test [-c command]` | Executes test suite directly in host environment and uploads telemetry. |
 | `sync` | `noir sync` | Runs instant Lynx AST profiler scan and pushes workspace metadata to backend. |
 | `analyze` | `noir analyze` | Triggers AI reliability inspection on current workspace. |
+| `fault list` | `noir fault list` | Lists all supported manual fault injection strategies and parameter limits. |
+| `fault containers` | `noir fault containers` | Discovers and displays running Docker containers available for fault injection. |
+| `fault inject` | `noir fault inject <type>` | Manually injects an allowlisted, safe, reversible fault (restart, stop, network, stress). |
+| `fault listen` | `noir fault listen` | Runs local daemon to execute faults queued from the Noir Web Dashboard. |
 | `status` | `noir status` | Displays connection health, active project details, and token status. |
 | `doctor` | `noir doctor` | Diagnoses local environment (Docker, Python, Git, Backend reachability). |
 | `config` | `noir config [get/set]` | Inspects and manages `.noir/config.json` settings. |

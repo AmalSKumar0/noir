@@ -16,7 +16,8 @@ export default function UserNavBar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const role = getUserRole();
-  const isCompany = role === 'company' || location.pathname.startsWith('/company');
+  const isCompany = role === 'company';
+
 
   const isActive = (path: string) => location.pathname === path;
 

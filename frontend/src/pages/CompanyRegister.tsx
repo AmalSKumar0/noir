@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
-import { setAuthTokens } from '../utils/auth';
+import { setAuthTokens, getRoleHomePath } from '../utils/auth';
 import AuthLayout from '../components/AuthLayout';
 
 export default function CompanyRegister() {
@@ -164,7 +164,9 @@ export default function CompanyRegister() {
         }
       }
 
-      navigate('/company/dashboard');
+      const homePath = getRoleHomePath(data.user?.role || 'company', data.user);
+      navigate(homePath);
+
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

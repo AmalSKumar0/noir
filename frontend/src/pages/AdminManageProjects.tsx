@@ -107,24 +107,24 @@ export default function AdminManageProjects() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-6 md:mt-10 px-2 md:px-6"
+        className="pt-2"
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-white">Manage Projects</h1>
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d8b4fe]/60" />
               <input 
                 type="text" 
                 placeholder="Search projects..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-white/20 bg-white/5 text-white text-sm font-medium placeholder-white/50 focus:outline-none focus:border-violet-500 backdrop-blur-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-white text-sm font-medium placeholder-[#e9d5ff]/40 focus:outline-none focus:border-[#c4b5fd] focus:ring-1 focus:ring-[#c4b5fd]/30 backdrop-blur-sm"
               />
             </div>
             <button 
               onClick={handleAdd}
-              className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-full shadow-lg transition-colors flex items-center gap-2 animate-pulse hover:animate-none"
+              className="px-5 py-2.5 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-sm font-semibold rounded-full shadow-[0_0_20px_rgba(196,181,253,0.3)] transition-all flex items-center gap-2 animate-pulse hover:animate-none"
             >
               <FolderPlus className="w-4 h-4" />
               New Project
@@ -135,7 +135,7 @@ export default function AdminManageProjects() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading ? (
             Array(3).fill(0).map((_, i) => (
-              <div key={`skeleton-${i}`} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md shadow-lg flex flex-col h-[280px]">
+              <div key={`skeleton-${i}`} className="bg-[#0c0a16]/90 border border-[#c4b5fd]/20 rounded-[2rem] p-6 backdrop-blur-md shadow-lg flex flex-col h-[280px]">
                 <div className="flex justify-between items-start mb-4">
                   <Skeleton className="w-12 h-12 rounded-xl" />
                   <Skeleton className="w-8 h-8 rounded-full" />
@@ -156,24 +156,24 @@ export default function AdminManageProjects() {
               </div>
             ))
           ) : filteredProjects.length === 0 ? (
-            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white/5 border border-white/10 border-dashed rounded-[2rem] p-6">
-              <Layout className="w-12 h-12 text-white/20 mb-4" />
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-[#0c0a16]/80 border border-[#c4b5fd]/20 border-dashed rounded-[2rem] p-6">
+              <Layout className="w-12 h-12 text-[#c4b5fd]/30 mb-4" />
               <h3 className="text-lg font-semibold text-white">No projects found</h3>
-              <p className="text-xs text-white/50 mt-1 max-w-[280px]">
+              <p className="text-xs text-[#e9d5ff]/50 mt-1 max-w-[280px]">
                 {searchQuery ? "No workspaces match your query." : "No projects exist on the platform yet."}
               </p>
             </div>
           ) : (
             filteredProjects.map((project) => (
-              <div key={project.id} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md shadow-lg flex flex-col group hover:bg-white/10 transition-colors">
+              <div key={project.id} className="bg-[#0c0a16]/90 border border-[#c4b5fd]/20 rounded-[2rem] p-6 backdrop-blur-md shadow-xl flex flex-col group hover:border-[#c4b5fd]/45 hover:bg-[#120f22] transition-all">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-300">
+                  <div className="w-12 h-12 rounded-xl bg-[#c4b5fd]/15 border border-[#c4b5fd]/25 flex items-center justify-center text-[#c4b5fd]">
                     <Layout className="w-6 h-6" />
                   </div>
                   <div className="relative">
                     <button 
                       onClick={() => toggleDropdown(project.id)}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-[#c4b5fd]"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
@@ -183,14 +183,14 @@ export default function AdminManageProjects() {
                           initial={{ opacity: 0, scale: 0.95, y: -10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                          className="absolute right-0 top-full mt-2 w-48 bg-[#100C1F] border border-white/10 rounded-xl shadow-xl overflow-hidden z-10"
+                          className="absolute right-0 top-full mt-2 w-48 bg-[#0e0b1a] border border-[#c4b5fd]/25 rounded-xl shadow-2xl overflow-hidden z-10"
                         >
-                          <button onClick={() => handleView(project)} className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
-                            <Eye className="w-4 h-4" />
+                          <button onClick={() => handleView(project)} className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-[#c4b5fd]/10 hover:text-white transition-colors flex items-center gap-2">
+                            <Eye className="w-4 h-4 text-[#c4b5fd]" />
                             View Details
                           </button>
-                          <button onClick={() => handleEdit(project)} className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2">
-                            <Edit2 className="w-4 h-4" />
+                          <button onClick={() => handleEdit(project)} className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-[#c4b5fd]/10 hover:text-white transition-colors flex items-center gap-2">
+                            <Edit2 className="w-4 h-4 text-[#c4b5fd]" />
                             Edit Project
                           </button>
                           <button onClick={() => handleDelete(project)} className="w-full text-left px-4 py-3 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-2 border-t border-white/5">
@@ -204,23 +204,23 @@ export default function AdminManageProjects() {
                 </div>
                 
                 <h3 className="text-xl font-bold text-white mb-1">{project.name}</h3>
-                <p className="text-sm text-white/50 mb-6">Owner: {project.ownerName}</p>
+                <p className="text-sm text-[#e9d5ff]/50 mb-6">Owner: {project.ownerName}</p>
                 
                 <div className="mt-auto">
-                  <div className="flex justify-between text-xs font-medium text-white/70 mb-2">
+                  <div className="flex justify-between text-xs font-medium text-[#e9d5ff]/70 mb-2">
                     <span>{project.status}</span>
-                    <span>{project.progress}%</span>
+                    <span className="text-[#c4b5fd]">{project.progress}%</span>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-1.5 mb-4 overflow-hidden">
+                  <div className="w-full bg-[#181328] rounded-full h-1.5 mb-4 overflow-hidden">
                     <div 
-                      className="bg-violet-400 h-1.5 rounded-full" 
+                      className="bg-gradient-to-r from-[#a78bfa] to-[#c4b5fd] h-1.5 rounded-full shadow-[0_0_8px_rgba(196,181,253,0.4)]" 
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
                   
-                  <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                    <span className="text-xs text-white/40">Updated {project.lastUpdated}</span>
-                    <button onClick={() => handleView(project)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/70 hover:bg-white hover:text-black transition-all group-hover:scale-110">
+                  <div className="flex justify-between items-center pt-4 border-t border-[#c4b5fd]/15">
+                    <span className="text-xs text-[#e9d5ff]/40">Updated {project.lastUpdated}</span>
+                    <button onClick={() => handleView(project)} className="w-8 h-8 rounded-full bg-[#181328] border border-[#c4b5fd]/20 flex items-center justify-center text-[#e9d5ff] hover:bg-[#c4b5fd] hover:text-[#0a0812] hover:border-[#c4b5fd] transition-all group-hover:scale-110 shadow-sm">
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -231,7 +231,7 @@ export default function AdminManageProjects() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-center justify-between mt-8 px-2 gap-4">
-          <div className="text-sm text-white/50">
+          <div className="text-sm text-[#e9d5ff]/50">
             Showing <span className="font-medium text-white">
               {filteredProjects.length > 0 ? 1 : 0}
             </span> to <span className="font-medium text-white">
@@ -241,15 +241,15 @@ export default function AdminManageProjects() {
             </span> results
           </div>
           <div className="flex items-center gap-2">
-            <button disabled className="px-3 py-1.5 rounded-lg border border-white/10 text-sm font-medium text-white/50 bg-white/5 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-sm font-medium text-[#e9d5ff]/50 bg-[#120f1e]/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               Previous
             </button>
             <div className="flex items-center gap-1">
-              <button className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500/20 text-violet-300 text-sm font-medium border border-violet-500/30">
+              <button className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#c4b5fd] text-[#0a0812] text-sm font-semibold border border-[#c4b5fd] shadow-[0_0_12px_rgba(196,181,253,0.35)]">
                 1
               </button>
             </div>
-            <button disabled className="px-3 py-1.5 rounded-lg border border-white/10 text-sm font-medium text-white/50 bg-white/5 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-sm font-medium text-[#e9d5ff]/50 bg-[#120f1e]/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               Next
             </button>
           </div>
@@ -290,10 +290,10 @@ export default function AdminManageProjects() {
               </div>
             </div>
             <div className="pt-4 border-t border-white/10">
-              <label className="block text-xs font-mono uppercase tracking-wider text-violet-400 mb-1.5 font-bold">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#c4b5fd] mb-1.5 font-bold">
                 Connection Code
               </label>
-              <div className="flex items-center gap-2 bg-black/40 border border-violet-500/20 rounded-xl p-3 font-mono text-sm text-violet-300 font-bold tracking-widest select-all">
+              <div className="flex items-center gap-2 bg-black/60 border border-[#c4b5fd]/30 rounded-xl p-3 font-mono text-sm text-[#e9d5ff] font-bold tracking-widest select-all">
                 {currentProject?.raw?.connection_code || 'NR-PENDING'}
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function AdminManageProjects() {
               <button 
                 type="button" 
                 onClick={() => setIsModalOpen(false)} 
-                className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-full shadow-lg transition-colors"
+                className="px-6 py-2 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-sm font-semibold rounded-full shadow-lg transition-colors"
               >
                 Close
               </button>
@@ -314,8 +314,8 @@ export default function AdminManageProjects() {
               <input 
                 type="text" 
                 defaultValue={currentProject?.name || ''} 
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 placeholder-white/30" 
-                placeholder="e.g. Mobile App V2"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] placeholder-white/30" 
+                placeholder="e.g. Mobile App V2" 
                 required 
               />
             </div>
@@ -324,8 +324,8 @@ export default function AdminManageProjects() {
               <input 
                 type="text" 
                 defaultValue={currentProject?.ownerName || ''} 
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 placeholder-white/30" 
-                placeholder="e.g. John Smith"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] placeholder-white/30" 
+                placeholder="e.g. John Smith" 
                 required 
               />
             </div>
@@ -334,7 +334,7 @@ export default function AdminManageProjects() {
                 <label className="block text-sm font-medium text-white/70 mb-1.5">Status</label>
                 <select 
                   defaultValue={currentProject?.status || 'Planning'} 
-                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 appearance-none"
+                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] appearance-none"
                 >
                   <option>Planning</option>
                   <option>In Progress</option>
@@ -347,9 +347,9 @@ export default function AdminManageProjects() {
                 <input 
                   type="number" 
                   min="0" 
-                  max="100"
+                  max="100" 
                   defaultValue={currentProject?.progress || 0} 
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 placeholder-white/30" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] placeholder-white/30" 
                   required 
                 />
               </div>
@@ -364,7 +364,7 @@ export default function AdminManageProjects() {
               </button>
               <button 
                 type="submit" 
-                className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-full shadow-lg transition-colors"
+                className="px-5 py-2.5 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-sm font-semibold rounded-full shadow-[0_0_15px_rgba(196,181,253,0.3)] transition-all"
               >
                 {modalMode === 'add' ? 'Create Project' : 'Save Changes'}
               </button>

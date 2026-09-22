@@ -161,31 +161,31 @@ export default function AdminManageCompanies() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-6 md:mt-10 px-2 md:px-6"
+        className="pt-2"
       >
         {/* Header & Controls */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-violet-400" />
+              <Building2 className="w-8 h-8 text-[#c4b5fd]" />
               Company Management
             </h1>
-            <p className="text-stone-400 text-xs font-mono mt-1">
+            <p className="text-[#d8b4fe]/60 text-xs font-mono mt-1">
               Review, approve, or reject enterprise workspace applications.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             {/* Status Filter Tabs */}
-            <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-full text-xs font-mono">
+            <div className="flex items-center bg-black/60 border border-[#c4b5fd]/20 p-1 rounded-full text-xs font-mono">
               {(['all', 'pending', 'approved', 'rejected'] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
                   className={`px-3 py-1.5 rounded-full capitalize transition-all cursor-pointer ${
                     statusFilter === st 
-                      ? 'bg-violet-600 text-white font-semibold shadow-md' 
-                      : 'text-stone-400 hover:text-white'
+                      ? 'bg-[#c4b5fd] text-[#0a0812] font-semibold shadow-md' 
+                      : 'text-[#e9d5ff]/60 hover:text-white'
                   }`}
                 >
                   {st}
@@ -195,32 +195,32 @@ export default function AdminManageCompanies() {
 
             {/* Search Input */}
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d8b4fe]/60" />
               <input
                 type="text"
                 placeholder="Search companies..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-white/20 bg-white/5 text-white text-sm font-medium placeholder-white/50 focus:outline-none focus:border-violet-500 backdrop-blur-sm font-mono"
+                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-white text-sm font-medium placeholder-[#e9d5ff]/40 focus:outline-none focus:border-[#c4b5fd] backdrop-blur-sm font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-1 backdrop-blur-md shadow-lg overflow-hidden">
+        <div className="bg-[#0c0a16]/90 border border-[#c4b5fd]/20 rounded-[2rem] p-1 backdrop-blur-md shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Company</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Admin Contact</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Industry & Size</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider text-right">Approval Actions</th>
+                <tr className="border-b border-[#c4b5fd]/15">
+                  <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Admin Contact</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Industry & Size</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider text-right">Approval Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-[#c4b5fd]/10">
                 {isLoading ? (
                   Array(4).fill(0).map((_, i) => (
                     <tr key={`skel-${i}`}>
@@ -233,13 +233,13 @@ export default function AdminManageCompanies() {
                   ))
                 ) : filteredCompanies.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-stone-400 font-mono text-sm">
+                    <td colSpan={5} className="px-6 py-12 text-center text-[#e9d5ff]/40 font-mono text-sm">
                       No company registrations found.
                     </td>
                   </tr>
                 ) : (
                   filteredCompanies.map((company) => (
-                    <tr key={company.id} className="hover:bg-white/5 transition-colors">
+                    <tr key={company.id} className="hover:bg-[#c4b5fd]/5 transition-colors">
                       {/* Logo + Company Name */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -254,7 +254,7 @@ export default function AdminManageCompanies() {
                               className="w-9 h-9 rounded-xl object-cover border border-white/10 bg-black/40"
                             />
                           ) : (
-                            <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                            <div className="w-9 h-9 rounded-xl bg-[#c4b5fd]/15 border border-[#c4b5fd]/30 flex items-center justify-center text-[#c4b5fd]">
                               <Building2 className="w-4 h-4" />
                             </div>
                           )}
@@ -265,7 +265,7 @@ export default function AdminManageCompanies() {
                                 href={company.website}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-xs text-stone-400 hover:text-violet-300 font-mono flex items-center gap-1 transition-colors"
+                                className="text-xs text-stone-400 hover:text-[#c4b5fd] font-mono flex items-center gap-1 transition-colors"
                               >
                                 <Globe className="w-3 h-3" />
                                 <span>{company.website.replace(/^https?:\/\//, '')}</span>
@@ -280,13 +280,13 @@ export default function AdminManageCompanies() {
                         <div className="text-sm font-medium text-stone-200">
                           {company.user_first_name} {company.user_last_name}
                         </div>
-                        <div className="text-xs text-stone-400 font-mono">{company.user_email}</div>
+                        <div className="text-xs text-[#e9d5ff]/50 font-mono">{company.user_email}</div>
                       </td>
 
                       {/* Industry & Size */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-xs text-stone-300 font-medium">{company.industry || 'N/A'}</div>
-                        <div className="text-[11px] text-stone-500 font-mono">{company.company_size || 'N/A'}</div>
+                        <div className="text-[11px] text-[#e9d5ff]/40 font-mono">{company.company_size || 'N/A'}</div>
                       </td>
 
                       {/* Status */}
@@ -338,7 +338,7 @@ export default function AdminManageCompanies() {
                         {/* View */}
                         <button
                           onClick={() => handleView(company)}
-                          className="p-2 hover:bg-white/10 rounded-full transition-colors text-stone-400 hover:text-white cursor-pointer"
+                          className="p-2 hover:bg-white/10 rounded-full transition-colors text-stone-400 hover:text-[#c4b5fd] cursor-pointer"
                           title="View Profile Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -360,22 +360,22 @@ export default function AdminManageCompanies() {
             </table>
 
             {/* Pagination footer */}
-            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-white/5 gap-4">
-              <div className="text-xs font-mono text-stone-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#c4b5fd]/15 gap-4">
+              <div className="text-xs font-mono text-[#e9d5ff]/50">
                 Showing {filteredCompanies.length} registered companies
               </div>
               <div className="flex items-center gap-2">
                 <button
                   disabled={!hasPrev || isLoading}
                   onClick={() => fetchCompanies(currentPage - 1)}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-mono text-white/75 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-xs font-mono text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 transition-colors disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   disabled={!hasNext || isLoading}
                   onClick={() => fetchCompanies(currentPage + 1)}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-mono text-white/75 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-xs font-mono text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 transition-colors disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -435,7 +435,7 @@ export default function AdminManageCompanies() {
                   className="w-14 h-14 rounded-2xl object-cover border border-white/10" 
                 />
               ) : (
-                <div className="w-14 h-14 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                <div className="w-14 h-14 rounded-2xl bg-[#c4b5fd]/15 border border-[#c4b5fd]/30 flex items-center justify-center text-[#c4b5fd]">
                   <Building2 className="w-7 h-7" />
                 </div>
               )}
@@ -464,7 +464,7 @@ export default function AdminManageCompanies() {
               </div>
               <div>
                 <span className="text-stone-500 block mb-1">Website</span>
-                <span className="text-violet-300 font-medium">{currentCompany?.website || 'N/A'}</span>
+                <span className="text-[#c4b5fd] font-medium">{currentCompany?.website || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-stone-500 block mb-1">Tax / Reg ID</span>

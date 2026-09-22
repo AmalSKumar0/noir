@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Menu, X, User, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthState, logout } from '../utils/auth';
+import { useAuthState, logout, getRoleHomePath } from '../utils/auth';
+
 
 export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: boolean, setIsMenuOpen: (v: boolean) => void }) {
   const links = ['About', 'Contact', 'Join as a Company', 'Workflow', 'Docs', 'Download Agent'];
@@ -115,7 +116,8 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
         <div className="flex-1 flex items-center justify-end gap-3 md:gap-4">
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
-              <Link to="/dashboard">
+              <Link to={getRoleHomePath()}>
+
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

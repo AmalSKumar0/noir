@@ -357,22 +357,22 @@ export default function AdminManageUsers() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-6 md:mt-10 px-2 md:px-6"
+          className="pt-2"
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <h1 className="text-3xl font-bold tracking-tight text-white">Manage Users</h1>
             <div className="flex items-center gap-4 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d8b4fe]/60" />
                 <input 
                   type="text" 
                   placeholder="Search users..." 
-                  className="w-full pl-10 pr-4 py-2.5 rounded-full border border-white/20 bg-white/5 text-white text-sm font-medium placeholder-white/50 focus:outline-none focus:border-violet-500 backdrop-blur-sm"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-white text-sm font-medium placeholder-[#e9d5ff]/40 focus:outline-none focus:border-[#c4b5fd] focus:ring-1 focus:ring-[#c4b5fd]/30 backdrop-blur-sm"
                 />
               </div>
               <button 
                 onClick={handleAdd}
-                className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-full shadow-lg transition-colors flex items-center gap-2"
+                className="px-5 py-2.5 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-sm font-semibold rounded-full shadow-[0_0_20px_rgba(196,181,253,0.3)] transition-all flex items-center gap-2"
               >
                 <UserPlus className="w-4 h-4" />
                 Add User
@@ -380,19 +380,19 @@ export default function AdminManageUsers() {
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-[2rem] p-1 backdrop-blur-md shadow-lg overflow-hidden">
+          <div className="bg-[#0c0a16]/90 border border-[#c4b5fd]/20 rounded-[2rem] p-1 backdrop-blur-md shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider text-right">Actions</th>
+                  <tr className="border-b border-[#c4b5fd]/15">
+                    <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-[#c4b5fd]/10">
                   {isLoading ? (
                     Array(4).fill(0).map((_, i) => (
                       <tr key={`skeleton-${i}`} className="hover:bg-white/5 transition-colors">
@@ -405,7 +405,7 @@ export default function AdminManageUsers() {
                     ))
                   ) : (
                     users.map((user) => (
-                      <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                      <tr key={user.id} className="hover:bg-[#c4b5fd]/5 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-medium text-white">{getFullName(user)}</div>
                         </td>
@@ -417,7 +417,7 @@ export default function AdminManageUsers() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                            (user.role === 'Admin' || user.role === 'admin' || user.role === 'developer') ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 
+                            (user.role === 'Admin' || user.role === 'admin' || user.role === 'developer') ? 'bg-[#c4b5fd]/15 text-[#e9d5ff] border border-[#c4b5fd]/30' : 
                             'bg-white/10 text-white/80 border border-white/10'
                           }`}>
                             {(user.role === 'Admin' || user.role === 'admin' || user.role === 'developer') ? <Shield className="w-3 h-3" /> : <ShieldOff className="w-3 h-3" />}
@@ -434,10 +434,10 @@ export default function AdminManageUsers() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
-                          <button onClick={() => handleView(user)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white" title="View Details">
+                          <button onClick={() => handleView(user)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-[#c4b5fd]" title="View Details">
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleEdit(user)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-blue-400" title="Edit">
+                          <button onClick={() => handleEdit(user)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-[#c4b5fd]" title="Edit">
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button onClick={() => handleDelete(user)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-rose-400" title="Delete">
@@ -449,15 +449,15 @@ export default function AdminManageUsers() {
                   )}
                 </tbody>
               </table>
-              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-white/5 gap-4">
-                <div className="text-sm text-white/50">
+              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#c4b5fd]/15 gap-4">
+                <div className="text-sm text-[#e9d5ff]/50">
                   Showing {users.length} users
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     disabled={!hasPrev || isLoading}
                     onClick={() => fetchUsers(currentPage - 1)}
-                    className="px-3 py-1.5 rounded-lg border border-white/10 text-sm font-medium text-white/75 bg-white/5 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-sm font-medium text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
@@ -468,7 +468,7 @@ export default function AdminManageUsers() {
                         onClick={() => fetchUsers(p)}
                         className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
                           p === currentPage
-                            ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                            ? 'bg-[#c4b5fd] text-[#0a0812] font-semibold border border-[#c4b5fd] shadow-[0_0_12px_rgba(196,181,253,0.35)]'
                             : 'text-white/50 hover:bg-white/10 hover:text-white border border-transparent'
                         }`}
                       >
@@ -479,7 +479,7 @@ export default function AdminManageUsers() {
                   <button
                     disabled={!hasNext || isLoading}
                     onClick={() => fetchUsers(currentPage + 1)}
-                    className="px-3 py-1.5 rounded-lg border border-white/10 text-sm font-medium text-white/75 bg-white/5 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 rounded-lg border border-[#c4b5fd]/20 text-sm font-medium text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
@@ -597,7 +597,7 @@ export default function AdminManageUsers() {
                 type="text" 
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 placeholder-white/30" 
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] placeholder-white/30" 
                 placeholder="e.g. John Doe"
                 required 
               />
@@ -608,7 +608,7 @@ export default function AdminManageUsers() {
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 placeholder-white/30" 
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] placeholder-white/30" 
                 placeholder="john@example.com"
                 required 
               />
@@ -619,7 +619,7 @@ export default function AdminManageUsers() {
                 <select 
                   value={role} 
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 appearance-none"
+                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] appearance-none"
                 >
                   <option value="admin">Admin</option>
                   <option value="developer">Developer</option>
@@ -631,7 +631,7 @@ export default function AdminManageUsers() {
                 <select 
                   value={isActive ? 'Active' : 'Inactive'} 
                   onChange={(e) => setIsActive(e.target.value === 'Active')}
-                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-violet-500 appearance-none"
+                  className="w-full bg-[#100C1F] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#c4b5fd] appearance-none"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -650,7 +650,7 @@ export default function AdminManageUsers() {
               <button 
                 type="submit" 
                 disabled={isActionLoading}
-                className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-full shadow-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-sm font-semibold rounded-full shadow-[0_0_15px_rgba(196,181,253,0.3)] transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {isActionLoading ? (
                   <>

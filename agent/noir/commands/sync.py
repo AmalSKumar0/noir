@@ -8,6 +8,7 @@ from noir.api.client import ApiClient
 from noir.auth.storage import has_tokens
 from noir.lynx_engine import profile_project
 from noir.utils.CommandDisplay import CommandDisplay
+from noir.utils.docker_detector import discover_project_containers, format_containers_table
 
 app = typer.Typer(
     help="Force an instant Lynx scan and sync workspace profile to backend."
@@ -49,7 +50,14 @@ def sync(
         print(f"[red]Lynx profiler error: {e}[/red]")
         raise typer.Exit(1)
 
-    print(f"[bold yellow]Pushing updated profile to Noir backend for project '[cyan]{code}[/cyan]'...[/bold yellow]")
+    print("[bold yellow]Discovering Docker containers & Compose services...[/bold yellow]")
+    try:
+        containers = discover_project_containers(path, project_code=code)
+    except Exception as de:
+        print(f"[yellow]Container discovery notice: {de}[/yellow]")
+        containers = []
+
+    print(f"[bold yellow]Pushing updated profile & Docker containers to Noir backend for project '[cyan]{code}[/cyan]'...[/bold yellow]")
     try:
         response = client.send_request_to_backend(
             f"/project/{code}/profile/",
@@ -60,6 +68,7 @@ def sync(
                 "runtime_version": profile_data.get("runtime_version"),
                 "package_manager": profile_data.get("package_manager"),
                 "operating_system": profile_data.get("operating_system"),
+                "docker_containers": containers,
             }
         )
 
@@ -70,6 +79,13 @@ def sync(
                 if isinstance(response, dict) and "profile" in response:
                     p_data["profile"] = response["profile"]
                     project_file.write_text(json.dumps(p_data, indent=4), encoding="utf-8")
+            except Exception:
+                pass
+
+        cache_dir = NOIR_DIR / "cache"
+        if cache_dir.exists():
+            try:
+                (cache_dir / "containers.json").write_text(json.dumps(containers, indent=4), encoding="utf-8")
             except Exception:
                 pass
 
@@ -85,7 +101,15 @@ def sync(
 
         print()
         print(table)
-        print("\n[bold green]✔ Project profile successfully synced to Noir backend![/bold green]\n")
+
+        print()
+        if containers:
+            container_table = format_containers_table(containers)
+            print(container_table)
+        else:
+            print("[yellow]No Docker containers or compose services detected for this workspace.[/yellow]")
+
+        print("\n[bold green]✔ Project profile & Docker containers successfully synced to Noir backend![/bold green]\n")
 
     except Exception as e:
         print(f"[red]Profile sync failed: {e}[/red]")

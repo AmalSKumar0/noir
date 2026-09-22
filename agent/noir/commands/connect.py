@@ -9,6 +9,7 @@ from noir.api.client import ApiClient
 from noir.auth.storage import has_tokens
 from noir.lynx_engine import profile_project
 from noir.utils.CommandDisplay import CommandDisplay
+from noir.utils.docker_detector import discover_project_containers, format_containers_table
 
 app = typer.Typer(
     help="Connect current repository to a Noir project."
@@ -69,7 +70,15 @@ def connect(
             "operating_system": "Linux"
         }
 
-    # 3. Initialize local .noir directory
+    # 3. Discover Docker containers & Compose services
+    print("[bold yellow]Discovering Docker containers & Compose services...[/bold yellow]")
+    try:
+        containers = discover_project_containers(path, project_code=code)
+    except Exception as de:
+        print(f"[yellow]Container discovery notice: {de}[/yellow]")
+        containers = []
+
+    # 4. Initialize local .noir directory
     try:
         NOIR_DIR.mkdir(exist_ok=True)
         cache = ensure_dir("cache")
@@ -101,14 +110,15 @@ def connect(
 
         (cache / "analysis.json").touch(exist_ok=True)
         (cache / "repository.json").touch(exist_ok=True)
+        (cache / "containers.json").write_text(json.dumps(containers, indent=4), encoding="utf-8")
         (log_dir / "noir.log").touch(exist_ok=True)
 
     except Exception as e:
         print(f"[red]Failed to initialize local .noir workspace: {e}[/red]")
         raise typer.Exit(1)
 
-    # 4. Post profile data to backend
-    print(f"[bold yellow]Syncing workspace profile to Noir backend server...[/bold yellow]")
+    # 5. Post profile data to backend
+    print(f"[bold yellow]Syncing workspace profile & Docker containers to Noir backend server...[/bold yellow]")
     try:
         profile_res = client.send_request_to_backend(
             f"/project/{code}/profile/",
@@ -119,6 +129,7 @@ def connect(
                 "runtime_version": profile_data.get("runtime_version"),
                 "package_manager": profile_data.get("package_manager"),
                 "operating_system": profile_data.get("operating_system"),
+                "docker_containers": containers,
             }
         )
 
@@ -129,7 +140,7 @@ def connect(
     except Exception as e:
         print(f"[yellow]Note: Connected locally, but backend profile sync was skipped ({e})[/yellow]")
 
-    # 5. Display summary table
+    # 6. Display summary tables
     table = Table(title="[bold green]Lynx System Profile[/bold green]", border_style="violet")
     table.add_column("Property", style="bold cyan")
     table.add_column("Detected Value", style="white")
@@ -142,4 +153,12 @@ def connect(
 
     print()
     print(table)
+
+    print()
+    if containers:
+        container_table = format_containers_table(containers)
+        print(container_table)
+    else:
+        print("[yellow]No Docker containers or compose services detected for this workspace.[/yellow]")
+
     print(f"\n[bold green]✔ Noir connected successfully to project '{code}'![/bold green]\n")

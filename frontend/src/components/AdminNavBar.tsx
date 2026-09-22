@@ -1,82 +1,131 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, Users, Wallet, Hexagon, HelpCircle, LogOut, Home, Building2 } from 'lucide-react';
+import {
+  Bell,
+  Calendar,
+  Folder,
+  HelpCircle,
+  LogOut,
+  Search,
+  Settings,
+  Sparkles,
+} from 'lucide-react';
 
-import { motion, AnimatePresence } from 'motion/react';
+const tabs = [
+  { to: '/admin/dashboard', label: 'Overview' },
+  { to: '/admin/users', label: 'Users' },
+  { to: '/admin/companies', label: 'Companies' },
+  { to: '/admin/projects', label: 'Projects' },
+];
+
+function getInitials() {
+  try {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const name = `${parsed.first_name || ''} ${parsed.last_name || ''}`.trim() || parsed.username || parsed.email || 'A';
+      return name
+        .split(/\s+/)
+        .map((part: string) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    }
+  } catch {
+    // ignore
+  }
+  return 'AD';
+}
 
 export default function AdminNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
+  const initials = useMemo(getInitials, []);
 
-  const isActive = (path: string) => location.pathname === path;
-
-  const handleLogout = () => {
-    navigate('/logout');
-  };
-
-  const NavButton = ({ to, icon: Icon, label, onClick, size = 'md' }: { to?: string, icon: any, label: string, onClick?: () => void, size?: 'md' | 'sm' }) => {
-    const active = to ? isActive(to) : false;
-    
-    const content = (
-      <div 
-        className="relative group flex items-center justify-center"
-        onMouseEnter={() => setHoveredLabel(label)}
-        onMouseLeave={() => setHoveredLabel(null)}
-      >
-        <div className={`
-          rounded-full transition-all duration-300 backdrop-blur-md flex items-center justify-center
-          ${size === 'sm' ? 'p-1.5' : 'p-2.5'}
-          ${active 
-            ? 'bg-white text-violet-600 shadow-lg' 
-            : 'bg-transparent text-white/60 hover:bg-white/10 hover:text-white'}
-        `}>
-          <Icon className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={1.5} />
-        </div>
-        
-        <AnimatePresence>
-          {hoveredLabel === label && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.15 }}
-              className="absolute left-full ml-4 px-3 py-1.5 bg-[#100C1F]/90 backdrop-blur-md border border-white/10 text-white text-xs font-medium rounded-lg whitespace-nowrap z-50 shadow-xl"
-            >
-              {label}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-
-    if (to) {
-      return (
-        <Link to={to} onClick={onClick}>
-          {content}
-        </Link>
-      );
-    }
-    
-    return (
-      <button onClick={onClick} className="w-full">
-        {content}
-      </button>
-    );
-  };
+  const iconBtn =
+    'w-9 h-9 rounded-full bg-[#141024]/80 border border-[#c4b5fd]/20 text-[#d8b4fe]/80 hover:text-white hover:bg-[#c4b5fd]/20 hover:border-[#c4b5fd]/45 transition-colors flex items-center justify-center';
 
   return (
-    <div className="fixed left-4 md:left-6 top-0 bottom-0 py-6 flex flex-col justify-between w-14 z-50">
-      <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-4 shadow-2xl border border-white/10">
-        <NavButton to="/admin/dashboard" icon={Home} label="Overview" />
-        <NavButton to="/admin/users" icon={Users} label="Manage Users" />
-        <NavButton to="/admin/companies" icon={Building2} label="Manage Companies" />
-        <NavButton to="/admin/projects" icon={Wallet} label="Manage Projects" />
+    <header className="px-4 sm:px-6 md:px-8 pt-4 md:pt-5 pb-2">
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/admin/dashboard" className="flex items-center gap-2 shrink-0 group">
+          <Sparkles className="w-4 h-4 text-[#c4b5fd] group-hover:text-[#e9d5ff] transition-colors" strokeWidth={1.75} />
+          <span className="text-sm font-semibold tracking-tight text-white">noir</span>
+          <span className="text-[10px] tracking-wider uppercase font-semibold px-2.5 py-0.5 rounded-full bg-[#c4b5fd]/15 text-[#e9d5ff] border border-[#c4b5fd]/30 shadow-[0_0_10px_rgba(196,181,253,0.15)]">
+            Admin
+          </span>
+        </Link>
+
+        <nav className="hidden md:flex items-center bg-black/70 border border-[#c4b5fd]/20 rounded-full p-1 shadow-inner">
+          {tabs.map((tab) => {
+            const active = location.pathname === tab.to;
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                className={`px-5 py-1.5 rounded-full text-[13px] font-medium transition-all ${
+                  active
+                    ? 'bg-gradient-to-r from-[#b185db] to-[#c4b5fd] text-[#0a0812] font-semibold shadow-[0_0_20px_rgba(196,181,253,0.45)]'
+                    : 'text-[#e9d5ff]/60 hover:text-white hover:bg-[#c4b5fd]/10'
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <button type="button" className={`${iconBtn} hidden sm:flex`} aria-label="Search">
+            <Search className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button type="button" className={`${iconBtn} hidden lg:flex`} aria-label="Calendar">
+            <Calendar className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button type="button" className={`${iconBtn} hidden lg:flex`} aria-label="Folders">
+            <Folder className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button type="button" className={`${iconBtn} hidden sm:flex`} aria-label="Notifications">
+            <Bell className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button type="button" className={`${iconBtn} hidden md:flex`} aria-label="Help">
+            <HelpCircle className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button type="button" className={`${iconBtn} hidden md:flex`} aria-label="Settings">
+            <Settings className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/logout')}
+            className={iconBtn}
+            aria-label="Log out"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={1.6} />
+          </button>
+          <div className="w-9 h-9 rounded-full overflow-hidden border border-[#c4b5fd]/40 bg-gradient-to-br from-[#3b2d54] to-[#161224] flex items-center justify-center text-[11px] font-semibold text-[#f3e8ff] shadow-[0_0_14px_rgba(196,181,253,0.25)] ml-1">
+            {initials}
+          </div>
+        </div>
       </div>
 
-      <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-3 gap-2.5 shadow-2xl border border-white/10">
-        <NavButton icon={LogOut} label="Log Out" onClick={handleLogout} size="sm" />
-      </div>
-    </div>
+      <nav className="flex md:hidden gap-1 overflow-x-auto pt-3">
+        {tabs.map((tab) => {
+          const active = location.pathname === tab.to;
+          return (
+            <Link
+              key={tab.to}
+              to={tab.to}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                active
+                  ? 'bg-gradient-to-r from-[#b185db] to-[#c4b5fd] text-[#0a0812] font-semibold shadow-[0_0_15px_rgba(196,181,253,0.4)]'
+                  : 'text-[#e9d5ff]/60 bg-[#141024]/60 border border-[#c4b5fd]/20 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </header>
   );
 }

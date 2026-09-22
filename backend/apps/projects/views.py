@@ -229,6 +229,12 @@ class ProjectProfileUpdateAPIView(APIView):
             framework.save()
 
         analysis_data = request.data.get("analysis_data") or request.data.get("summary") or {}
+        docker_containers = request.data.get("docker_containers")
+        if docker_containers is None and isinstance(analysis_data, dict):
+            docker_containers = analysis_data.get("docker_containers")
+        if docker_containers is None:
+            existing = ProjectProfile.objects.filter(project=project).first()
+            docker_containers = existing.docker_containers if existing else []
 
         profile, _ = ProjectProfile.objects.update_or_create(
             project=project,
@@ -238,6 +244,7 @@ class ProjectProfileUpdateAPIView(APIView):
                 "package_manager": package_manager,
                 "operating_system": operating_system,
                 "analysis_data": analysis_data,
+                "docker_containers": docker_containers,
             }
         )
 
@@ -316,4 +323,233 @@ class ProjectStreamStatusAPIView(APIView):
         return Response({
             "is_active": is_active,
             "project_code": project.connection_code
+        }, status=status.HTTP_200_OK)
+
+
+from django.utils import timezone
+from .models import FaultInjection
+from .serializers import (
+    FaultInjectionSerializer,
+    FaultInjectionCreateSerializer,
+    FaultInjectionReportSerializer,
+)
+
+
+def get_project_with_permission(identifier, user):
+    """
+    Look up project by ID or connection_code and check user permissions.
+    Returns (project, None) on success or (None, Response) on error.
+    """
+    if str(identifier).isdigit():
+        project = Project.objects.filter(id=int(identifier)).first()
+    else:
+        project = Project.objects.filter(connection_code__iexact=identifier).first()
+
+    if not project:
+        return None, Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if user.is_staff or user.is_superuser or project.owner == user:
+        return project, None
+
+    if user.role == User.Role.COMPANY:
+        if hasattr(user, "company_profile") and project.owner.company == user.company_profile:
+            return project, None
+        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+    if user.role == User.Role.DEVELOPER and user.company:
+        company_owner = user.company.user
+        if (
+            project.owner == company_owner
+            or (hasattr(project, "assigned_teams") and project.assigned_teams.filter(members=user).exists())
+        ):
+            return project, None
+        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+    return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+
+class ProjectFaultListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        status_filter = request.query_params.get("status")
+        queryset = project.fault_injections.all()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        serializer = FaultInjectionSerializer(queryset[:100], many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        serializer = FaultInjectionCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        fault = serializer.save(
+            project=project,
+            requested_by=request.user,
+            status=FaultInjection.Status.PENDING,
+        )
+        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_201_CREATED)
+
+
+class ProjectFaultPendingAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        pending = (
+            project.fault_injections.filter(status=FaultInjection.Status.PENDING)
+            .order_by("requested_at")
+            .first()
+        )
+        if not pending:
+            return Response({"pending": False, "fault": None}, status=status.HTTP_200_OK)
+
+        return Response(
+            {"pending": True, "fault": FaultInjectionSerializer(pending).data},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ProjectFaultDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+
+class ProjectFaultCancelAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        if fault.status != FaultInjection.Status.PENDING:
+            return Response(
+                {"detail": f"Cannot cancel fault in '{fault.status}' state."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fault.status = FaultInjection.Status.CANCELLED
+        fault.save(update_fields=["status"])
+        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+
+class ProjectFaultClaimAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        if fault.status != FaultInjection.Status.PENDING:
+            return Response(
+                {"detail": f"Fault is in '{fault.status}' state and cannot be claimed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fault.status = FaultInjection.Status.RUNNING
+        fault.started_at = timezone.now()
+        fault.save(update_fields=["status", "started_at"])
+        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+
+class ProjectFaultReportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        if fault.status not in (FaultInjection.Status.RUNNING, FaultInjection.Status.PENDING):
+            return Response(
+                {"detail": f"Fault is already in terminal state '{fault.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = FaultInjectionReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        fault.status = serializer.validated_data["status"]
+        fault.completed_at = timezone.now()
+        fault.result = serializer.validated_data.get("result", {})
+        fault.error_message = serializer.validated_data.get("error_message", "")
+        fault.save(update_fields=["status", "completed_at", "result", "error_message"])
+        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+
+class ProjectContainersAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        profile = getattr(project, "profile", None)
+        containers = profile.docker_containers if profile else []
+        return Response({
+            "project_id": project.id,
+            "connection_code": project.connection_code,
+            "containers": containers,
+            "docker_containers": containers,
+            "total": len(containers)
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        containers = request.data.get("containers")
+        if containers is None:
+            containers = request.data.get("docker_containers", [])
+        if not isinstance(containers, list):
+            return Response({"detail": "containers must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = getattr(project, "profile", None)
+        if not profile:
+            framework, _ = Framework.objects.get_or_create(
+                name="Generic",
+                defaults={"language": "Python", "default_test_command": "pytest", "detection_file": "Lynx Auto-Detector", "supported": True}
+            )
+            profile = ProjectProfile.objects.create(
+                project=project,
+                framework=framework,
+                operating_system="Linux",
+                docker_containers=containers
+            )
+        else:
+            profile.docker_containers = containers
+            profile.save(update_fields=["docker_containers"])
+
+        return Response({
+            "message": "Containers updated successfully.",
+            "project_id": project.id,
+            "connection_code": project.connection_code,
+            "containers": profile.docker_containers,
+            "docker_containers": profile.docker_containers,
+            "total": len(profile.docker_containers)
         }, status=status.HTTP_200_OK)

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import BackgroundBoids from '../components/BackgroundBoids';
 import Loader from '../components/Loader';
 import { apiFetch } from '../utils/api';
-import { setAuthTokens, isAuthenticated } from '../utils/auth';
+import { setAuthTokens, isAuthenticated, getRoleHomePath } from '../utils/auth';
 
 // Global single-flight set to prevent duplicate code exchange in React StrictMode
 const processedAuthCodes = new Set<string>();
@@ -16,7 +16,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard', { replace: true });
+      navigate(getRoleHomePath(), { replace: true });
       return;
     }
 
@@ -28,7 +28,7 @@ export default function AuthCallback() {
     // Case 1: Tokens provided directly in URL
     if (accessParam) {
       setAuthTokens(accessParam, refreshParam || undefined);
-      navigate('/dashboard', { replace: true });
+      navigate(getRoleHomePath(), { replace: true });
       return;
     }
 
@@ -54,7 +54,7 @@ export default function AuthCallback() {
           if (!response.ok) {
             // Check if another parallel call set tokens in the meantime
             if (isAuthenticated()) {
-              navigate('/dashboard', { replace: true });
+              navigate(getRoleHomePath(), { replace: true });
               return;
             }
             const errData = await response.json().catch(() => ({}));
@@ -70,14 +70,14 @@ export default function AuthCallback() {
               localStorage.setItem('user_role', data.user.role);
               localStorage.setItem('user', JSON.stringify(data.user));
             }
-            navigate('/dashboard', { replace: true });
+            navigate(getRoleHomePath(data.user?.role, data.user), { replace: true });
           } else {
             throw new Error('No access token returned from server');
           }
         } catch (err: any) {
           if (isAuthenticated()) {
             console.time("Navigate");
-            navigate("/dashboard", { replace: true });
+            navigate(getRoleHomePath(), { replace: true });
             console.timeEnd("Navigate");
           } else {
             setError(err.message || 'Authentication failed');
@@ -94,6 +94,7 @@ export default function AuthCallback() {
       navigate('/login', { replace: true });
     }
   }, [navigate]);
+
 
   return (
     <div className="relative min-h-screen bg-black overflow-hidden flex items-center justify-center font-sans">

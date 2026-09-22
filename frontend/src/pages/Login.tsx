@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
-import { setAuthTokens } from '../utils/auth';
+import { setAuthTokens, getRoleHomePath } from '../utils/auth';
 import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
 import AuthLayout from '../components/AuthLayout';
 
@@ -51,18 +51,9 @@ export default function Login() {
       }
 
       // Navigate based on role and company status
-      if (data.user && data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (data.user && data.user.role === 'company') {
-        const status = data.user.company_profile?.status;
-        if (status === 'pending' || status === 'rejected') {
-          navigate('/company/status');
-        } else {
-          navigate('/company/dashboard');
-        }
-      } else {
-        navigate('/dashboard');
-      }
+      const homePath = getRoleHomePath(data.user?.role, data.user);
+      navigate(homePath);
+
     } catch (err: any) {
       setError(err.message || 'An error occurred during authentication');
     } finally {

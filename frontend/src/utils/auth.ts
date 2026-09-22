@@ -221,3 +221,35 @@ export function getUserRole(): string | null {
   return null;
 }
 
+/**
+ * Resolves the default home dashboard route based on the user's role and status.
+ */
+export function getRoleHomePath(role?: string | null, userObj?: any): string {
+  const userRole = role || getUserRole();
+  if (userRole === 'admin') {
+    return '/admin/dashboard';
+  }
+  if (userRole === 'company') {
+    let status = 'approved';
+    if (userObj && userObj.company_profile) {
+      status = userObj.company_profile.status || status;
+    } else {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          status = parsed.company_profile?.status || status;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    if (status === 'pending' || status === 'rejected') {
+      return '/company/status';
+    }
+    return '/company/dashboard';
+  }
+  return '/dashboard';
+}
+
+
