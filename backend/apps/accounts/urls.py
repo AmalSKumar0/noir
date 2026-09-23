@@ -10,7 +10,7 @@ urlpatterns = [
     path('admin/companies/<int:pk>/', AdminCompanyDetailView.as_view(), name='admin_company_detail'),
 
     path('login/', EmailTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path("api-auth", include("rest_framework.urls", namespace="rest_framework")),
     path('github/login/', github_login, name='github_login'),

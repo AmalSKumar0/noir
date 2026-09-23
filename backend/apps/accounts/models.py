@@ -55,6 +55,7 @@ class CompanyProfile(models.Model):
     company_size = models.CharField(max_length=50, blank=True, default="")
     website = models.URLField(max_length=255, blank=True, default="")
     tax_id = models.CharField(max_length=100, blank=True, default="")
+    ownership_certificate = models.TextField(blank=True, default="", help_text="Base64 or document URL for company ownership / incorporation certificate")
     phone_number = models.CharField(max_length=50, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,6 +1,6 @@
 from apps.accounts.models import User, CompanyProfile, CompanyDeveloperRequest, Notification, DeveloperTeam
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework.exceptions import AuthenticationFailed
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
@@ -15,6 +15,7 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
             "company_size",
             "website",
             "tax_id",
+            "ownership_certificate",
             "phone_number",
             "created_at",
         ]
@@ -42,6 +43,7 @@ class AdminCompanyProfileSerializer(serializers.ModelSerializer):
             "company_size",
             "website",
             "tax_id",
+            "ownership_certificate",
             "phone_number",
             "created_at",
             "updated_at",
@@ -215,3 +217,20 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             "company": developer_company_data,
         }
         return data
+
+
+class SafeTokenRefreshSerializer(TokenRefreshSerializer):
+    """
+    Subclass of SimpleJWT's TokenRefreshSerializer to safely handle cases
+    where the user referenced by the refresh token has been deleted or does not exist,
+    preventing an unhandled User.DoesNotExist 500 error and returning a clean 401 response.
+    """
+
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist:
+            raise AuthenticationFailed(
+                self.error_messages["no_active_account"],
+                "no_active_account",
+            )

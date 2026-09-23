@@ -25,7 +25,7 @@ def get_project_with_permission(identifier, user):
     if not project:
         return None, Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    if user.is_staff or user.is_superuser or project.owner == user:
+    if user.is_staff or user.is_superuser or getattr(user, "role", None) == "admin" or project.owner == user:
         return project, None
 
     if user.role == User.Role.COMPANY:
@@ -71,7 +71,13 @@ class MyProjectListView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.COMPANY:
+        if user.is_superuser or user.is_staff or getattr(user, "role", None) == "admin":
+            return Project.objects.all().order_by("-updated_at")
+        elif user.role == User.Role.COMPANY:
+            if hasattr(user, "company_profile"):
+                return Project.objects.filter(
+                    Q(owner=user) | Q(owner__company=user.company_profile)
+                ).distinct().order_by("-updated_at")
             return Project.objects.filter(owner=user).order_by("-updated_at")
         elif user.role == User.Role.DEVELOPER and user.company:
             company_owner = user.company.user
@@ -95,7 +101,13 @@ class ProjectDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.COMPANY:
+        if user.is_superuser or user.is_staff or getattr(user, "role", None) == "admin":
+            return Project.objects.all()
+        elif user.role == User.Role.COMPANY:
+            if hasattr(user, "company_profile"):
+                return Project.objects.filter(
+                    Q(owner=user) | Q(owner__company=user.company_profile)
+                ).distinct()
             return Project.objects.filter(owner=user)
         elif user.role == User.Role.DEVELOPER and user.company:
             company_owner = user.company.user
@@ -104,6 +116,25 @@ class ProjectDetailView(RetrieveUpdateDestroyAPIView):
             ).distinct()
         else:
             return Project.objects.filter(owner=user)
+
+    def perform_destroy(self, instance):
+        if instance.connection_code:
+            code_upper = instance.connection_code.upper()
+            code_lower = instance.connection_code.lower()
+            cache.delete(f"core_active_stream_{code_upper}")
+            cache.delete(f"core_active_stream_{code_lower}")
+            cache.delete(f"core_daemon_active_{code_upper}")
+            cache.delete(f"core_daemon_active_{code_lower}")
+        instance.delete()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        project_name = instance.title
+        self.perform_destroy(instance)
+        return Response(
+            {"message": f"Project '{project_name}' deleted successfully."},
+            status=status.HTTP_200_OK
+        )
 
 class CliProjectDetailView(RetrieveUpdateDestroyAPIView):
     serializer_class = SingleProjectSerializer
@@ -112,7 +143,13 @@ class CliProjectDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.COMPANY:
+        if user.is_superuser or user.is_staff or getattr(user, "role", None) == "admin":
+            return Project.objects.all()
+        elif user.role == User.Role.COMPANY:
+            if hasattr(user, "company_profile"):
+                return Project.objects.filter(
+                    Q(owner=user) | Q(owner__company=user.company_profile)
+                ).distinct()
             return Project.objects.filter(owner=user)
         elif user.role == User.Role.DEVELOPER and user.company:
             company_owner = user.company.user
@@ -121,6 +158,25 @@ class CliProjectDetailView(RetrieveUpdateDestroyAPIView):
             ).distinct()
         else:
             return Project.objects.filter(owner=user)
+
+    def perform_destroy(self, instance):
+        if instance.connection_code:
+            code_upper = instance.connection_code.upper()
+            code_lower = instance.connection_code.lower()
+            cache.delete(f"core_active_stream_{code_upper}")
+            cache.delete(f"core_active_stream_{code_lower}")
+            cache.delete(f"core_daemon_active_{code_upper}")
+            cache.delete(f"core_daemon_active_{code_lower}")
+        instance.delete()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        project_name = instance.title
+        self.perform_destroy(instance)
+        return Response(
+            {"message": f"Project '{project_name}' deleted successfully."},
+            status=status.HTTP_200_OK
+        )
 
 
 class TestRunListCreateView(APIView):

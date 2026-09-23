@@ -4,9 +4,9 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer, EmailTokenObtainPairSerializer
+from .serializers import RegisterSerializer, EmailTokenObtainPairSerializer, SafeTokenRefreshSerializer
 from apps.users.serializers import UserSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from django.conf import settings
@@ -127,17 +127,18 @@ class CompanyRegisterView(APIView):
         first_name = data.get("first_name", "")
         last_name = data.get("last_name", "")
 
-        company_name = data.get("company_name")
+        company_name = data.get("company_name", "").strip()
         logo = data.get("logo", "")
         industry = data.get("industry", "")
         company_size = data.get("company_size", "")
         website = data.get("website", "")
-        tax_id = data.get("tax_id", "")
+        tax_id = data.get("tax_id", "").strip()
+        ownership_certificate = data.get("ownership_certificate", "")
         phone_number = data.get("phone_number", "")
 
-        if not email or not password or not company_name:
+        if not email or not password or not company_name or not tax_id:
             return Response(
-                {"detail": "Email, password, and company name are required."},
+                {"detail": "Email, password, company name, and Tax ID / Business Registration are required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -178,6 +179,7 @@ class CompanyRegisterView(APIView):
             company_size=company_size,
             website=website,
             tax_id=tax_id,
+            ownership_certificate=ownership_certificate,
             phone_number=phone_number,
         )
 
@@ -303,6 +305,11 @@ class LogoutView(APIView):
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
     throttle_classes = [LoginThrottle]
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    serializer_class = SafeTokenRefreshSerializer
+
 
 
 @throttle_classes([LoginThrottle])

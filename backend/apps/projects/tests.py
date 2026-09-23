@@ -224,3 +224,64 @@ class FaultInjectionAPITests(APITestCase):
         self.assertEqual(post_res.status_code, status.HTTP_200_OK)
         self.assertEqual(post_res.data["total"], 1)
 
+
+class ProjectDeletionAPITests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="project_owner",
+            email="owner@example.com",
+            password="testpassword123",
+            role=User.Role.DEVELOPER,
+        )
+        self.admin = User.objects.create_user(
+            username="admin_user",
+            email="admin@example.com",
+            password="testpassword123",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.other_user = User.objects.create_user(
+            username="unauthorized_user",
+            email="unauth@example.com",
+            password="testpassword123",
+            role=User.Role.DEVELOPER,
+        )
+        self.project = Project.objects.create(
+            title="Project To Delete",
+            connection_code="NR-DELTEST",
+            owner=self.owner,
+            status=Project.Status.ACTIVE,
+            visibility=Project.Visibility.PRIVATE,
+            architecture=Project.DeploymentType.MONOLITH,
+            analysis_mode=Project.AnalysisMode.MANUAL,
+        )
+
+    def test_admin_can_retrieve_and_delete_any_project(self):
+        self.client.force_authenticate(user=self.admin)
+        url = f"/api/projects/{self.project.id}/"
+
+        # Verify admin can retrieve project details
+        get_res = self.client.get(url)
+        self.assertEqual(get_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_res.data["title"], "Project To Delete")
+
+        # Verify admin can delete project
+        del_res = self.client.delete(url)
+        self.assertEqual(del_res.status_code, status.HTTP_200_OK)
+        self.assertFalse(Project.objects.filter(id=self.project.id).exists())
+
+    def test_owner_can_delete_own_project(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/projects/{self.project.id}/"
+        del_res = self.client.delete(url)
+        self.assertEqual(del_res.status_code, status.HTTP_200_OK)
+        self.assertFalse(Project.objects.filter(id=self.project.id).exists())
+
+    def test_unauthorized_user_cannot_delete_project(self):
+        self.client.force_authenticate(user=self.other_user)
+        url = f"/api/projects/{self.project.id}/"
+        del_res = self.client.delete(url)
+        self.assertEqual(del_res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Project.objects.filter(id=self.project.id).exists())
+
+
