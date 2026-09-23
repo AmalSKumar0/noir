@@ -947,7 +947,7 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
         isOpen={showDispatchModal}
         onClose={() => setShowDispatchModal(false)}
         title="Queue Fault Injection"
-        maxWidth="max-w-xl"
+        maxWidthClass="max-w-xl"
       >
         <form onSubmit={handleDispatchInjection} className="space-y-4 font-mono">
           {formError && (

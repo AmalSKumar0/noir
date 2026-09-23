@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, User, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { setAuthTokens } from '../utils/auth';
 import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
+import { validateEmail, validateUsername, validatePassword, validateConfirmPassword } from '../utils/validation';
 import AuthLayout from '../components/AuthLayout';
 
 const processedCodes = new Set<string>();
@@ -28,6 +29,19 @@ export default function Register() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [touched, setTouched] = useState({
+    username: false,
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
+
+  const usernameVal = validateUsername(username);
+  const emailVal = validateEmail(email);
+  const passwordVal = validatePassword(password);
+  const confirmVal = validateConfirmPassword(password, confirmPassword);
+
+  const isFormValid = usernameVal.isValid && emailVal.isValid && passwordVal.isValid && confirmVal.isValid;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -82,8 +96,21 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    setTouched({
+      username: true,
+      email: true,
+      password: true,
+      confirmPassword: true,
+    });
+
+    if (!isFormValid) {
+      setError(
+        usernameVal.error ||
+        emailVal.error ||
+        passwordVal.error ||
+        confirmVal.error ||
+        'Please resolve the highlighted errors'
+      );
       return;
     }
 
@@ -176,67 +203,195 @@ export default function Register() {
           </motion.div>
         )}
 
-        <form onSubmit={handleRegister} className="flex flex-col gap-4 w-full">
-          <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full bg-stone-900/50 border border-white/5 rounded-full py-3.5 pl-12 pr-6 text-sm text-white placeholder-stone-500 focus:outline-none focus:border-violet-500/50 focus:bg-stone-900/80 transition-all font-mono"
-            />
+        <form onSubmit={handleRegister} className="flex flex-col gap-3.5 w-full">
+          {/* USERNAME */}
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+              <input
+                type="text"
+                placeholder="Username (min 3 chars)"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setTouched((prev) => ({ ...prev, username: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, username: true }))}
+                required
+                className={`w-full bg-stone-900/50 border rounded-full py-3.5 pl-12 pr-10 text-sm text-white placeholder-stone-500 focus:outline-none transition-all font-mono ${
+                  touched.username && username
+                    ? usernameVal.isValid
+                      ? 'border-emerald-500/50 focus:border-emerald-500/70 bg-emerald-950/10'
+                      : 'border-red-500/50 focus:border-red-500/70 bg-red-950/10'
+                    : 'border-white/5 focus:border-violet-500/50 focus:bg-stone-900/80'
+                }`}
+              />
+              {touched.username && username && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {usernameVal.isValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {touched.username && !usernameVal.isValid && username && (
+              <span className="text-[11px] font-mono text-red-400 pl-4">{usernameVal.error}</span>
+            )}
           </div>
 
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full bg-stone-900/50 border border-white/5 rounded-full py-3.5 pl-12 pr-6 text-sm text-white placeholder-stone-500 focus:outline-none focus:border-violet-500/50 focus:bg-stone-900/80 transition-all font-mono"
-            />
+          {/* EMAIL */}
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setTouched((prev) => ({ ...prev, email: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                required
+                className={`w-full bg-stone-900/50 border rounded-full py-3.5 pl-12 pr-10 text-sm text-white placeholder-stone-500 focus:outline-none transition-all font-mono ${
+                  touched.email && email
+                    ? emailVal.isValid
+                      ? 'border-emerald-500/50 focus:border-emerald-500/70 bg-emerald-950/10'
+                      : 'border-red-500/50 focus:border-red-500/70 bg-red-950/10'
+                    : 'border-white/5 focus:border-violet-500/50 focus:bg-stone-900/80'
+                }`}
+              />
+              {touched.email && email && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {emailVal.isValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {touched.email && !emailVal.isValid && email && (
+              <span className="text-[11px] font-mono text-red-400 pl-4">{emailVal.error}</span>
+            )}
           </div>
           
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-stone-900/50 border border-white/5 rounded-full py-3.5 pl-12 pr-12 text-sm text-white placeholder-stone-500 focus:outline-none focus:border-violet-500/50 focus:bg-stone-900/80 transition-all font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-white transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+          {/* PASSWORD */}
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password (min 8 chars)"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setTouched((prev) => ({ ...prev, password: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
+                required
+                className={`w-full bg-stone-900/50 border rounded-full py-3.5 pl-12 pr-20 text-sm text-white placeholder-stone-500 focus:outline-none transition-all font-mono ${
+                  touched.password && password
+                    ? passwordVal.isValid
+                      ? 'border-emerald-500/50 focus:border-emerald-500/70 bg-emerald-950/10'
+                      : 'border-red-500/50 focus:border-red-500/70 bg-red-950/10'
+                    : 'border-white/5 focus:border-violet-500/50 focus:bg-stone-900/80'
+                }`}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {touched.password && password && (
+                  passwordVal.isValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-stone-500 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {/* Live Password Strength Meter */}
+            {touched.password && password && (
+              <div className="px-4 py-1 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-stone-400">
+                  Strength:{' '}
+                  <span
+                    className={
+                      passwordVal.strength === 'strong'
+                        ? 'text-emerald-400 font-semibold'
+                        : passwordVal.strength === 'medium'
+                        ? 'text-amber-400 font-semibold'
+                        : 'text-red-400 font-semibold'
+                    }
+                  >
+                    {passwordVal.strength.toUpperCase()}
+                  </span>
+                </span>
+                <span className={passwordVal.hasMinLength ? 'text-emerald-400' : 'text-stone-500'}>
+                  {password.length}/8+ chars
+                </span>
+              </div>
+            )}
+            {touched.password && !passwordVal.isValid && password && (
+              <span className="text-[11px] font-mono text-red-400 pl-4">{passwordVal.error}</span>
+            )}
           </div>
 
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full bg-stone-900/50 border border-white/5 rounded-full py-3.5 pl-12 pr-12 text-sm text-white placeholder-stone-500 focus:outline-none focus:border-violet-500/50 focus:bg-stone-900/80 transition-all font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-white transition-colors"
-            >
-              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+          {/* CONFIRM PASSWORD */}
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setTouched((prev) => ({ ...prev, confirmPassword: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
+                required
+                className={`w-full bg-stone-900/50 border rounded-full py-3.5 pl-12 pr-20 text-sm text-white placeholder-stone-500 focus:outline-none transition-all font-mono ${
+                  touched.confirmPassword && confirmPassword
+                    ? confirmVal.isValid
+                      ? 'border-emerald-500/50 focus:border-emerald-500/70 bg-emerald-950/10'
+                      : 'border-red-500/50 focus:border-red-500/70 bg-red-950/10'
+                    : 'border-white/5 focus:border-violet-500/50 focus:bg-stone-900/80'
+                }`}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {touched.confirmPassword && confirmPassword && (
+                  confirmVal.isValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="text-stone-500 hover:text-white transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {touched.confirmPassword && confirmPassword && (
+              <span
+                className={`text-[11px] font-mono pl-4 ${
+                  confirmVal.isValid ? 'text-emerald-400' : 'text-red-400'
+                }`}
+              >
+                {confirmVal.isValid ? '✓ Passwords match' : confirmVal.error}
+              </span>
+            )}
           </div>
 
           <motion.button
@@ -244,7 +399,7 @@ export default function Register() {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading || isGithubLoading}
-            className="w-full mt-4 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-widest hover:bg-stone-200 transition-colors shadow-[0_5px_20px_rgba(139,92,246,0.15)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full mt-2 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-widest hover:bg-stone-200 transition-colors shadow-[0_5px_20px_rgba(139,92,246,0.15)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {isLoading ? (
               <>

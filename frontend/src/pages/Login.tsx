@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { setAuthTokens, getRoleHomePath } from '../utils/auth';
 import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
+import { validateEmail } from '../utils/validation';
 import AuthLayout from '../components/AuthLayout';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  const emailVal = validateEmail(email);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,16 +124,40 @@ export default function Login() {
         )}
 
         <form onSubmit={handleAuth} className="flex flex-col gap-4 w-full">
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full bg-stone-900/50 border border-white/5 rounded-full py-3.5 pl-12 pr-6 text-sm text-white placeholder-stone-500 focus:outline-none focus:border-violet-500/50 focus:bg-stone-900/80 transition-all font-mono"
-            />
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailTouched(true);
+                }}
+                onBlur={() => setEmailTouched(true)}
+                required
+                className={`w-full bg-stone-900/50 border rounded-full py-3.5 pl-12 pr-10 text-sm text-white placeholder-stone-500 focus:outline-none transition-all font-mono ${
+                  emailTouched && email
+                    ? emailVal.isValid
+                      ? 'border-emerald-500/50 focus:border-emerald-500/70 bg-emerald-950/10'
+                      : 'border-red-500/50 focus:border-red-500/70 bg-red-950/10'
+                    : 'border-white/5 focus:border-violet-500/50 focus:bg-stone-900/80'
+                }`}
+              />
+              {emailTouched && email && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {emailVal.isValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {emailTouched && !emailVal.isValid && email && (
+              <span className="text-[11px] font-mono text-red-400 pl-4">{emailVal.error}</span>
+            )}
           </div>
           
           <div className="relative">

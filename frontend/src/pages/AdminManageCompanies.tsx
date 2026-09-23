@@ -478,6 +478,23 @@ export default function AdminManageCompanies() {
                 <span className="text-stone-500 block mb-1">Application Status</span>
                 <span className="text-white font-semibold uppercase">{currentCompany?.status || 'pending'}</span>
               </div>
+              <div className="sm:col-span-2 pt-2 border-t border-white/5">
+                <span className="text-stone-500 block mb-1.5">Ownership / Incorporation Certificate</span>
+                {currentCompany?.ownership_certificate ? (
+                  <a
+                    href={currentCompany.ownership_certificate}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={`${currentCompany.company_name.replace(/\s+/g, '_')}_certificate`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 hover:text-white transition-colors text-xs font-mono"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>View / Download Business Certificate</span>
+                  </a>
+                ) : (
+                  <span className="text-stone-500 text-xs italic">No document uploaded</span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-white/10">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import AdminLayout from '../components/AdminLayout';
-import { Search, FolderPlus, MoreVertical, Layout, ArrowRight, Edit2, Trash2, Eye } from 'lucide-react';
+import { Search, FolderPlus, MoreVertical, Layout, ArrowRight, Edit2, Trash2, Eye, AlertCircle } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
 import { apiFetch } from '../utils/api';
@@ -22,10 +22,12 @@ export default function AdminManageProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'view'>('add');
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'view' | 'delete'>('add');
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   const fetchProjects = async () => {
     try {
@@ -41,11 +43,12 @@ export default function AdminManageProjects() {
 
       if (response.ok) {
         const data = await response.json();
-        const mapped: Project[] = data.results.map((p: any) => ({
+        const rawList = Array.isArray(data) ? data : (data.results || []);
+        const mapped: Project[] = rawList.map((p: any) => ({
           id: p.id,
           name: p.title,
-          ownerName: p.owner?.username || 'Unknown',
-          status: p.status === 'active' ? 'Active' : p.status === 'error' ? 'Error' : 'Archived',
+          ownerName: p.owner?.username || p.owner?.email || 'Unknown',
+          status: p.status === 'active' ? 'Active' : p.status === 'error' ? 'Error' : (p.status || 'Archived'),
           progress: p.status === 'active' ? 80 : p.status === 'error' ? 35 : 100,
           lastUpdated: p.updated_at ? formatLastUpdated(p.updated_at) : 'Just now',
           raw: p
@@ -66,12 +69,14 @@ export default function AdminManageProjects() {
   const handleAdd = () => {
     setModalMode('add');
     setCurrentProject(null);
+    setActionError('');
     setIsModalOpen(true);
   };
 
   const handleEdit = (project: any) => {
     setModalMode('edit');
     setCurrentProject(project);
+    setActionError('');
     setIsModalOpen(true);
     setActiveDropdown(null);
   };
@@ -79,13 +84,46 @@ export default function AdminManageProjects() {
   const handleView = (project: any) => {
     setModalMode('view');
     setCurrentProject(project);
+    setActionError('');
     setIsModalOpen(true);
     setActiveDropdown(null);
   };
 
   const handleDelete = (project: any) => {
-    console.log('Delete project:', project);
+    setModalMode('delete');
+    setCurrentProject(project);
+    setActionError('');
+    setIsModalOpen(true);
     setActiveDropdown(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!currentProject) return;
+    setIsActionLoading(true);
+    setActionError('');
+    try {
+      const token = await checkAndRefreshToken();
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await apiFetch(`${baseUrl}/api/projects/${currentProject.id}/`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (response.ok) {
+        setIsModalOpen(false);
+        setProjects(prev => prev.filter(p => p.id !== currentProject.id));
+        fetchProjects();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setActionError(errData.detail || errData.error || 'Failed to delete project');
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'An error occurred while deleting project');
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   const toggleDropdown = (id: number) => {
@@ -259,9 +297,69 @@ export default function AdminManageProjects() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={modalMode === 'add' ? 'Add New Project' : modalMode === 'edit' ? 'Edit Project' : 'Project Details'}
+        title={
+          modalMode === 'add'
+            ? 'Add New Project'
+            : modalMode === 'edit'
+            ? 'Edit Project'
+            : modalMode === 'delete'
+            ? 'Delete Project Workspace'
+            : 'Project Details'
+        }
       >
-        {modalMode === 'view' ? (
+        {modalMode === 'delete' ? (
+          <div className="space-y-6">
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-200">
+              <p className="text-sm leading-relaxed">
+                Are you sure you want to delete workspace <span className="font-bold text-white">{currentProject?.name}</span>?
+              </p>
+              <p className="text-xs text-rose-300/80 mt-2">
+                This will permanently delete this project node and all associated test runs, chaos injections, and streaming telemetry logs. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-xs font-mono space-y-1">
+              <div className="flex justify-between">
+                <span className="text-white/50">Project ID:</span>
+                <span className="text-white font-semibold">#{currentProject?.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/50">Connection Code:</span>
+                <span className="text-[#c4b5fd] font-semibold">{currentProject?.raw?.connection_code || 'NR-PENDING'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/50">Owner:</span>
+                <span className="text-white">{currentProject?.ownerName}</span>
+              </div>
+            </div>
+
+            {actionError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono flex items-center gap-3">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isActionLoading}
+                className="px-5 py-2.5 rounded-full text-xs font-medium text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isActionLoading}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-lg transition-colors flex items-center gap-2"
+              >
+                {isActionLoading ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        ) : modalMode === 'view' ? (
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-white/50 mb-1">Project Name</label>
