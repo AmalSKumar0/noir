@@ -46,21 +46,28 @@ class ApiClient:
 
         return response.json()
     
+    def get_oauth_url(self, provider: str) -> str:
+        return self._url(f"/accounts/{provider}/login/?client=cli")
+
     def github_login(self):
+        url = self.get_oauth_url("github")
         try:
-            webbrowser.open(self._url("/accounts/github/login/?client=cli"))
+            webbrowser.open(url)
         except Exception as e:
             typer.echo(f"Error occurred while opening GitHub login page: {e}")
             raise e
+        return url
     
     def google_login(self):
+        url = self.get_oauth_url("google")
         try:
-            webbrowser.open(self._url("/accounts/google/login/?client=cli"))
+            webbrowser.open(url)
         except Exception as e:
             typer.echo(f"Error occurred while opening Google login page: {e}")
             raise e
+        return url
 
-    def obtain_tokens(self, code: str):
+    def obtain_tokens(self, code: str) -> dict:
         try:
             response = self.client.post(
                 self._url("/accounts/common-auth/callback/"),
@@ -69,10 +76,18 @@ class ApiClient:
                 }
             )
             response.raise_for_status()
-            save_token(response.json())
+            data = response.json()
+            save_token(data)
+            return data
+        except httpx.HTTPStatusError as e:
+            err_msg = ""
+            try:
+                err_msg = e.response.json().get("detail", "")
+            except Exception:
+                err_msg = e.response.text
+            raise RuntimeError(f"{err_msg or str(e)}")
         except Exception as e:
-            typer.echo(f"Error occurred while obtaining tokens: {e}")
-            raise e
+            raise RuntimeError(f"Error occurred while obtaining tokens: {e}")
     
     def send_request_to_backend(self, url: str, method: str, data: dict | None = None, retry=True):
         if not has_tokens():

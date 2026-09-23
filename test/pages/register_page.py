@@ -1,3 +1,4 @@
+import time
 from selenium.webdriver.common.by import By
 from test.pages.base_page import BasePage
 
@@ -48,7 +49,7 @@ class CompanyRegisterPage(BasePage):
     NEXT_BUTTON = (By.XPATH, "//button[contains(., 'Next') or @type='submit']")
 
     # Stage 2: Company Details & Verification
-    COMPANY_NAME_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Company' i]")
+    COMPANY_NAME_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Company Legal Name' i], input[placeholder*='Company' i]")
     TAX_ID_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Tax ID' i]")
     CERTIFICATE_INPUT = (By.CSS_SELECTOR, "input[type='file'][accept*='pdf']")
     WEBSITE_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Website' i]")
@@ -67,9 +68,23 @@ class CompanyRegisterPage(BasePage):
         self.type(self.PASSWORD_INPUT, password)
         self.type(self.CONFIRM_PASSWORD_INPUT, confirm_password or password)
         self.click(self.NEXT_BUTTON)
+        try:
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            WebDriverWait(self.driver, 5).until(EC.invisibility_of_element_located(self.FIRST_NAME_INPUT))
+        except Exception:
+            time.sleep(0.5)
 
     def fill_stage_2(self, company_name: str, tax_id: str, website: str = "", phone: str = "", certificate_path: str = ""):
-        self.type(self.COMPANY_NAME_INPUT, company_name)
+        # Wait for Step 2 to mount and settle
+        time.sleep(0.3)
+        for _ in range(3):
+            try:
+                self.type(self.COMPANY_NAME_INPUT, company_name)
+                break
+            except Exception:
+                time.sleep(0.3)
+
         self.type(self.TAX_ID_INPUT, tax_id)
         if website:
             self.type(self.WEBSITE_INPUT, website)
@@ -77,6 +92,7 @@ class CompanyRegisterPage(BasePage):
             self.type(self.PHONE_INPUT, phone)
         if certificate_path and self.is_visible(self.CERTIFICATE_INPUT, timeout=2):
             self.find(self.CERTIFICATE_INPUT).send_keys(certificate_path)
+            time.sleep(0.3)
         self.click(self.SUBMIT_BUTTON)
 
     def get_error_message(self) -> str:

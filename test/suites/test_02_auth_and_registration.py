@@ -39,6 +39,34 @@ class TestAuthAndRegistration:
 
         assert "/dashboard" in driver.current_url, f"Expected redirect to /dashboard, got: {driver.current_url}"
 
+    def test_login_valid_company_redirects_to_company_dashboard(self, driver):
+        login_page = LoginPage(driver)
+        login_page.open()
+
+        login_page.login(config.COMPANY_USER["email"], config.COMPANY_USER["password"])
+        login_page.wait_for_url("/company/dashboard")
+
+        assert "/company/dashboard" in driver.current_url, f"Expected redirect to /company/dashboard, got: {driver.current_url}"
+
+    def test_login_valid_admin_redirects_to_admin_dashboard(self, driver):
+        login_page = LoginPage(driver)
+        login_page.open()
+
+        login_page.login(config.ADMIN_USER["email"], config.ADMIN_USER["password"])
+        login_page.wait_for_url("/admin/dashboard")
+
+        assert "/admin/dashboard" in driver.current_url, f"Expected redirect to /admin/dashboard, got: {driver.current_url}"
+
+    def test_login_password_visibility_toggle(self, driver):
+        login_page = LoginPage(driver)
+        login_page.open()
+
+        login_page.enter_password("SecretPass123!")
+        assert login_page.get_password_input_type() == "password", "Initial password input type must be password"
+
+        login_page.toggle_password_visibility()
+        assert login_page.get_password_input_type() == "text", "Password input type should become text after clicking toggle"
+
     def test_developer_registration_live_validation(self, driver):
         reg_page = DeveloperRegisterPage(driver)
         reg_page.open()
@@ -52,15 +80,34 @@ class TestAuthAndRegistration:
         errors = reg_page.get_inline_errors()
         assert len(errors) > 0, f"Expected live inline errors for invalid inputs, found: {errors}"
 
+    def test_developer_successful_registration(self, driver):
+        reg_page = DeveloperRegisterPage(driver)
+        reg_page.open()
+
+        unique_id = int(time.time())
+        username = f"dev_{unique_id}"
+        email = f"developer_{unique_id}@noirtest.ai"
+
+        reg_page.register(
+            username=username,
+            email=email,
+            password="SecurePass123!",
+            confirm_password="SecurePass123!",
+        )
+
+        reg_page.wait_for_url("/dashboard")
+        assert "/dashboard" in driver.current_url, f"Expected redirect to /dashboard after registration, got: {driver.current_url}"
+
     def test_company_registration_step_1_and_step_2_fields(self, driver):
         company_page = CompanyRegisterPage(driver)
         company_page.open()
 
         # Fill Step 1 with valid credentials
+        unique_id = int(time.time())
         company_page.fill_stage_1(
             first_name="Jane",
             last_name="Doe",
-            email="jane.doe@enterprise.test",
+            email=f"jane_{unique_id}@enterprise.test",
             password="EnterprisePass123!",
             confirm_password="EnterprisePass123!",
         )
@@ -75,3 +122,33 @@ class TestAuthAndRegistration:
         assert company_page.is_visible(CompanyRegisterPage.CERTIFICATE_INPUT, timeout=5), (
             "Step 2 Ownership / Incorporation Certificate upload input must be present"
         )
+
+    def test_company_full_registration_submission(self, driver):
+        company_page = CompanyRegisterPage(driver)
+        company_page.open()
+
+        unique_id = int(time.time())
+        company_page.fill_stage_1(
+            first_name="Atlas",
+            last_name="Enterprise",
+            email=f"corp_{unique_id}@noirtest.ai",
+            password="EnterprisePass123!",
+            confirm_password="EnterprisePass123!",
+        )
+
+        cert_file = str(config.REPORTS_DIR / "test_cert.pdf")
+        company_page.fill_stage_2(
+            company_name=f"Atlas Global {unique_id}",
+            tax_id=f"TAX-{unique_id}",
+            website="https://atlascorp.test",
+            phone="+15559876543",
+            certificate_path=cert_file,
+        )
+
+        # Pending company should be routed to /company/status
+        company_page.wait_for_url("/company/status")
+        assert "/company/status" in driver.current_url, (
+            f"Expected redirect to /company/status after company registration, got: {driver.current_url}"
+        )
+
+

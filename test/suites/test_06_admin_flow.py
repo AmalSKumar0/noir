@@ -33,8 +33,11 @@ class TestAdminFlow:
         companies_page.open()
 
         assert "/admin/companies" in driver.current_url
-        # Test clicking status filter
         companies_page.click_pending_filter()
+        time.sleep(0.5)
+        companies_page.click_view_first_company()
+        if companies_page.is_modal_visible():
+            companies_page.close_modal()
 
     def test_admin_manage_projects(self, auth_driver):
         driver, _ = auth_driver("admin")
@@ -42,4 +45,4 @@ class TestAdminFlow:
         projects_page.open()
 
         assert "/admin/projects" in driver.current_url
-        assert projects_page.has_projects_table(), "Projects table should render on /admin/projects"
+        assert projects_page.has_projects_table(), "Projects should render on /admin/projects"

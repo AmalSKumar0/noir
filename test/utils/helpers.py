@@ -47,6 +47,7 @@ def fill_input(driver: WebDriver, locator: tuple[str, str], text: str, clear: bo
     if clear:
         element.clear()
     element.send_keys(text)
+    return element
 
 def inject_tokens(driver: WebDriver, access_token: str, refresh_token: str = None, role: str = "developer", user_data: dict = None):
     """

@@ -52,8 +52,8 @@ class BasePage:
     def click(self, locator: tuple[str, str], timeout: int = config.DEFAULT_TIMEOUT):
         helpers.safe_click(self.driver, locator, timeout)
 
-    def type(self, locator: tuple[str, str], text: str, clear: bool = True, timeout: int = config.DEFAULT_TIMEOUT):
-        helpers.fill_input(self.driver, locator, text, clear=clear, timeout=timeout)
+    def type(self, locator: tuple[str, str], text: str, clear: bool = True, timeout: int = config.DEFAULT_TIMEOUT) -> WebElement:
+        return helpers.fill_input(self.driver, locator, text, clear=clear, timeout=timeout)
 
     def get_text(self, locator: tuple[str, str], timeout: int = config.DEFAULT_TIMEOUT) -> str:
         return self.find(locator, timeout).text

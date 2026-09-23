@@ -5,7 +5,7 @@ class DeveloperDashboardPage(BasePage):
     """Page Object for the Developer Dashboard ('/dashboard')."""
 
     CREATE_PROJECT_BUTTON = (By.XPATH, "//button[contains(., 'New Project') or contains(., 'Create Project')]")
-    SEARCH_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Search' i]")
+    SEARCH_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Filter' i], input[placeholder*='Search' i]")
     PROJECT_CARDS = (By.XPATH, "//div[contains(@class, 'group') and (.//h3 or .//span[contains(@class, 'font-mono')])] | //div[contains(@class, 'rounded') and .//a[contains(@href, '/projects/')]]")
     AGENT_FEED_SECTION = (By.XPATH, "//*[contains(text(), 'Live Feed') or contains(text(), 'Agent') or contains(text(), 'Terminal')]")
     NAV_PROJECTS = (By.XPATH, "//a[contains(@href, '/dashboard/projects') or contains(@href, '/projects')]")
@@ -15,6 +15,11 @@ class DeveloperDashboardPage(BasePage):
     NAV_NOTIFICATIONS = (By.XPATH, "//button[contains(@aria-label, 'notification') or .//*[name()='svg' and contains(@class, 'lucide-bell')]]")
     NAV_LOGOUT = (By.XPATH, "//button[contains(@aria-label, 'logout') or contains(., 'Logout') or .//*[name()='svg' and contains(@class, 'lucide-log-out')]]")
 
+    MODAL_TITLE_INPUT = (By.CSS_SELECTOR, "div.fixed input[placeholder*='Acme API' i], div.fixed input[placeholder*='Title' i]")
+    MODAL_DESC_INPUT = (By.CSS_SELECTOR, "div.fixed textarea, div.fixed input[placeholder*='Description' i]")
+    MODAL_ARCH_SELECT = (By.CSS_SELECTOR, "div.fixed select")
+    MODAL_SUBMIT_BUTTON = (By.CSS_SELECTOR, "div.fixed button[type='submit']")
+
     def open(self):
         return super().open("/dashboard")
 
@@ -22,8 +27,16 @@ class DeveloperDashboardPage(BasePage):
         self.click(self.CREATE_PROJECT_BUTTON)
 
     def is_create_modal_visible(self) -> bool:
-        modal_locator = (By.XPATH, "//div[contains(@class, 'fixed') and .//h3[contains(., 'Project') or contains(., 'Create')]]")
+        modal_locator = (By.XPATH, "//div[contains(@class, 'fixed')]//h2[contains(., 'Project') or contains(., 'Register')]")
         return self.is_visible(modal_locator, timeout=3)
+
+    def create_project(self, title: str, description: str = ""):
+        self.click_create_project()
+        self.is_create_modal_visible()
+        self.type(self.MODAL_TITLE_INPUT, title)
+        if description:
+            self.type(self.MODAL_DESC_INPUT, description)
+        self.click(self.MODAL_SUBMIT_BUTTON)
 
     def search_projects(self, query: str):
         self.type(self.SEARCH_INPUT, query)
@@ -34,6 +47,7 @@ class DeveloperDashboardPage(BasePage):
     def click_first_project(self):
         project_link = (By.XPATH, "//a[contains(@href, '/dashboard/projects/') or contains(@href, '/projects/')]")
         self.click(project_link)
+
 
 
 class ProjectDetailPage(BasePage):
@@ -107,3 +121,36 @@ class OrganizationProfilePage(BasePage):
 
     def has_organization_content(self) -> bool:
         return self.is_visible(self.ORG_HEADER)
+
+
+class QuickstartPage(BasePage):
+    """Page Object for Developer Quickstart ('/quickstart')."""
+
+    HEADER = (By.XPATH, "//*[contains(text(), 'Quickstart') or contains(text(), 'CLI')]")
+    SEARCH_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Search' i]")
+    COMMAND_CARDS = (By.XPATH, "//div[contains(@class, 'rounded')]//span[contains(@class, 'font-mono')] | //div[contains(@class, 'border')]//code")
+    COPY_BUTTON = (By.XPATH, "//button[contains(@aria-label, 'copy') or contains(., 'Copy') or .//*[name()='svg' and contains(@class, 'lucide-copy')]]")
+
+    def open(self):
+        return super().open("/quickstart")
+
+    def has_quickstart_content(self) -> bool:
+        return self.is_visible(self.HEADER, timeout=5)
+
+    def search_commands(self, query: str):
+        if self.is_visible(self.SEARCH_INPUT, timeout=3):
+            self.type(self.SEARCH_INPUT, query)
+
+
+class UserProjectsPage(BasePage):
+    """Page Object for User Projects List ('/dashboard/projects')."""
+
+    PROJECTS_GRID = (By.XPATH, "//div[contains(@class, 'grid')]//div[contains(@class, 'rounded')] | //table")
+    SEARCH_INPUT = (By.CSS_SELECTOR, "input[placeholder*='Search' i]")
+
+    def open(self):
+        return super().open("/dashboard/projects")
+
+    def has_projects_grid(self) -> bool:
+        return self.is_visible(self.PROJECTS_GRID, timeout=5)
+

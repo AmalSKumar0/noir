@@ -3,6 +3,7 @@ import time
 from selenium.webdriver.support.ui import WebDriverWait
 from test.pages.home_page import HomePage
 from test.pages.login_page import LoginPage
+from test.pages.contact_page import ContactPage
 from test import config
 
 class TestLandingAndPublic:
@@ -37,6 +38,19 @@ class TestLandingAndPublic:
 
         assert "/contact" in driver.current_url, f"Expected to navigate to /contact, got: {driver.current_url}"
 
+    def test_contact_form_submission(self, driver):
+        contact_page = ContactPage(driver)
+        contact_page.open()
+
+        assert contact_page.is_loaded(), "Contact page heading should be visible"
+        contact_page.submit_contact_form(
+            first_name="Alex",
+            last_name="Tester",
+            email="alex.tester@noir.ai",
+            message="Evaluating Noir platform for enterprise chaos telemetry.",
+        )
+        assert contact_page.is_submission_successful(), "Submission success message should be displayed"
+
     def test_wildcard_fallback_redirects_to_home(self, driver):
         driver.get(f"{config.FRONTEND_URL}/some-unknown-fallback-path-xyz")
         
@@ -48,3 +62,4 @@ class TestLandingAndPublic:
         assert driver.current_url.rstrip("/") == config.FRONTEND_URL.rstrip("/"), (
             f"Expected redirection to root URL, got: {driver.current_url}"
         )
+

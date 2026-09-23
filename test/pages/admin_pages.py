@@ -54,6 +54,12 @@ class AdminManageCompaniesPage(BasePage):
     FILTER_APPROVED = (By.XPATH, "//button[contains(text(), 'Approved') or contains(., 'approved')]")
     COMPANY_ROWS = (By.XPATH, "//tbody//tr | //div[contains(@class, 'rounded') and .//button[contains(text(), 'View')]]")
     VIEW_BUTTON = (By.XPATH, "//button[contains(., 'View') or .//*[name()='svg' and contains(@class, 'lucide-eye')]]")
+    COMPANY_MODAL = (By.XPATH, "//div[contains(@class, 'fixed')]//h2[contains(., 'Company') or contains(., 'Details')]")
+    TAX_ID_DISPLAY = (By.XPATH, "//*[contains(text(), 'Tax ID') or contains(text(), 'TAX')]")
+    CERTIFICATE_LINK = (By.XPATH, "//a[contains(., 'Certificate') or contains(., 'Document') or contains(., 'View') or contains(., 'Download')] | //button[contains(., 'Certificate') or contains(., 'View Document')]")
+    APPROVE_BUTTON = (By.XPATH, "//button[contains(., 'Approve')]")
+    REJECT_BUTTON = (By.XPATH, "//button[contains(., 'Reject')]")
+    MODAL_CLOSE_BUTTON = (By.XPATH, "//div[contains(@class, 'fixed')]//button[.//*[name()='svg']]")
 
     def open(self):
         return super().open("/admin/companies")
@@ -66,15 +72,33 @@ class AdminManageCompaniesPage(BasePage):
         if self.is_visible(self.VIEW_BUTTON, timeout=3):
             self.click(self.VIEW_BUTTON)
 
+    def is_modal_visible(self) -> bool:
+        return self.is_visible(self.COMPANY_MODAL, timeout=4)
+
+    def has_tax_id_displayed(self) -> bool:
+        return self.is_visible(self.TAX_ID_DISPLAY, timeout=3)
+
+    def has_certificate_displayed(self) -> bool:
+        return self.is_visible(self.CERTIFICATE_LINK, timeout=3)
+
+    def click_approve(self):
+        if self.is_visible(self.APPROVE_BUTTON, timeout=3):
+            self.click(self.APPROVE_BUTTON)
+
+    def close_modal(self):
+        if self.is_visible(self.MODAL_CLOSE_BUTTON, timeout=2):
+            self.click(self.MODAL_CLOSE_BUTTON)
+
 
 class AdminManageProjectsPage(BasePage):
     """Page Object for Admin Global Projects Management ('/admin/projects')."""
 
-    PROJECTS_TABLE = (By.XPATH, "//table | //div[contains(@class, 'overflow-x-auto')]")
-    PROJECT_ROWS = (By.XPATH, "//tbody//tr | //div[contains(@class, 'rounded') and (.//h3 or .//span[contains(@class, 'font-mono')])] ")
+    PROJECTS_CONTAINER = (By.XPATH, "//div[contains(@class, 'grid')] | //table | //div[contains(@class, 'overflow-x-auto')]")
+    PROJECT_ROWS = (By.XPATH, "//div[contains(@class, 'grid')]//div[contains(@class, 'rounded')] | //tbody//tr")
 
     def open(self):
         return super().open("/admin/projects")
 
     def has_projects_table(self) -> bool:
-        return self.is_visible(self.PROJECTS_TABLE)
+        return self.is_visible(self.PROJECTS_CONTAINER, timeout=5)
+

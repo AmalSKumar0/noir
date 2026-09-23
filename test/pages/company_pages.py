@@ -48,3 +48,17 @@ class CompanyDevelopersPage(BasePage):
 
     def has_developers_content(self) -> bool:
         return self.is_visible(self.DEVELOPERS_HEADER)
+
+
+class CompanyStatusPage(BasePage):
+    """Page Object for Company Status / Pending Approval ('/company/status')."""
+
+    STATUS_HEADER = (By.XPATH, "//*[contains(text(), 'Review') or contains(text(), 'Pending') or contains(text(), 'Verification') or contains(text(), 'Status')]")
+    REFRESH_BUTTON = (By.XPATH, "//button[contains(., 'Refresh') or .//*[name()='svg' and contains(@class, 'lucide-refresh')]]")
+
+    def open(self):
+        return super().open("/company/status")
+
+    def has_status_content(self) -> bool:
+        return self.is_visible(self.STATUS_HEADER, timeout=5)
+

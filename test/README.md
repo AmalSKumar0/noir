@@ -12,7 +12,11 @@ test/
 ├── requirements.txt                   # Test dependencies (selenium, pytest, pytest-html)
 ├── config.py                          # URLs, credentials, timeouts, browser options
 ├── conftest.py                        # Pytest fixtures, driver lifecycle, auto-screenshots
-├── run_tests.py                       # CLI test runner
+├── run_tests.py                       # CLI test runner with service health checks & aliases
+├── reports/
+│   ├── test_cert.pdf                  # Valid minimal PDF fixture for company registration
+│   ├── screenshots/                   # Auto-captured failure screenshots
+│   └── report.html                    # Generated HTML test execution report
 ├── utils/
 │   ├── driver_factory.py              # Cross-browser WebDriver builder (Firefox, Chrome, Brave)
 │   ├── helpers.py                     # Safe clicks, explicit waits, token injection, screenshots
@@ -20,19 +24,20 @@ test/
 ├── pages/                             # Page Object Model (POM)
 │   ├── base_page.py                   # Base abstractions & wait helpers
 │   ├── home_page.py                   # Landing page elements and actions
-│   ├── login_page.py                  # Login form with live email validation
-│   ├── register_page.py               # Developer & Company registration with Tax ID & Certificate
-│   ├── developer_pages.py             # Developer Dashboard, Project Details, Analytics, Reports, Profile
-│   ├── company_pages.py               # Company Dashboard, Managed Projects, Developers Directory
-│   └── admin_pages.py                 # Admin Dashboard, Users, Company Approvals, Global Projects
-└── suites/                            # Modular Test Suites
-    ├── test_01_landing_and_public.py      # Landing, Contact, 404 wildcard fallback
-    ├── test_02_auth_and_registration.py  # Form validations, error messages, registration, login
-    ├── test_03_route_guards_and_security.py # Protected route redirects, role boundaries
-    ├── test_04_developer_flow.py         # Developer Dashboard, Projects, Analytics, Reports
-    ├── test_05_company_flow.py           # Company Dashboard, Projects, Developers management
-    ├── test_06_admin_flow.py             # Admin Dashboard, Users, Company approvals, Projects
-    └── test_07_notifications_and_logout.py # Notifications toggle, Logout token invalidation
+│   ├── contact_page.py                # Contact form POM with fields and confirmation banner
+│   ├── login_page.py                  # Login form with live email validation & password toggle
+│   ├── register_page.py               # Developer & Company registration with Tax ID & PDF upload
+│   ├── developer_pages.py             # Developer Dashboard, Project Creation, Analytics, Reports, Quickstart
+│   ├── company_pages.py               # Company Dashboard, Status Review, Projects, Developers Directory
+│   └── admin_pages.py                 # Admin Dashboard, Users, Company Approvals & Document Review
+└── suites/                            # Modular Test Suites (48 E2E Tests)
+    ├── test_01_landing_and_public.py      # Landing, Navigation, Contact Form, 404 fallback
+    ├── test_02_auth_and_registration.py  # Live validation, Company/Dev/Admin login, Password toggle, PDF upload
+    ├── test_03_route_guards_and_security.py # Unauthenticated redirects, Developer/Company/Admin boundaries
+    ├── test_04_developer_flow.py         # Dashboard, Create project modal, Search, Telemetry, Analytics, Chaos
+    ├── test_05_company_flow.py           # Company Dashboard, Pending review status, Projects, Developers
+    ├── test_06_admin_flow.py             # Admin Dashboard, User table, Company approval modal, Project cards
+    └── test_07_notifications_and_logout.py # Notifications dropdown toggle, Logout & token revocation
 ```
 
 ---
@@ -104,15 +109,16 @@ uv run --with selenium --with pytest python test/run_tests.py --suite logout
 
 | Flag | Description | Default |
 |---|---|---|
-| `--suite <name>` | `all`, `public`, `auth`, `security`, `developer`, `company`, `admin`, `logout` | `all` |
+| `--suite <name>` | `all`, `public` (alias: `contact`), `auth`, `security`, `developer`, `company`, `admin`, `logout` (alias: `notifications`) | `all` |
+| `--check-services` | Verify backend (http://localhost:8000) and frontend (http://localhost:3000) are healthy before running tests | False |
 | `--browser <name>` | `firefox`, `chrome`, `brave` | `firefox` |
 | `--headed` | Run browser in visible graphical window | Headless |
 | `--report` | Generate self-contained HTML report in `test/reports/report.html` | False |
 | `-k <keyword>` | Run only tests matching a name pattern (pytest filter) | None |
 
-Example with HTML report:
+Example with service readiness check and HTML report:
 ```bash
-uv run --with selenium --with pytest --with pytest-html python test/run_tests.py --report
+./backend/venv/bin/python test/run_tests.py --check-services --report
 ```
 
 ---

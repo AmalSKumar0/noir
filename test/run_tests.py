@@ -7,6 +7,8 @@ Execute the entire app test suite or specific modules.
 import sys
 import os
 import argparse
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 # Add project root to sys.path
@@ -20,19 +22,49 @@ from test.utils.seed_data import seed_test_database
 
 SUITE_MAPPING = {
     "public": "test/suites/test_01_landing_and_public.py",
+    "contact": "test/suites/test_01_landing_and_public.py",
     "auth": "test/suites/test_02_auth_and_registration.py",
     "security": "test/suites/test_03_route_guards_and_security.py",
     "developer": "test/suites/test_04_developer_flow.py",
     "company": "test/suites/test_05_company_flow.py",
     "admin": "test/suites/test_06_admin_flow.py",
     "logout": "test/suites/test_07_notifications_and_logout.py",
+    "e2e": "test/suites",
 }
+
+def check_services_health() -> tuple[bool, bool]:
+    """
+    Checks whether the backend and frontend are reachable.
+    Returns (backend_alive, frontend_alive).
+    """
+    backend_alive = False
+    frontend_alive = False
+
+    # Check backend
+    try:
+        req = urllib.request.Request(f"{config.BACKEND_URL}/api/accounts/login/")
+        urllib.request.urlopen(req, timeout=3)
+        backend_alive = True
+    except urllib.error.HTTPError:
+        backend_alive = True  # Status 405/401 indicates server is up and listening
+    except Exception:
+        backend_alive = False
+
+    # Check frontend
+    try:
+        req = urllib.request.Request(config.FRONTEND_URL)
+        urllib.request.urlopen(req, timeout=3)
+        frontend_alive = True
+    except Exception:
+        frontend_alive = False
+
+    return backend_alive, frontend_alive
 
 def main():
     parser = argparse.ArgumentParser(description="Noir Automated Selenium E2E Test Runner")
     parser.add_argument(
         "--suite",
-        choices=["all", "public", "auth", "security", "developer", "company", "admin", "logout"],
+        choices=["all", "public", "contact", "auth", "security", "developer", "company", "admin", "logout", "e2e"],
         default="all",
         help="Specify which test suite to run (default: all)",
     )
@@ -61,12 +93,42 @@ def main():
         help="Generate an HTML test report in test/reports/report.html",
     )
     parser.add_argument(
+        "--check-services",
+        action="store_true",
+        default=False,
+        help="Verify frontend and backend reachability and exit",
+    )
+    parser.add_argument(
         "-k",
         "--keyword",
         help="Filter tests by keyword expression (pytest -k)",
     )
 
     args, unknown = parser.parse_known_args()
+
+    # Step 0: Check service availability
+    backend_ok, frontend_ok = check_services_health()
+
+    if args.check_services:
+        print("\n==========================================")
+        print("  SERVICE HEALTH STATUS")
+        print("==========================================")
+        print(f"  Backend  ({config.BACKEND_URL}):  {'ONLINE' if backend_ok else 'OFFLINE'}")
+        print(f"  Frontend ({config.FRONTEND_URL}): {'ONLINE' if frontend_ok else 'OFFLINE'}")
+        print("==========================================\n")
+        sys.exit(0 if (backend_ok and frontend_ok) else 1)
+
+    if not (backend_ok and frontend_ok):
+        print("\n==========================================")
+        print("  [WARNING] SERVICES UNREACHABLE")
+        print("==========================================")
+        if not backend_ok:
+            print(f"  [-] Backend is unreachable at {config.BACKEND_URL}")
+            print("      Start it via: ./backend/venv/bin/python backend/manage.py runserver 0.0.0.0:8000")
+        if not frontend_ok:
+            print(f"  [-] Frontend is unreachable at {config.FRONTEND_URL}")
+            print("      Start it via: cd frontend && npm run dev")
+        print("==========================================\n")
 
     # Step 1: Ensure database is seeded
     if args.seed:
@@ -85,7 +147,7 @@ def main():
 
     pytest_args = ["pytest", "-v"]
 
-    if args.suite == "all":
+    if args.suite in ("all", "e2e"):
         pytest_args.append("test/suites")
     else:
         pytest_args.append(SUITE_MAPPING[args.suite])
@@ -110,6 +172,11 @@ def main():
 
     import pytest
     exit_code = pytest.main(pytest_args[1:])
+
+    if args.report:
+        report_file = config.REPORTS_DIR / "report.html"
+        print(f"\n[Report] Test report generated at: {report_file}")
+
     sys.exit(exit_code)
 
 if __name__ == "__main__":

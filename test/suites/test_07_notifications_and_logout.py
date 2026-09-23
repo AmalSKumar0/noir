@@ -1,5 +1,6 @@
 import pytest
 import time
+from selenium.webdriver.support.ui import WebDriverWait
 from test.pages.developer_pages import DeveloperDashboardPage
 from test import config
 
@@ -22,7 +23,7 @@ class TestNotificationsAndLogout:
 
         # Trigger logout by navigating to /logout
         driver.get(f"{config.FRONTEND_URL}/logout")
-        time.sleep(1.5)
+        WebDriverWait(driver, 10).until(lambda d: "/login" in d.current_url)
 
         # Assert redirected to /login
         assert "/login" in driver.current_url, f"Expected redirect to /login after logout, got: {driver.current_url}"
@@ -33,5 +34,15 @@ class TestNotificationsAndLogout:
 
         # Attempt to access protected dashboard after logout
         driver.get(f"{config.FRONTEND_URL}/dashboard")
-        time.sleep(1)
+        WebDriverWait(driver, 10).until(lambda d: "/login" in d.current_url)
         assert "/login" in driver.current_url, "Accessing /dashboard after logout should redirect to /login"
+
+    def test_logout_via_navbar_button(self, auth_driver):
+        driver, _ = auth_driver("developer")
+        dashboard = DeveloperDashboardPage(driver)
+        dashboard.open()
+
+        if dashboard.is_visible(DeveloperDashboardPage.NAV_LOGOUT, timeout=4):
+            dashboard.click(DeveloperDashboardPage.NAV_LOGOUT)
+            WebDriverWait(driver, 10).until(lambda d: "/login" in d.current_url)
+            assert "/login" in driver.current_url

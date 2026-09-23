@@ -170,6 +170,10 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
   const [formError, setFormError] = useState<string | null>(null);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState<string | null>(null);
 
+  // Daemon Status ('noir fault listen' active indicator)
+  const [isDaemonActive, setIsDaemonActive] = useState<boolean>(false);
+  const [isCheckingDaemon, setIsCheckingDaemon] = useState<boolean>(false);
+
   // Cancellation & Stop State
   const [stoppingFaultIds, setStoppingFaultIds] = useState<Set<number>>(new Set());
   const [cancellingFaultIds, setCancellingFaultIds] = useState<Set<number>>(new Set());
@@ -246,6 +250,28 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
       if (!quiet) setIsLoadingHistory(false);
     }
   }, [projectIdentifier]);
+
+  // Check Daemon Status ('noir fault listen')
+  const checkDaemonStatus = useCallback(async () => {
+    try {
+      setIsCheckingDaemon(true);
+      const resp = await apiFetch(`/api/project/${projectIdentifier}/stream-status/`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setIsDaemonActive(!!data.is_daemon_active);
+      }
+    } catch (e) {
+      console.error('Failed to check daemon status:', e);
+    } finally {
+      setIsCheckingDaemon(false);
+    }
+  }, [projectIdentifier]);
+
+  useEffect(() => {
+    checkDaemonStatus();
+    const interval = setInterval(checkDaemonStatus, 4000);
+    return () => clearInterval(interval);
+  }, [checkDaemonStatus]);
 
   // Fetch Containers
   const fetchContainers = useCallback(async () => {
@@ -461,6 +487,11 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
       return;
     }
 
+    if (!isDaemonActive) {
+      setFormError("Cannot queue fault: The Noir daemon ('noir fault listen') is not running. Please start the listener in your terminal before queuing a fault.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -581,6 +612,18 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
                   }`} />
                   <span className="capitalize">{wsStatus}</span>
                 </div>
+
+                {/* Daemon Status Pill */}
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-mono flex items-center gap-1.5 border ${
+                  isDaemonActive
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`} title={isDaemonActive ? "Noir daemon ('noir fault listen') is running" : "Noir daemon ('noir fault listen') is not running"}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    isDaemonActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                  }`} />
+                  <span>{isDaemonActive ? 'DAEMON ACTIVE' : 'DAEMON INACTIVE'}</span>
+                </div>
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
                 Asynchronous fault execution queue with live telemetry and Docker control.
@@ -622,6 +665,7 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
               onClick={() => {
                 setFormError(null);
                 setSubmitSuccessMsg(null);
+                checkDaemonStatus();
                 setShowDispatchModal(true);
               }}
               className="px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm hover:shadow-amber-500/20 cursor-pointer"
@@ -957,6 +1001,41 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
             </div>
           )}
 
+          {/* Real-time Daemon Status Banner */}
+          {isDaemonActive ? (
+            <div className="flex items-center justify-between p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-semibold">Daemon Active: 'noir fault listen' is running</span>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase font-bold">Ready</span>
+            </div>
+          ) : (
+            <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="font-semibold text-amber-200">Listener Required: 'noir fault listen' is not running</span>
+                </div>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase font-bold">Action Needed</span>
+              </div>
+              <p className="text-[11px] text-zinc-400">
+                Noir requires the agent listener daemon to be actively running in your workspace to execute queued faults. Run this command in your project directory:
+              </p>
+              <div className="flex items-center justify-between bg-black/60 border border-zinc-800 rounded px-2.5 py-1.5 font-mono text-[11px]">
+                <span className="text-zinc-300">$ <span className="text-emerald-400 font-bold">noir fault listen</span></span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy('noir fault listen', 'modal-listen')}
+                  className="text-zinc-400 hover:text-white flex items-center gap-1 text-[10px] cursor-pointer"
+                >
+                  {copiedCmd === 'modal-listen' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedCmd === 'modal-listen' ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Fault Strategy Selector */}
           <div>
             <label className="text-xs text-zinc-400 block mb-1.5 uppercase tracking-wider font-bold">
@@ -1158,13 +1237,18 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !targetContainer.trim()}
-              className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              disabled={isSubmitting || !isDaemonActive || !targetContainer.trim()}
+              className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Queueing...</span>
+                </>
+              ) : !isDaemonActive ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Start 'noir fault listen' to Queue</span>
                 </>
               ) : (
                 <>

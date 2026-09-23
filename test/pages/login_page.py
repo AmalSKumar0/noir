@@ -11,6 +11,8 @@ class LoginPage(BasePage):
     REGISTER_LINK = (By.XPATH, "//a[contains(@href, '/register') and not(contains(@href, '/register/company'))]")
     COMPANY_REGISTER_LINK = (By.XPATH, "//a[contains(@href, '/register/company')]")
 
+    PASSWORD_TOGGLE_BUTTON = (By.CSS_SELECTOR, "form button[type='button']")
+
     def open(self):
         return super().open("/login")
 
@@ -19,6 +21,12 @@ class LoginPage(BasePage):
 
     def enter_password(self, password: str):
         self.type(self.PASSWORD_INPUT, password)
+
+    def toggle_password_visibility(self):
+        self.click(self.PASSWORD_TOGGLE_BUTTON)
+
+    def get_password_input_type(self) -> str:
+        return self.find(self.PASSWORD_INPUT).get_attribute("type")
 
     def submit(self):
         self.click(self.SUBMIT_BUTTON)
@@ -41,3 +49,4 @@ class LoginPage(BasePage):
     def click_company_register(self):
         self.click(self.COMPANY_REGISTER_LINK)
         self.wait_for_url("/register/company")
+

@@ -480,6 +480,30 @@ class ProjectFaultListCreateAPIView(APIView):
         if err_resp:
             return err_resp
 
+        # Verify that 'noir fault listen' daemon is actively running
+        code_upper = project.connection_code.upper()
+        code_lower = project.connection_code.lower()
+        is_daemon_active = bool(
+            cache.get(f"core_daemon_active_{code_upper}") or 
+            cache.get(f"core_daemon_active_{code_lower}")
+        )
+
+        allow_offline = (
+            request.data.get("allow_offline", False) or 
+            request.query_params.get("allow_offline", False) or
+            getattr(settings, "ALLOW_OFFLINE_QUEUING", False)
+        )
+
+        if not is_daemon_active and not allow_offline:
+            return Response(
+                {
+                    "detail": "Cannot queue fault: The Noir daemon ('noir fault listen') is not running. Please start the listener in your project workspace using 'noir fault listen' first.",
+                    "command": "noir fault listen",
+                    "code": "daemon_inactive",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = FaultInjectionCreateSerializer(data=request.data, context={"project": project})
         serializer.is_valid(raise_exception=True)
         fault = serializer.save(

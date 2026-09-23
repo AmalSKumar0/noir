@@ -24,6 +24,8 @@ class FaultExecutionSystemTests(TestCase):
             connection_code="CHAOS-001",
             owner=self.user,
         )
+        from django.core.cache import cache
+        cache.set(f"core_daemon_active_{self.project.connection_code.upper()}", True, timeout=3600)
 
     def test_create_fault_returns_immediately_and_status_is_queued(self):
         """Starting an injection creates a job in QUEUED state without blocking."""
@@ -232,3 +234,35 @@ class FaultExecutionSystemTests(TestCase):
         self.assertEqual(len(logs), 2)
         self.assertEqual(logs[0]["message"], "Allocating 256MB...")
         self.assertEqual(logs[1]["message"], "Memory held for 10s...")
+
+    def test_queue_fault_requires_noir_fault_listen_running(self):
+        """Queuing a fault without noir fault listen running fails with 400."""
+        from django.core.cache import cache
+
+        url = f"/api/projects/{self.project.id}/faults/"
+        payload = {
+            "fault_type": "cpu_stress",
+            "target": "api-server",
+            "parameters": {"workers": 1, "duration": 5},
+        }
+
+        # Clear daemon active keys
+        code_upper = self.project.connection_code.upper()
+        code_lower = self.project.connection_code.lower()
+        cache.delete(f"core_daemon_active_{code_upper}")
+        cache.delete(f"core_daemon_active_{code_lower}")
+
+        # Fails with 400 when daemon is not active
+        resp = self.client.post(url, payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("noir fault listen", resp.json().get("detail", ""))
+        self.assertEqual(resp.json().get("command"), "noir fault listen")
+
+        # But allow_offline allows bypassing when explicitly requested
+        resp_offline = self.client.post(f"{url}?allow_offline=true", payload, format="json")
+        self.assertEqual(resp_offline.status_code, status.HTTP_201_CREATED)
+
+        # Activating the daemon allows normal queuing
+        cache.set(f"core_daemon_active_{code_upper}", True, timeout=10)
+        resp2 = self.client.post(url, payload, format="json")
+        self.assertEqual(resp2.status_code, status.HTTP_201_CREATED)
