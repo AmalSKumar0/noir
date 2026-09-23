@@ -1,4 +1,5 @@
 import time
+import threading
 from typing import Dict, Any, Optional
 from ..base import FaultExecutor, FaultResult
 
@@ -44,8 +45,43 @@ class CpuStressExecutor(FaultExecutor):
 
         t0 = time.time()
         try:
-            res = docker_mgr.apply_cpu_stress(container_name, workers=workers, duration_sec=duration)
+            if context and context.get("log"):
+                context["log"](f"Applying CPU stress ({workers} workers) on '{container_name}' for {duration}s...")
+
+            exec_result = {}
+            exec_error = []
+
+            def run_stress():
+                try:
+                    exec_result["res"] = docker_mgr.apply_cpu_stress(container_name, workers=workers, duration_sec=duration)
+                except Exception as e:
+                    exec_error.append(e)
+
+            thread = threading.Thread(target=run_stress, daemon=True)
+            thread.start()
+
+            step = 0.5
+            last_logged_sec = 0
+            while thread.is_alive():
+                if context and context.get("is_cancelled") and context["is_cancelled"]():
+                    docker_mgr.kill_fault_processes(container_name)
+                    if context.get("log"):
+                        context["log"](f"Execution cancelled by user. Terminated CPU stress processes in '{container_name}'.", level="WARN")
+                    raise InterruptedError(f"CPU stress on '{container_name}' cancelled by user.")
+
+                thread.join(timeout=step)
+                elapsed = int(time.time() - t0)
+                if context and context.get("log") and elapsed > 0 and elapsed % 3 == 0 and elapsed != last_logged_sec:
+                    last_logged_sec = elapsed
+                    context["log"](f"CPU stress active on '{container_name}' ({elapsed}s / {duration}s)...")
+
+            if exec_error:
+                raise exec_error[0]
+
+            res = exec_result.get("res", {})
             elapsed = round(time.time() - t0, 2)
+            if context and context.get("log"):
+                context["log"](f"CPU stress completed successfully on '{container_name}' ({elapsed}s).")
 
             return FaultResult(
                 success=True,
@@ -59,7 +95,19 @@ class CpuStressExecutor(FaultExecutor):
                 duration_seconds=elapsed,
                 recovered=True,
             )
+        except InterruptedError as ie:
+            docker_mgr.kill_fault_processes(container_name)
+            elapsed = round(time.time() - t0, 2)
+            return FaultResult(
+                success=False,
+                message=str(ie),
+                details={"target": container_name, "cancelled": True},
+                duration_seconds=elapsed,
+                recovered=True,
+                error="Cancelled by user.",
+            )
         except Exception as e:
+            docker_mgr.kill_fault_processes(container_name)
             elapsed = round(time.time() - t0, 2)
             return FaultResult(
                 success=False,
@@ -69,6 +117,19 @@ class CpuStressExecutor(FaultExecutor):
                 recovered=True,
                 error=str(e),
             )
+
+    def rollback(
+        self,
+        docker_mgr: Any,
+        container_name: str,
+        params: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        try:
+            docker_mgr.kill_fault_processes(container_name)
+            return True
+        except Exception:
+            return False
 
 
 class MemoryStressExecutor(FaultExecutor):
@@ -112,8 +173,43 @@ class MemoryStressExecutor(FaultExecutor):
 
         t0 = time.time()
         try:
-            res = docker_mgr.apply_memory_stress(container_name, memory_mb=memory_mb, duration_sec=duration)
+            if context and context.get("log"):
+                context["log"](f"Applying memory pressure ({memory_mb}MB) on '{container_name}' for {duration}s...")
+
+            exec_result = {}
+            exec_error = []
+
+            def run_stress():
+                try:
+                    exec_result["res"] = docker_mgr.apply_memory_stress(container_name, memory_mb=memory_mb, duration_sec=duration)
+                except Exception as e:
+                    exec_error.append(e)
+
+            thread = threading.Thread(target=run_stress, daemon=True)
+            thread.start()
+
+            step = 0.5
+            last_logged_sec = 0
+            while thread.is_alive():
+                if context and context.get("is_cancelled") and context["is_cancelled"]():
+                    docker_mgr.kill_fault_processes(container_name)
+                    if context.get("log"):
+                        context["log"](f"Execution cancelled by user. Released memory buffer in '{container_name}'.", level="WARN")
+                    raise InterruptedError(f"Memory stress on '{container_name}' cancelled by user.")
+
+                thread.join(timeout=step)
+                elapsed = int(time.time() - t0)
+                if context and context.get("log") and elapsed > 0 and elapsed % 3 == 0 and elapsed != last_logged_sec:
+                    last_logged_sec = elapsed
+                    context["log"](f"Memory pressure active on '{container_name}': {memory_mb}MB ({elapsed}s / {duration}s)...")
+
+            if exec_error:
+                raise exec_error[0]
+
+            res = exec_result.get("res", {})
             elapsed = round(time.time() - t0, 2)
+            if context and context.get("log"):
+                context["log"](f"Memory pressure completed and buffer released on '{container_name}' ({elapsed}s).")
 
             return FaultResult(
                 success=True,
@@ -127,7 +223,19 @@ class MemoryStressExecutor(FaultExecutor):
                 duration_seconds=elapsed,
                 recovered=True,
             )
+        except InterruptedError as ie:
+            docker_mgr.kill_fault_processes(container_name)
+            elapsed = round(time.time() - t0, 2)
+            return FaultResult(
+                success=False,
+                message=str(ie),
+                details={"target": container_name, "cancelled": True},
+                duration_seconds=elapsed,
+                recovered=True,
+                error="Cancelled by user.",
+            )
         except Exception as e:
+            docker_mgr.kill_fault_processes(container_name)
             elapsed = round(time.time() - t0, 2)
             return FaultResult(
                 success=False,
@@ -137,3 +245,17 @@ class MemoryStressExecutor(FaultExecutor):
                 recovered=True,
                 error=str(e),
             )
+
+    def rollback(
+        self,
+        docker_mgr: Any,
+        container_name: str,
+        params: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        try:
+            docker_mgr.kill_fault_processes(container_name)
+            return True
+        except Exception:
+            return False
+

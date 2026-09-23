@@ -11,7 +11,8 @@ import {
   Check,
   Copy,
   Calendar,
-  Clock
+  Clock,
+  ArrowUpRight
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -37,7 +38,7 @@ export default function ProjectAnalyticsPage({ isCompanyView = false }: { isComp
   const [error, setError] = useState<string | null>(null);
 
   const backLink = isCompanyView ? `/company/projects/${projectId}` : `/dashboard/projects/${projectId}`;
-  const backLabel = "Back to Project Overview";
+  const backLabel = "Back to Workspace";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,19 +59,18 @@ export default function ProjectAnalyticsPage({ isCompanyView = false }: { isComp
             id: Number(projectId),
             connection_code: 'NR-KO2Y3DZZ',
             title: `Project #${projectId}`,
-            description: 'Reliability Engineering Telemetry Node.',
+            description: 'Reliability Engineering Platform Workspace Node.',
             architecture: 'monolith',
             status: 'active'
           });
         }
 
-        // Fetch Test Runs
         const testRes = await apiFetch(`${baseUrl}/api/project/test-runs/?project_id=${projectId}`, { headers });
         if (testRes.ok) {
-          const tData = await testRes.json();
-          setTestRuns(tData);
+          const testData = await testRes.json();
+          setTestRuns(testData);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         setError('Failed to load project analytics data.');
       } finally {
@@ -87,67 +87,58 @@ export default function ProjectAnalyticsPage({ isCompanyView = false }: { isComp
 
   return (
     <UserLayout>
-      <div className="max-w-6xl mx-auto mt-6 md:mt-10 px-4 md:px-8 pb-24 text-white space-y-8">
+      <div className="space-y-3.5 pb-12">
         
-        {/* Navigation Breadcrumb */}
-        <Link 
-          to={backLink} 
-          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs font-mono uppercase tracking-widest transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {backLabel}
-        </Link>
+        {/* Navigation Breadcrumb Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+              <Link to="/dashboard" className="hover:text-zinc-300">Noir</Link>
+              <span className="text-zinc-600">/</span>
+              <Link to="/dashboard/projects" className="hover:text-zinc-300">Workspaces</Link>
+              <span className="text-zinc-600">/</span>
+              <Link to={backLink} className="hover:text-zinc-300 truncate max-w-[150px]">{project?.title || 'Node'}</Link>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-200">Analytics</span>
+            </div>
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-violet-400" />
+                <span>{project?.title} • Test History & Failure Logs</span>
+              </h1>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-400">
+                {testRuns.length} runs recorded
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              to={backLink}
+              className="h-8 px-3 rounded-md bg-zinc-900 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>{backLabel}</span>
+            </Link>
+          </div>
+        </div>
 
         {isLoading ? (
-          <div className="space-y-6">
-            <Skeleton className="w-1/3 h-10 rounded-xl bg-white/5" />
-            <Skeleton className="w-full h-64 rounded-[2.5rem] bg-white/5" />
+          <div className="space-y-4">
+            <div className="h-10 w-full bg-zinc-900/60 rounded-md animate-pulse" />
+            <div className="h-64 w-full bg-zinc-900/60 rounded-lg animate-pulse" />
           </div>
         ) : error ? (
-          <div className="py-16 text-center bg-white/5 border border-white/10 rounded-[2rem] p-6">
-            <Activity className="w-12 h-12 text-rose-500/50 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white">Error Loading Analytics</h3>
-            <p className="text-xs text-white/50 mt-1 max-w-[280px] mx-auto font-mono">{error}</p>
+          <div className="py-12 text-center bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-6">
+            <Activity className="w-8 h-8 text-rose-500/60 mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-zinc-200">Error Loading Analytics</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-[280px] mx-auto font-mono">{error}</p>
           </div>
         ) : (
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
-            {/* Header Title Bar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-white/5">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
-                    <BarChart3 className="w-8 h-8 text-violet-400" />
-                    {project?.title} • Reliability Analytics
-                  </h1>
-                </div>
-                <p className="text-sm text-white/50 mt-1 font-light">
-                  Historical test run matrix, failure analytics, and stdout/stderr log inspector.
-                </p>
-              </div>
-
-              {/* Sub-page Navigation Tabs */}
-              <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 font-mono text-xs">
-                <Link
-                  to={backLink}
-                  className="px-4 py-2 rounded-xl text-white/40 hover:text-white transition-all"
-                >
-                  Overview & Live Logs
-                </Link>
-                <button
-                  className="px-4 py-2 rounded-xl bg-violet-600 text-white font-bold transition-all"
-                >
-                  Test Analytics & History
-                </button>
-              </div>
-            </div>
-
-            {/* Test History Analytics Sub-Page Component */}
+          <div className="space-y-3.5">
+            {/* Test History Analytics Component */}
             <TestHistoryAnalytics testRuns={testRuns} isLoading={isLoading} />
-          </motion.div>
+          </div>
         )}
       </div>
     </UserLayout>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Activity } from 'lucide-react';
 import { apiFetch } from '../utils/api';
+import { getAccessToken } from '../utils/auth';
 
 export default function LiveStreamTerminal({ 
   connectionCode, 
@@ -25,7 +26,9 @@ export default function LiveStreamTerminal({
     let host = apiBase.replace(/^https?:\/\//, '');
     if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
     const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${host}/ws/project/${connectionCode}/logs/`;
+    const token = getAccessToken();
+    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = `${wsProtocol}//${host}/ws/project/${connectionCode}/logs/${tokenQuery}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -149,35 +152,35 @@ export default function LiveStreamTerminal({
   }, [logs]);
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-2.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <Terminal className="w-5 h-5 text-violet-400" />
-            Real-Time Telemetry & Live Output
+          <h2 className="text-xs font-semibold flex items-center gap-2 text-zinc-200 uppercase tracking-wider font-mono">
+            <Terminal className="w-3.5 h-3.5 text-violet-400" />
+            Real-Time Telemetry & Process Stream
           </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Automatically streams live logs when <code className="text-violet-300 font-mono">noir run</code> or <code className="text-violet-300 font-mono">noir analyze</code> executes.
+          <p className="text-[11px] text-zinc-400 mt-0.5 font-mono">
+            WebSocket telemetry from <code className="text-zinc-300">noir run</code> or <code className="text-zinc-300">noir fault listen</code>.
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {/* Status Badge */}
-          <span className={`flex items-center gap-1.5 text-[10px] font-mono px-3 py-1 rounded-full border transition-all ${
+          <span className={`flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded border transition-all ${
             isWsConnected 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
-              : 'bg-stone-800/80 border-white/10 text-gray-400'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-medium'
+              : 'bg-zinc-800/80 border-zinc-750 text-zinc-400'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${isWsConnected ? 'bg-emerald-400 animate-ping' : 'bg-gray-500'}`} />
-            {isWsConnected ? 'LIVE STREAM ACTIVE' : 'STREAM IDLE (WAITING FOR RUN)'}
+            <span className={`w-1.5 h-1.5 rounded-full ${isWsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+            {isWsConnected ? 'WS CONNECTED' : 'WS IDLE (WAITING)'}
           </span>
 
           {logs.length > 0 && (
             <button
               onClick={() => setLogs([])}
-              className="text-[10px] font-mono text-white/40 hover:text-white px-2 py-1 bg-white/5 rounded-lg border border-white/5 transition-all cursor-pointer"
+              className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 px-2 py-0.5 bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800 transition-colors cursor-pointer"
             >
-              Clear Logs
+              Clear
             </button>
           )}
         </div>
@@ -185,25 +188,25 @@ export default function LiveStreamTerminal({
 
       <div 
         ref={terminalRef}
-        className="bg-black/80 border border-white/10 rounded-2xl p-4 font-mono text-xs text-stone-300 h-64 overflow-y-auto space-y-1 shadow-inner scrollbar-thin scrollbar-thumb-white/10"
+        className="bg-[#090A0F] border border-zinc-800/80 rounded-md p-3 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text"
       >
         {logs.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center text-white/30 space-y-2">
-            <Activity className={`w-8 h-8 text-violet-400/30 ${isWsConnected ? 'animate-pulse' : ''}`} />
-            <p className="text-xs font-medium text-gray-400">
-              {isWsConnected ? 'Live stream connected. Waiting for output...' : 'Stream automatically activates when an agent task begins.'}
+          <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 space-y-1.5 py-6">
+            <Activity className={`w-6 h-6 text-zinc-600 ${isWsConnected ? 'animate-pulse text-emerald-500' : ''}`} />
+            <p className="text-xs font-medium text-zinc-400">
+              {isWsConnected ? 'Live stream connected. Awaiting agent output...' : 'Stream automatically activates when agent runs.'}
             </p>
-            <p className="text-[10px] font-mono text-white/30">
-              Run <span className="text-violet-300">$ noir run</span> or <span className="text-violet-300">$ noir analyze</span> in your connected workspace to view live telemetry.
+            <p className="text-[10px] font-mono text-zinc-500">
+              Execute <span className="text-zinc-300">noir run</span> or <span className="text-zinc-300">noir fault listen</span> in your workspace.
             </p>
           </div>
         ) : (
           logs.map((item, idx) => (
-            <div key={idx} className="flex items-start gap-2 hover:bg-white/5 p-0.5 rounded transition-colors">
-              <span className="text-violet-400/60 text-[10px] select-none min-w-[55px] font-mono">
+            <div key={idx} className="flex items-start gap-2 hover:bg-zinc-900/60 p-0.5 rounded transition-colors">
+              <span className="text-zinc-500 text-[10px] select-none min-w-[55px] font-mono">
                 {item.timestamp}
               </span>
-              <span className={item.stream === 'stderr' ? 'text-rose-400' : 'text-emerald-300'}>
+              <span className={item.stream === 'stderr' ? 'text-rose-400' : 'text-emerald-400'}>
                 {item.log}
               </span>
             </div>

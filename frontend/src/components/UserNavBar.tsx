@@ -74,16 +74,16 @@ export default function UserNavBar() {
         onMouseLeave={() => setHoveredLabel(null)}
       >
         <div className={`
-          rounded-full transition-all duration-300 backdrop-blur-md cursor-pointer relative flex items-center justify-center
+          rounded-full transition-all duration-200 cursor-pointer relative flex items-center justify-center
           ${size === 'sm' ? 'p-1.5' : 'p-2.5'}
           ${active 
-            ? 'bg-white text-violet-600 shadow-lg scale-105' 
-            : 'bg-transparent text-white/60 hover:bg-white/10 hover:text-white'}
+            ? 'bg-zinc-100 text-zinc-950 font-medium shadow-sm' 
+            : 'bg-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'}
         `}>
-          <Icon className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={1.5} />
+          <Icon className={size === 'sm' ? 'w-4 h-4' : 'w-4.5 h-4.5'} strokeWidth={1.75} />
           
           {badge !== undefined && badge > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 bg-rose-500 text-white text-[8px] font-bold font-mono rounded-full flex items-center justify-center border border-[#0A0718] animate-pulse shadow-lg">
+            <span className="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-1 bg-rose-500 text-white text-[8px] font-bold font-mono rounded-full flex items-center justify-center border border-[#090A0F] shadow-sm">
               {badge > 99 ? '99+' : badge}
             </span>
           )}
@@ -92,11 +92,11 @@ export default function UserNavBar() {
         <AnimatePresence>
           {hoveredLabel === label && (
             <motion.div
-              initial={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.15 }}
-              className="absolute left-full ml-4 px-3 py-1.5 bg-[#100C1F]/90 backdrop-blur-md border border-white/10 text-white text-xs font-medium rounded-lg whitespace-nowrap z-50 shadow-xl"
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-full ml-3 px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-zinc-200 text-xs font-medium rounded-md whitespace-nowrap z-50 shadow-lg"
             >
               {label}
             </motion.div>
@@ -122,8 +122,8 @@ export default function UserNavBar() {
 
   return (
     <>
-      <div className="fixed left-4 md:left-6 top-0 bottom-0 py-6 flex flex-col justify-between w-14 z-50">
-        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-4 gap-3.5 shadow-2xl border border-white/10">
+      <div className="fixed left-3 md:left-5 top-0 bottom-0 py-5 flex flex-col justify-between w-12 z-50">
+        <div className="bg-[#0e1017]/80 backdrop-blur-xl rounded-full flex flex-col items-center py-3.5 gap-2.5 shadow-2xl border border-zinc-800/80">
           {isCompany ? (
             <>
               <NavButton to="/company/dashboard" icon={Home} label="Overview" />
@@ -143,7 +143,7 @@ export default function UserNavBar() {
           )}
         </div>
 
-        <div className="bg-[#0A0718]/40 backdrop-blur-xl rounded-full flex flex-col items-center py-3 gap-2.5 shadow-2xl border border-white/10">
+        <div className="bg-[#0e1017]/80 backdrop-blur-xl rounded-full flex flex-col items-center py-2.5 gap-2 shadow-2xl border border-zinc-800/80">
           {/* Notifications Bell (compact) */}
           <NavButton 
             icon={Bell} 

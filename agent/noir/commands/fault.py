@@ -1,7 +1,9 @@
 import json
 import time
+import threading
 from pathlib import Path
 from typing import Optional, Dict, Any
+
 
 import typer
 from rich.console import Console
@@ -14,6 +16,7 @@ from noir.faults.base import FaultResult
 from noir.api.client import ApiClient
 from noir.auth.storage import has_tokens
 from noir.utils.CommandDisplay import CommandDisplay
+from noir.utils.docker_detector import discover_project_containers
 
 app = typer.Typer(
     help="Safely inject and manage manual fault injection experiments in local Docker containers.",
@@ -270,9 +273,146 @@ def inject_fault(
             console.print(f"[dim yellow]Warning: Failed to report execution result to backend: {e}[/dim yellow]")
 
 
+def _execute_single_fault(
+    fault: Dict[str, Any],
+    project_id: str,
+    client: ApiClient,
+    docker_mgr: DockerManager,
+    cancel_event: threading.Event,
+):
+    fault_id = fault["id"]
+    fault_type = fault["fault_type"]
+    target = fault["target"]
+    params = fault.get("parameters") or {}
+
+    def emit_log(msg: str, level: str = "INFO"):
+        level_style = "green" if level == "INFO" else ("yellow" if level == "WARN" else "red")
+        console.print(f"  [dim cyan]#{fault_id}[/dim cyan] [{level_style}]{msg}[/{level_style}]")
+        try:
+            client.send_request_to_backend(
+                f"/projects/{project_id}/faults/{fault_id}/log/",
+                "POST",
+                data={"level": level, "message": msg},
+            )
+        except Exception:
+            pass
+
+    # 1. Claim
+    try:
+        client.send_request_to_backend(
+            f"/projects/{project_id}/faults/{fault_id}/claim/",
+            "POST",
+        )
+        emit_log(f"Claimed by worker daemon. Preparing {fault_type} on target '{target}'...")
+    except Exception as claim_err:
+        console.print(f"  [red]Failed to claim fault #{fault_id}: {claim_err}[/red]")
+        return
+
+    # Check for early cancellation
+    if cancel_event.is_set():
+        emit_log("Cancelled before execution began.", level="WARN")
+        try:
+            client.send_request_to_backend(
+                f"/projects/{project_id}/faults/{fault_id}/report/",
+                "POST",
+                data={"status": "cancelled", "result": {"cancelled": True}, "error_message": "Cancelled by user."},
+            )
+        except Exception:
+            pass
+        return
+
+    # 2. Get executor
+    executor = registry.get(fault_type)
+    if not executor:
+        err_msg = f"Agent does not support fault type '{fault_type}'"
+        emit_log(err_msg, level="ERROR")
+        try:
+            client.send_request_to_backend(
+                f"/projects/{project_id}/faults/{fault_id}/report/",
+                "POST",
+                data={
+                    "status": "failed",
+                    "result": {"error": err_msg},
+                    "error_message": err_msg,
+                },
+            )
+        except Exception:
+            pass
+        return
+
+    # Cancellation check function passed into executor context
+    last_status_poll = [0.0]
+    def is_cancelled_fn() -> bool:
+        if cancel_event.is_set():
+            return True
+        now = time.time()
+        # Poll backend status every 1.0s to detect cancel_requested from UI
+        if now - last_status_poll[0] >= 1.0:
+            last_status_poll[0] = now
+            try:
+                st = client.send_request_to_backend(
+                    f"/projects/{project_id}/faults/{fault_id}/status/",
+                    "GET",
+                )
+                if st.get("cancel_requested") or st.get("status") in ("cancel_requested", "cancelled"):
+                    cancel_event.set()
+                    return True
+            except Exception:
+                pass
+        return False
+
+    context = {
+        "is_cancelled": is_cancelled_fn,
+        "log": emit_log,
+    }
+
+    emit_log(f"Executing {executor.display_name} on target '{target}'...")
+    try:
+        result: FaultResult = executor.execute(docker_mgr, target, params, context=context)
+    except Exception as e:
+        result = FaultResult(
+            success=False,
+            message=f"Execution error on '{target}': {e}",
+            recovered=False,
+            error=str(e),
+        )
+
+    # 4. Report final result
+    if cancel_event.is_set() or (result.details and result.details.get("cancelled")):
+        status_str = "cancelled"
+        emit_log(f"Fault #{fault_id} cancelled safely and cleaned up.", level="WARN")
+    elif result.success:
+        status_str = "completed"
+        emit_log(f"Fault #{fault_id} completed successfully in {result.duration_seconds}s.", level="INFO")
+    else:
+        status_str = "failed"
+        emit_log(f"Fault #{fault_id} failed: {result.error}", level="ERROR")
+
+    try:
+        client.send_request_to_backend(
+            f"/projects/{project_id}/faults/{fault_id}/report/",
+            "POST",
+            data={
+                "status": status_str,
+                "result": result.to_dict(),
+                "error_message": result.error or "",
+            },
+        )
+    except Exception as rep_err:
+        console.print(f"[dim yellow]Warning: Failed to report execution result: {rep_err}[/dim yellow]")
+
+    if status_str == "completed":
+        console.print(f"  [bold green]✔ Fault #{fault_id} Completed ({result.duration_seconds}s)[/bold green]")
+    elif status_str == "cancelled":
+        console.print(f"  [bold yellow]■ Fault #{fault_id} Cancelled & Cleaned Up[/bold yellow]")
+    else:
+        console.print(f"  [bold red]✖ Fault #{fault_id} Failed: {result.error}[/bold red]")
+
+
 @app.command("listen")
 def listen_for_faults(
     interval: float = typer.Option(2.0, "--interval", "-i", help="Polling interval in seconds (default 2.0s)."),
+    concurrency: int = typer.Option(1, "--concurrency", "-c", help="Max concurrent injections (default 1)."),
 ):
     """
     Run in background/terminal to listen for and execute fault injection requests dispatched from the Noir Web Dashboard.
@@ -300,84 +440,161 @@ def listen_for_faults(
     console.print(Panel(
         f"Project: [bold cyan]{project_id}[/bold cyan]\n"
         f"Polling Interval: [white]{interval}s[/white]\n"
+        f"Concurrency Limit: [bold yellow]{concurrency}[/bold yellow]\n"
         f"Status: [bold green]Active & Listening for Remote Fault Injections[/bold green]\n\n"
-        f"[dim]Trigger faults from the web dashboard. The agent will execute them locally and report results.[/dim]\n"
+        f"[dim]Trigger faults from the web dashboard. The agent will execute them locally and stream logs.[/dim]\n"
         f"[dim]Press Ctrl+C at any time to stop listening.[/dim]",
         title="[bold violet]Noir Fault Injection Daemon[/bold violet]",
         border_style="violet",
     ))
 
+    # Send initial daemon started heartbeat to telemetry stream
+    try:
+        client.send_request_to_backend(
+            f"/project/{project_id}/stream-logs/",
+            "POST",
+            data={
+                "log": f"[Daemon] Noir Fault Injection Daemon active on project {project_id} (concurrency: {concurrency}). Listening...",
+                "stream": "stdout",
+                "event": "daemon_start",
+            },
+        )
+    except Exception:
+        pass
+
+    # Display discovered & available Docker containers
+    try:
+        detected = discover_project_containers(".", project_id)
+        if detected:
+            try:
+                client.send_request_to_backend(
+                    f"/projects/{project_id}/containers/",
+                    "POST",
+                    data={"containers": detected}
+                )
+            except Exception:
+                pass
+
+            table = Table(title="[bold cyan]Discovered Docker Containers (Project & Daemon)[/bold cyan]", border_style="cyan")
+            table.add_column("Container Name", style="bold white")
+            table.add_column("Service", style="yellow")
+            table.add_column("Status", justify="center")
+            table.add_column("Source", style="dim")
+            table.add_column("Image", style="cyan")
+
+            active_count = 0
+            for c in detected:
+                raw_st = c.get("status", "unknown")
+                if raw_st == "running":
+                    st = "[bold green]● Running[/bold green]"
+                    active_count += 1
+                elif raw_st == "exited":
+                    st = "[dim red]○ Exited[/dim red]"
+                elif raw_st == "defined":
+                    st = "[yellow]◌ Defined (Not Started)[/yellow]"
+                else:
+                    st = f"[dim]{raw_st}[/dim]"
+
+                table.add_row(
+                    c.get("name", "-"),
+                    c.get("service", "-"),
+                    st,
+                    c.get("source", "-"),
+                    c.get("image", "-"),
+                )
+            console.print(table)
+
+            if active_count == 0:
+                console.print(
+                    "[yellow]⚡ Note: Fault injections (latency, stress, stop, restart) operate on running containers.\n"
+                    "   Start defined containers with 'docker compose up -d' or 'noir run' so the agent can execute faults against them.[/yellow]\n"
+                )
+            else:
+                console.print(f"[bold green]✔ {active_count} active container(s) ready for fault injection experiments.[/bold green]\n")
+        else:
+            avail = docker_mgr.get_available_container_names()
+            if avail:
+                table = Table(title="[bold cyan]Active Docker Containers on Host[/bold cyan]", border_style="cyan")
+                table.add_column("Container Name", style="bold white")
+                table.add_column("Status", justify="center")
+                table.add_column("Image", style="cyan")
+                for c in avail:
+                    st = "[bold green]● Running[/bold green]" if c['status'] == 'running' else f"[dim]{c['status']}[/dim]"
+                    table.add_row(c['name'], st, c.get('image', '-'))
+                console.print(table)
+            else:
+                console.print("[dim yellow]No Docker containers currently found on Docker daemon.[/dim yellow]\n")
+    except Exception as e:
+        console.print(f"[dim]Could not list local containers: {e}[/dim]\n")
+
+    active_workers: Dict[int, Dict[str, Any]] = {}
+
     try:
         while True:
-            try:
-                pending_resp = client.send_request_to_backend(
-                    f"/projects/{project_id}/faults/pending/",
-                    "GET",
-                )
-                fault = pending_resp.get("fault")
-                if fault:
-                    fault_id = fault["id"]
-                    fault_type = fault["fault_type"]
-                    target = fault["target"]
-                    params = fault.get("parameters") or {}
+            # 1. Clean up finished worker threads
+            finished_ids = [fid for fid, w in active_workers.items() if not w["thread"].is_alive()]
+            for fid in finished_ids:
+                del active_workers[fid]
 
-                    console.print(f"\n[bold yellow]⚡ Received Pending Fault #{fault_id}:[/bold yellow] [bold cyan]{fault_type}[/bold cyan] -> [white]{target}[/white]")
-
-                    # 1. Claim
+            # 2. Check for backend cancellation on running jobs
+            for fid, w in list(active_workers.items()):
+                if not w["cancel_event"].is_set():
                     try:
-                        client.send_request_to_backend(
-                            f"/projects/{project_id}/faults/{fault_id}/claim/",
-                            "POST",
-                        )
-                        console.print(f"  [dim]Claimed fault #{fault_id} (marked RUNNING)...[/dim]")
-                    except Exception as claim_err:
-                        console.print(f"  [red]Failed to claim fault #{fault_id}: {claim_err}[/red]")
-                        time.sleep(interval)
-                        continue
+                        st = client.send_request_to_backend(f"/projects/{project_id}/faults/{fid}/status/", "GET")
+                        if st.get("cancel_requested"):
+                            console.print(f"  [bold yellow]Stop requested for active fault #{fid}. Terminating...[/bold yellow]")
+                            w["cancel_event"].set()
+                    except Exception:
+                        pass
 
-                    # 2. Get executor
-                    executor = registry.get(fault_type)
-                    if not executor:
-                        err_msg = f"Agent does not support fault type '{fault_type}'"
-                        console.print(f"  [red]{err_msg}[/red]")
-                        client.send_request_to_backend(
-                            f"/projects/{project_id}/faults/{fault_id}/report/",
-                            "POST",
-                            data={
-                                "status": "failed",
-                                "result": {"error": err_msg},
-                                "error_message": err_msg,
-                            },
-                        )
-                        continue
-
-                    # 3. Execute with live spinner
-                    with console.status(f"[bold cyan]Executing {executor.display_name} on '{target}'...[/bold cyan]"):
-                        result: FaultResult = executor.execute(docker_mgr, target, params)
-
-                    # 4. Report
-                    status_str = "completed" if result.success else "failed"
-                    client.send_request_to_backend(
-                        f"/projects/{project_id}/faults/{fault_id}/report/",
-                        "POST",
-                        data={
-                            "status": status_str,
-                            "result": result.to_dict(),
-                            "error_message": result.error or "",
-                        },
+            # 3. If capacity available, poll for next pending fault
+            if len(active_workers) < concurrency:
+                try:
+                    pending_resp = client.send_request_to_backend(
+                        f"/projects/{project_id}/faults/pending/?concurrency={concurrency}",
+                        "GET",
                     )
+                    fault = pending_resp.get("fault")
+                    if fault and fault["id"] not in active_workers:
+                        fid = fault["id"]
+                        ftype = fault["fault_type"]
+                        ftarget = fault["target"]
+                        console.print(f"\n[bold yellow]⚡ Received Queued Fault #{fid}:[/bold yellow] [bold cyan]{ftype}[/bold cyan] -> [white]{ftarget}[/white]")
 
-                    if result.success:
-                        console.print(f"  [bold green]✔ Fault #{fault_id} Completed successfully ({result.duration_seconds}s)[/bold green]")
-                    else:
-                        console.print(f"  [bold red]✖ Fault #{fault_id} Failed: {result.error}[/bold red]")
-
-            except Exception as poll_err:
-                # Silently handle transient connection drops or print subtle dim message
-                time.sleep(interval)
-                continue
+                        cancel_ev = threading.Event()
+                        worker_thread = threading.Thread(
+                            target=_execute_single_fault,
+                            args=(fault, project_id, client, docker_mgr, cancel_ev),
+                            daemon=True,
+                        )
+                        active_workers[fid] = {
+                            "thread": worker_thread,
+                            "cancel_event": cancel_ev,
+                        }
+                        worker_thread.start()
+                except Exception:
+                    pass
 
             time.sleep(interval)
 
     except KeyboardInterrupt:
-        console.print("\n[bold yellow]Stopping Noir Fault Daemon. Goodbye![/bold yellow]\n")
+        console.print("\n[bold yellow]Stopping Noir Fault Daemon. Signalling active tasks to terminate...[/bold yellow]\n")
+        for fid, w in active_workers.items():
+            w["cancel_event"].set()
+        for fid, w in active_workers.items():
+            w["thread"].join(timeout=2.0)
+        console.print("[dim]Goodbye![/dim]\n")
+    finally:
+        try:
+            client.send_request_to_backend(
+                f"/project/{project_id}/stream-logs/",
+                "POST",
+                data={
+                    "log": f"[Daemon] Noir Fault Injection Daemon stopped for project {project_id}.",
+                    "stream": "stdout",
+                    "event": "daemon_stop",
+                },
+            )
+        except Exception:
+            pass
+

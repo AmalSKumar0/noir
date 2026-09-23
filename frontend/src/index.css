@@ -11,3 +11,86 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
 }
+
+/* Print Styles for Executive Reports */
+@media print {
+  @page {
+    margin: 1.2cm;
+    size: auto;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation, sidebars, controls, and non-printable overlays */
+  .no-print,
+  nav,
+  header,
+  aside,
+  button,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  /* Expand printable container */
+  .printable-report-container {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .print-page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ensure text and borders are crisp and high-contrast in print */
+  .printable-report-container * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .printable-report-container .print-bg-slate {
+    background-color: #f8fafc !important;
+  }
+
+  .printable-report-container .print-border {
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .printable-report-container .print-badge-success {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+  }
+
+  .printable-report-container .print-badge-danger {
+    background-color: #fff1f2 !important;
+    color: #be123c !important;
+    border: 1px solid #fecdd3 !important;
+  }
+
+  .printable-report-container .print-badge-warning {
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border: 1px solid #fde68a !important;
+  }
+}

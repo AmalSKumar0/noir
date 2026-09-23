@@ -112,18 +112,22 @@ class FaultInjection(models.Model):
         MEMORY_STRESS = "memory_stress", "Memory Stress"
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
+        QUEUED = "queued", "Queued"
         RUNNING = "running", "Running"
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
+        CANCEL_REQUESTED = "cancel_requested", "Cancel Requested"
         CANCELLED = "cancelled", "Cancelled"
+
+    # Backward compatibility alias
+    Status.PENDING = Status.QUEUED
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="fault_injections")
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requested_faults")
     fault_type = models.CharField(max_length=50, choices=FaultType.choices)
     target = models.CharField(max_length=100)
     parameters = models.JSONField(default=dict, blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED, db_index=True)
     requested_at = models.DateTimeField(auto_now_add=True, db_index=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -136,8 +140,30 @@ class FaultInjection(models.Model):
             models.Index(fields=['project', 'status', 'requested_at']),
         ]
 
+    @property
+    def created_at(self):
+        return self.requested_at
+
+    @property
+    def is_terminal(self):
+        return self.status in (self.Status.COMPLETED, self.Status.FAILED, self.Status.CANCELLED)
+
     def __str__(self):
         return f"FaultInjection #{self.id} ({self.fault_type} on {self.target} - {self.status})"
+
+
+class FaultInjectionLog(models.Model):
+    fault = models.ForeignKey(FaultInjection, on_delete=models.CASCADE, related_name="logs")
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    level = models.CharField(max_length=20, default="INFO")
+    message = models.TextField()
+
+    class Meta:
+        ordering = ['timestamp', 'id']
+
+    def __str__(self):
+        return f"[{self.timestamp}] [{self.level}] Fault #{self.fault_id}: {self.message[:50]}"
+
 
 
 

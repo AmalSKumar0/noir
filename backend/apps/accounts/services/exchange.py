@@ -32,10 +32,13 @@ class ExchangeService:
         key = f"oauth:{code}"
 
         try:
-            user_id = redis_client.get(key)
+            pipe = redis_client.pipeline()
+            pipe.get(key)
+            pipe.delete(key)
+            results = pipe.execute()
+            user_id = results[0]
             if not user_id:
                 return None
-            redis_client.delete(key)
             return User.objects.get(id=int(user_id))
         except (redis.RedisError, User.DoesNotExist, ValueError) as e:
             logger.error(f"Error consuming oauth code: {e}")

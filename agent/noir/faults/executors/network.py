@@ -1,6 +1,9 @@
 import time
+import re
 from typing import Dict, Any, Optional
 from ..base import FaultExecutor, FaultResult
+
+INTERFACE_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
 class NetworkDelayExecutor(FaultExecutor):
@@ -38,7 +41,10 @@ class NetworkDelayExecutor(FaultExecutor):
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid duration parameter: {e}")
 
-        normalized["interface"] = str(params.get("interface", "eth0"))
+        interface = str(params.get("interface", "eth0")).strip()
+        if not INTERFACE_REGEX.match(interface):
+            raise ValueError(f"Invalid interface name format: '{interface}'")
+        normalized["interface"] = interface
         return normalized
 
     def execute(
@@ -56,18 +62,34 @@ class NetworkDelayExecutor(FaultExecutor):
 
         t0 = time.time()
         try:
+            if context and context.get("log"):
+                context["log"](f"Applying network delay {latency_ms}ms (jitter ±{jitter_ms}ms) on {interface}...")
+
             # 1. Apply latency
             res = docker_mgr.apply_network_delay(
                 container_name, latency_ms=latency_ms, jitter_ms=jitter_ms, interface=interface
             )
 
-            # 2. Hold for duration
-            time.sleep(duration)
+            # 2. Hold for duration with cancellation checking and periodic logging
+            step = 0.5
+            loops = int(duration / step)
+            for i in range(loops):
+                if context and context.get("is_cancelled") and context["is_cancelled"]():
+                    self.rollback(docker_mgr, container_name, params)
+                    if context.get("log"):
+                        context["log"](f"Execution cancelled by user. Removed network delay on '{container_name}'.", level="WARN")
+                    raise InterruptedError(f"Network delay on '{container_name}' cancelled by user.")
+                time.sleep(step)
+                if context and context.get("log") and (i + 1) % 4 == 0:
+                    elapsed_sec = int((i + 1) * step)
+                    context["log"](f"Network latency active: +{latency_ms}ms on {container_name} ({elapsed_sec}s / {duration}s)")
 
             # 3. Clean up / rollback latency rule
             docker_mgr.remove_network_delay(container_name, interface=interface)
-            elapsed = round(time.time() - t0, 2)
+            if context and context.get("log"):
+                context["log"](f"Cleaned up network delay on '{container_name}'. Restored normal traffic.")
 
+            elapsed = round(time.time() - t0, 2)
             return FaultResult(
                 success=True,
                 message=f"Injected {latency_ms}ms delay (±{jitter_ms}ms) on '{container_name}' for {duration}s. Network restored.",
@@ -80,6 +102,16 @@ class NetworkDelayExecutor(FaultExecutor):
                 },
                 duration_seconds=elapsed,
                 recovered=True,
+            )
+        except InterruptedError as ie:
+            elapsed = round(time.time() - t0, 2)
+            return FaultResult(
+                success=False,
+                message=str(ie),
+                details={"target": container_name, "cancelled": True},
+                duration_seconds=elapsed,
+                recovered=True,
+                error="Cancelled by user.",
             )
         except Exception as e:
             self.rollback(docker_mgr, container_name, params)
@@ -134,7 +166,10 @@ class NetworkLossExecutor(FaultExecutor):
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid duration parameter: {e}")
 
-        normalized["interface"] = str(params.get("interface", "eth0"))
+        interface = str(params.get("interface", "eth0")).strip()
+        if not INTERFACE_REGEX.match(interface):
+            raise ValueError(f"Invalid interface name format: '{interface}'")
+        normalized["interface"] = interface
         return normalized
 
     def execute(
@@ -151,16 +186,32 @@ class NetworkLossExecutor(FaultExecutor):
 
         t0 = time.time()
         try:
+            if context and context.get("log"):
+                context["log"](f"Applying packet loss {loss_percent}% on {interface}...")
+
             # 1. Apply packet loss
             docker_mgr.apply_network_loss(container_name, loss_percent=loss_percent, interface=interface)
 
-            # 2. Hold for duration
-            time.sleep(duration)
+            # 2. Hold for duration with cancellation checking and periodic logging
+            step = 0.5
+            loops = int(duration / step)
+            for i in range(loops):
+                if context and context.get("is_cancelled") and context["is_cancelled"]():
+                    self.rollback(docker_mgr, container_name, params)
+                    if context.get("log"):
+                        context["log"](f"Execution cancelled by user. Restored packet delivery on '{container_name}'.", level="WARN")
+                    raise InterruptedError(f"Packet loss on '{container_name}' cancelled by user.")
+                time.sleep(step)
+                if context and context.get("log") and (i + 1) % 4 == 0:
+                    elapsed_sec = int((i + 1) * step)
+                    context["log"](f"Packet loss active: {loss_percent}% on {container_name} ({elapsed_sec}s / {duration}s)")
 
             # 3. Clean up
             docker_mgr.remove_network_delay(container_name, interface=interface)
-            elapsed = round(time.time() - t0, 2)
+            if context and context.get("log"):
+                context["log"](f"Cleaned up packet loss on '{container_name}'. Restored normal traffic.")
 
+            elapsed = round(time.time() - t0, 2)
             return FaultResult(
                 success=True,
                 message=f"Applied {loss_percent}% packet loss on '{container_name}' for {duration}s. Normal network restored.",
@@ -173,6 +224,17 @@ class NetworkLossExecutor(FaultExecutor):
                 duration_seconds=elapsed,
                 recovered=True,
             )
+        except InterruptedError as ie:
+            elapsed = round(time.time() - t0, 2)
+            return FaultResult(
+                success=False,
+                message=str(ie),
+                details={"target": container_name, "cancelled": True},
+                duration_seconds=elapsed,
+                recovered=True,
+                error="Cancelled by user.",
+            )
+
         except Exception as e:
             self.rollback(docker_mgr, container_name, params)
             elapsed = round(time.time() - t0, 2)

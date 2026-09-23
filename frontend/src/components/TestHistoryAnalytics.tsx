@@ -129,91 +129,87 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
     <div className="space-y-6">
       
       {/* Metrics & Analytics Matrix */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total Runs Card */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-xl group-hover:bg-violet-500/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Total Test Executions</span>
-            <FlaskConical className="w-4 h-4 text-violet-400" />
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+          <div className="flex items-center justify-between text-zinc-400 mb-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Test Executions</span>
+            <FlaskConical className="w-3.5 h-3.5 text-violet-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-bold font-mono text-white">{totalRuns}</span>
-            <span className="text-xs text-white/40">runs recorded</span>
+            <span className="text-xl font-bold font-mono text-zinc-100">{totalRuns}</span>
+            <span className="text-[11px] text-zinc-500 font-mono">runs recorded</span>
           </div>
         </div>
 
         {/* Success Pass Rate Card */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Reliability Pass Rate</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+          <div className="flex items-center justify-between text-zinc-400 mb-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Pass Rate</span>
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-2xl md:text-3xl font-bold font-mono ${Number(passRate) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <span className={`text-xl font-bold font-mono ${Number(passRate) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
               {passRate}%
             </span>
-            <span className="text-xs text-emerald-400/60">{passedRuns} passed</span>
+            <span className="text-[11px] text-emerald-400/80 font-mono">{passedRuns} passed</span>
           </div>
         </div>
 
         {/* Failure Count Matrix Card */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Failed Test Workloads</span>
-            <ShieldAlert className="w-4 h-4 text-rose-400" />
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+          <div className="flex items-center justify-between text-zinc-400 mb-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Failed Workloads</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-2xl md:text-3xl font-bold font-mono ${failedRuns > 0 ? 'text-rose-400 animate-pulse' : 'text-stone-300'}`}>
+            <span className={`text-xl font-bold font-mono ${failedRuns > 0 ? 'text-rose-400' : 'text-zinc-400'}`}>
               {failedRuns}
             </span>
-            <span className="text-xs text-rose-400/60">{totalIndividualFailedTests} failed assertions</span>
+            <span className="text-[11px] text-rose-400/80 font-mono">{totalIndividualFailedTests} failed</span>
           </div>
         </div>
 
         {/* Avg Execution Latency */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Average Latency</span>
-            <Clock className="w-4 h-4 text-blue-400" />
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+          <div className="flex items-center justify-between text-zinc-400 mb-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Avg Latency</span>
+            <Clock className="w-3.5 h-3.5 text-blue-400" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-bold font-mono text-white">
+            <span className="text-xl font-bold font-mono text-zinc-100">
               {(avgDurationMs / 1000).toFixed(2)}s
             </span>
-            <span className="text-xs text-white/40">{avgDurationMs} ms</span>
+            <span className="text-[11px] text-zinc-500 font-mono">{avgDurationMs}ms</span>
           </div>
         </div>
       </div>
 
       {/* Main Execution Log & History Card */}
-      <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-6">
+      <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-3">
         
         {/* Title & Filter Control Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 pb-2.5 border-b border-zinc-800/80">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-violet-400" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200 flex items-center gap-1.5">
+              <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
               Test Execution Logs & Historical Analytics
             </h2>
-            <p className="text-xs text-white/50 mt-1 font-light">
+            <p className="text-[11px] text-zinc-500 mt-0.5">
               Audit past containerized & CLI test runs, examine error stack traces, and inspect failure logs.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {/* Search Input */}
-            <div className="relative flex-1 md:w-48">
-              <Search className="w-3.5 h-3.5 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative flex-1 sm:w-44">
+              <Search className="w-3 h-3 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search logs or suite..."
+                placeholder="Filter logs or suite..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/50 transition-all font-mono"
+                className="w-full h-7 bg-zinc-900 border border-zinc-800 rounded-md pl-7 pr-2.5 text-[11px] text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors font-mono"
               />
             </div>
 
@@ -222,9 +218,9 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
               <select
                 value={developerFilter}
                 onChange={(e) => setDeveloperFilter(e.target.value)}
-                className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-violet-300 font-mono focus:outline-none focus:border-violet-500/50 transition-all"
+                className="h-7 bg-zinc-900 border border-zinc-800 rounded-md px-2 text-[11px] text-zinc-300 font-mono focus:outline-none focus:border-zinc-600 transition-colors"
               >
-                <option value="all">All Developers ({uniqueDevelopers.length})</option>
+                <option value="all">All Devs ({uniqueDevelopers.length})</option>
                 {uniqueDevelopers.map((dev) => (
                   <option key={dev.id} value={dev.id}>
                     {dev.name} (@{dev.username})
@@ -234,27 +230,27 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
             )}
 
             {/* Status Filter Buttons */}
-            <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 font-mono text-[10px]">
+            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-md p-0.5 font-mono text-[10px]">
               <button
                 onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'all' ? 'bg-violet-600 text-white font-bold' : 'text-white/40 hover:text-white'
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                  statusFilter === 'all' ? 'bg-zinc-800 text-zinc-100 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 ALL ({totalRuns})
               </button>
               <button
                 onClick={() => setStatusFilter('passed')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'passed' ? 'bg-emerald-600 text-white font-bold' : 'text-white/40 hover:text-white'
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                  statusFilter === 'passed' ? 'bg-emerald-600/30 text-emerald-300 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 PASSED ({passedRuns})
               </button>
               <button
                 onClick={() => setStatusFilter('failed')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'failed' ? 'bg-rose-600 text-white font-bold' : 'text-white/40 hover:text-white'
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                  statusFilter === 'failed' ? 'bg-rose-600/30 text-rose-300 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 FAILED ({failedRuns})
@@ -281,73 +277,73 @@ export default function TestHistoryAnalytics({ testRuns, isLoading = false }: Te
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredRuns.map((run) => {
               const isPassed = run.status === 'passed';
               const fullName = `${run.executor_first_name || ''} ${run.executor_last_name || ''}`.trim();
               return (
                 <div
                   key={run.id}
-                  className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+                  className={`p-2.5 px-3 rounded-md border transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-2.5 ${
                     isPassed 
-                      ? 'bg-black/40 border-white/5 hover:border-emerald-500/30' 
-                      : 'bg-rose-950/20 border-rose-500/20 hover:border-rose-500/40'
+                      ? 'bg-[#090A0F] border-zinc-800/80 hover:border-zinc-700' 
+                      : 'bg-rose-950/20 border-rose-600/30 hover:border-rose-600/50'
                   }`}
                 >
-                  <div className="space-y-1.5 flex-1">
+                  <div className="space-y-1 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono uppercase ${
                         isPassed 
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                          : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
                       }`}>
-                        {isPassed ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {isPassed ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
                         {run.status}
                       </span>
-                      <span className="font-bold text-white text-sm font-mono">{run.suite_name}</span>
+                      <span className="font-semibold text-zinc-200 text-xs font-mono">{run.suite_name}</span>
                       {run.project_title && (
-                        <span className="text-[10px] font-mono text-violet-300 bg-violet-500/10 px-2 py-0.5 rounded-lg border border-violet-500/20">
+                        <span className="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-1.5 py-0.2 rounded border border-zinc-800">
                           {run.project_title}
                         </span>
                       )}
-                      <span className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
+                      <span className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.2 rounded border border-zinc-800/60">
                         ${run.command}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-white/40">
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-zinc-500">
                       <span>
-                        Developer: <strong className="text-violet-300">
+                        Dev: <strong className="text-zinc-300">
                           {fullName ? `${fullName} (@${run.executor_username})` : (run.executor_username || 'CLI Agent')}
                         </strong>
                       </span>
-                      {run.executor_email && <span className="text-white/30">({run.executor_email})</span>}
-                      {run.team_name && <span>Team: <strong className="text-purple-300">{run.team_name}</strong></span>}
+                      {run.executor_email && <span className="text-zinc-600">({run.executor_email})</span>}
+                      {run.team_name && <span>Team: <strong className="text-zinc-400">{run.team_name}</strong></span>}
                       <span>Logged: {new Date(run.created_at).toLocaleString()}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto font-mono text-xs border-t md:border-t-0 pt-3 md:pt-0 border-white/5">
+                  <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto font-mono text-xs border-t md:border-t-0 pt-2 md:pt-0 border-zinc-800/60">
                     <div className="text-left md:text-right">
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-400 font-bold">{run.passed_tests} passed</span>
-                        {run.failed_tests > 0 && <span className="text-rose-400 font-bold">{run.failed_tests} failed</span>}
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <span className="text-emerald-400 font-semibold">{run.passed_tests} passed</span>
+                        {run.failed_tests > 0 && <span className="text-rose-400 font-semibold">{run.failed_tests} failed</span>}
                       </div>
-                      <span className="text-[10px] text-white/40">Duration: {(run.duration_ms / 1000).toFixed(2)}s</span>
+                      <span className="text-[10px] text-zinc-500">Duration: {(run.duration_ms / 1000).toFixed(2)}s</span>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setSelectedRun(run)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                      className={`h-6 px-2 rounded border text-[11px] font-mono font-medium flex items-center gap-1 transition-colors cursor-pointer ${
                         isPassed 
-                          ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white' 
+                          ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300' 
                           : 'bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/40 text-rose-300'
                       }`}
                     >
-                      <Terminal className="w-3.5 h-3.5" />
-                      View Logs
-                      <ChevronRight className="w-3 h-3 opacity-60" />
+                      <Terminal className="w-3 h-3" />
+                      <span>Logs</span>
+                      <ChevronRight className="w-2.5 h-2.5 opacity-60" />
                     </button>
                   </div>
                 </div>

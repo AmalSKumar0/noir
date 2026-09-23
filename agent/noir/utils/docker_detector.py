@@ -40,6 +40,41 @@ def _extract_ports(ports_spec: Any) -> List[str]:
     return result
 
 
+def sanitize_docker_name(name: str, fallback: str = "app") -> str:
+    """
+    Sanitizes a string into a valid, safe, lowercase Docker identifier (container or service name).
+    Docker requires: [a-zA-Z0-9][a-zA-Z0-9_.-]*
+    We strictly lowercase and normalize to ensure 100% Docker CLI and daemon compatibility.
+    """
+    if not name:
+        return fallback
+    # Replace non-alphanumeric/dot/underscore/hyphen chars with hyphen
+    cleaned = re.sub(r'[^a-zA-Z0-9_.-]', '-', name.strip()).lower()
+    # Strip non-alphanumeric chars from edges
+    cleaned = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', cleaned)
+    # Collapse multiple consecutive hyphens
+    cleaned = re.sub(r'-+', '-', cleaned)
+    return cleaned or fallback
+
+
+def sanitize_docker_image_string(image_str: str, fallback: str = "app:latest") -> str:
+    """
+    Normalizes an existing image string (e.g. 'DormCare:app' -> 'dormcare:app').
+    Ensures repository and tag are strictly lowercase and valid.
+    """
+    if not image_str:
+        return fallback
+    clean_str = image_str.strip()
+    if ":" in clean_str:
+        parts = clean_str.rsplit(":", 1)
+        repo, tag = parts[0], parts[1]
+        clean_repo = re.sub(r'[^a-zA-Z0-9_./:-]', '-', repo).lower().strip('-._/')
+        clean_tag = sanitize_docker_name(tag, fallback="latest")
+        return f"{clean_repo or 'app'}:{clean_tag}"
+    else:
+        return sanitize_docker_name(clean_str, fallback="app")
+
+
 def parse_compose_services(workspace_dir: Path) -> List[Dict[str, Any]]:
     """Parse services from compose files in workspace."""
     candidates = [
@@ -53,6 +88,7 @@ def parse_compose_services(workspace_dir: Path) -> List[Dict[str, Any]]:
 
     services_found = []
     seen_services = set()
+    clean_ws = sanitize_docker_name(workspace_dir.name, fallback="app")
 
     for path in candidates:
         if not path.exists():
@@ -68,17 +104,26 @@ def parse_compose_services(workspace_dir: Path) -> List[Dict[str, Any]]:
                         continue
                     seen_services.add(svc_name)
                     svc_dict = svc_data if isinstance(svc_data, dict) else {}
-                    image = svc_dict.get("image", "")
-                    if not image and "build" in svc_dict:
-                        image = f"{svc_name}:local-build"
+                    clean_svc = sanitize_docker_name(svc_name, fallback="service")
+
+                    raw_container = svc_dict.get("container_name")
+                    container_name = sanitize_docker_name(raw_container) if raw_container else f"{clean_ws}-{clean_svc}"
+
+                    raw_image = svc_dict.get("image", "")
+                    if raw_image:
+                        image = sanitize_docker_image_string(raw_image, fallback=f"{clean_ws}:{clean_svc}")
+                    elif "build" in svc_dict:
+                        image = f"{clean_svc}:local-build"
+                    else:
+                        image = f"{clean_ws}:{clean_svc}"
+
                     ports = _extract_ports(svc_dict.get("ports", []))
-                    container_name = svc_dict.get("container_name") or f"{workspace_dir.name}-{svc_name}"
 
                     services_found.append({
                         "id": "-",
                         "name": container_name,
-                        "service": svc_name,
-                        "image": image or "custom-image",
+                        "service": clean_svc,
+                        "image": image,
                         "status": "defined",
                         "ports": ports,
                         "source": "compose",
@@ -97,18 +142,21 @@ def parse_dockerfiles(workspace_dir: Path) -> List[Dict[str, Any]]:
         workspace_dir / "Dockerfile",
         workspace_dir / "docker" / "Dockerfile",
     ]
-    for pattern in ["Dockerfile.*"]:
+    for pattern in ["Dockerfile.*", "Dockerfile-*"]:
         candidates.extend(workspace_dir.glob(pattern))
+
+    clean_ws = sanitize_docker_name(workspace_dir.name, fallback="app")
 
     for df in candidates:
         if df.exists() and df.is_file():
             name = df.name
-            service_name = "app" if name == "Dockerfile" else name.replace("Dockerfile.", "").replace("Dockerfile-", "")
+            raw_svc = "app" if name == "Dockerfile" else name.replace("Dockerfile.", "").replace("Dockerfile-", "")
+            clean_svc = sanitize_docker_name(raw_svc, fallback="app")
             dockerfiles.append({
                 "id": "-",
-                "name": f"{workspace_dir.name}-{service_name}",
-                "service": service_name,
-                "image": f"{workspace_dir.name}:{service_name}",
+                "name": f"{clean_ws}-{clean_svc}",
+                "service": clean_svc,
+                "image": f"{clean_ws}:{clean_svc}",
                 "status": "defined",
                 "ports": [],
                 "source": "dockerfile",

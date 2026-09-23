@@ -3,14 +3,16 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
-  FolderPlus, 
+  Plus, 
   Folder, 
   Trash2, 
   Sparkles, 
   Check, 
   Copy, 
   Server,
-  ArrowRight
+  ArrowUpRight,
+  Cpu,
+  Layers
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import Modal from '../components/Modal';
@@ -36,7 +38,7 @@ export default function UserProjects() {
   const [error, setError] = useState<string | null>(null);
 
   // Clipboard copies
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   useEffect(() => {
     // Auth check
@@ -97,7 +99,6 @@ export default function UserProjects() {
         const updated = [newPrj, ...projects];
         setProjects(updated);
         setCachedProjects(updated);
-        // Force refresh from backend to ensure full sync on new project creation
         getUserProjects({ forceRefresh: true }).then(fresh => setProjects(fresh));
         
         // Reset form fields
@@ -127,46 +128,51 @@ export default function UserProjects() {
     }
   };
 
-  const copyToken = (projId: string, tokenVal: string) => {
-    navigator.clipboard.writeText(tokenVal);
-    setCopiedId(projId);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyConnectionCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
   const filteredProjects = projects.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.connectionCode && p.connectionCode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
     <UserLayout>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mt-6 md:mt-10 px-2 md:px-6 pb-12"
-      >
-        {/* Header Panel */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 pb-6 border-b border-white/5">
+      <div className="space-y-3.5">
+        
+        {/* Compact Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Folder className="w-8 h-8 text-violet-500" />
-              My Projects
-            </h1>
-            <p className="text-xs text-white/50 font-mono mt-1 uppercase tracking-widest">
-              Cluster Node Workspaces ({projects.length})
-            </p>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+              <Link to="/dashboard" className="hover:text-zinc-300">Noir</Link>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-300">Developer Console</span>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-400">Workspaces</span>
+            </div>
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-100">
+                Registered Workspaces
+              </h1>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-400">
+                {projects.length} nodes
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2">
             {/* Search Input */}
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
               <input 
                 type="text" 
-                placeholder="Search workspaces..." 
+                placeholder="Filter workspaces..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-white/20 bg-white/5 text-white text-xs font-medium placeholder-white/40 focus:outline-none focus:border-violet-500/50 backdrop-blur-sm transition-all"
+                className="h-8 pl-8 pr-3 text-xs bg-zinc-900/90 border border-zinc-800 rounded-md text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 w-48 sm:w-60 transition-all"
               />
             </div>
 
@@ -174,132 +180,130 @@ export default function UserProjects() {
             <button 
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-5 py-2.5 bg-white hover:bg-stone-200 text-stone-950 text-xs font-semibold uppercase tracking-widest rounded-full shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98"
+              className="h-8 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
             >
-              <FolderPlus className="w-4 h-4" />
-              New Project
+              <Plus className="w-3.5 h-3.5" />
+              <span>Register Node</span>
             </button>
           </div>
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {isLoading ? (
             Array(3).fill(0).map((_, i) => (
               <div 
                 key={`skeleton-${i}`} 
-                className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md shadow-lg flex flex-col h-[260px]"
+                className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 flex flex-col h-[160px]"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <Skeleton className="w-12 h-12 rounded-2xl bg-white/5" />
-                  <Skeleton className="w-16 h-6 rounded-full bg-white/5" />
-                </div>
-                <Skeleton className="w-3/4 h-6 mb-2 bg-white/5" />
-                <Skeleton className="w-1/2 h-4 mb-6 bg-white/5" />
-                <div className="mt-auto pt-4 border-t border-white/5 flex justify-between items-center">
-                  <Skeleton className="w-1/3 h-4 bg-white/5" />
-                  <Skeleton className="w-8 h-8 rounded-full bg-white/5" />
+                <Skeleton className="w-1/2 h-5 mb-2 bg-zinc-800/40" />
+                <Skeleton className="w-3/4 h-3.5 mb-4 bg-zinc-800/30" />
+                <div className="mt-auto flex justify-between items-center pt-2 border-t border-zinc-800/60">
+                  <Skeleton className="w-1/3 h-4 bg-zinc-800/40" />
+                  <Skeleton className="w-12 h-6 rounded bg-zinc-800/40" />
                 </div>
               </div>
             ))
           ) : filteredProjects.length === 0 ? (
-            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white/5 border border-white/10 border-dashed rounded-[2rem] p-6">
-              <Folder className="w-12 h-12 text-white/20 mb-4" />
-              <h3 className="text-lg font-semibold text-white">No workspaces found</h3>
-              <p className="text-xs text-white/50 mt-1 max-w-[280px]">
-                {searchQuery ? "Your search filter didn't match any registered projects." : "Add your first node workspace to start routing traces to the dashboard."}
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-[#0D0F17] border border-zinc-800/80 border-dashed rounded-lg p-6">
+              <Folder className="w-8 h-8 text-zinc-600 mb-2" />
+              <h3 className="text-sm font-semibold text-zinc-300">No workspaces found</h3>
+              <p className="text-xs text-zinc-500 mt-1 max-w-[280px]">
+                {searchQuery ? "No workspaces match your query filter." : "Register your first workspace node to route live telemetry."}
               </p>
               {!searchQuery && (
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="mt-6 px-4 py-2 border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 text-xs uppercase tracking-widest font-bold rounded-full transition-colors cursor-pointer"
+                  className="mt-4 h-8 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  Create Project
+                  <Plus className="w-3.5 h-3.5" /> Register Workspace
                 </button>
               )}
             </div>
           ) : (
             filteredProjects.map((project) => {
-              const mockToken = `nr_live_${project.id.replace('prj-', '')}2b8ea102bc0f2771d9a0d8fe1844b20`;
-              
               return (
-                <motion.div 
-                  layout
+                <div 
                   key={project.id} 
-                  className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md shadow-lg flex flex-col justify-between group hover:border-violet-500/30 transition-all duration-300 relative overflow-hidden"
+                  className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 flex flex-col justify-between hover:border-zinc-700 transition-colors group"
                 >
-                  {/* Glowing hover accent */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/5 blur-2xl rounded-full group-hover:bg-violet-600/10 transition-all duration-500 pointer-events-none" />
-                  
                   <div>
-                    {/* Card Top Row */}
-                    <div className="flex justify-between items-start mb-5">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-400 transition-all">
-                        <Folder className="w-5 h-5" />
-                      </div>
-                      
-                      {/* Status indicator badge */}
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-mono uppercase tracking-widest flex items-center gap-1.5 border ${
-                        project.status === 'active' 
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                          : project.status === 'error'
-                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 animate-pulse'
-                          : 'bg-stone-500/10 border-white/10 text-white/40'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          project.status === 'active' 
-                            ? 'bg-emerald-400' 
-                            : project.status === 'error'
-                            ? 'bg-rose-400'
-                            : 'bg-white/30'
-                        }`} />
-                        {project.status}
+                    {/* Top Row: Title + Status */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <Link 
+                        to={`/dashboard/projects/${project.id}`}
+                        className="font-semibold text-sm text-zinc-200 group-hover:text-violet-300 transition-colors flex items-center gap-1 truncate"
+                      >
+                        <span className="truncate">{project.name}</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-violet-400 shrink-0" />
+                      </Link>
+
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>Active</span>
                       </span>
                     </div>
 
-                    {/* Workspace Metadata */}
-                    <Link to={`/dashboard/projects/${project.id}`} className="block mt-2">
-                      <h3 className="text-xl font-bold text-white group-hover:text-violet-300 transition-colors cursor-pointer flex items-center gap-1.5">
-                        {project.name}
-                        <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-violet-400" />
-                      </h3>
-                    </Link>
-                    <p className="text-[10px] text-white/40 font-mono mt-1 uppercase tracking-widest">
-                      ID: {project.id}
-                    </p>
+                    {/* Metadata strip */}
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-3">
+                      <span>ID: {project.id}</span>
+                      <span>•</span>
+                      <span>{project.environments || 1} Env</span>
+                      <span>•</span>
+                      <span className="text-zinc-400">Docker Synced</span>
+                    </div>
+
+                    {/* Connection Code box */}
+                    {project.connectionCode && (
+                      <div className="bg-zinc-900/90 border border-zinc-800/80 rounded px-2 py-1 flex items-center justify-between text-[11px] font-mono text-zinc-300">
+                        <span className="text-zinc-500 select-none">CODE:</span>
+                        <span className="text-zinc-200 font-semibold">{project.connectionCode}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyConnectionCode(project.connectionCode!, project.id)}
+                          className="text-zinc-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+                          title="Copy connection code"
+                        >
+                          {copiedCodeId === project.id ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Card Bottom Status row */}
-                  <div className="mt-8 pt-4 border-t border-white/5 flex justify-between items-center">
-                    <div className="flex items-center gap-1.5">
-                      <Server className="w-3.5 h-3.5 text-white/40" />
-                      <span className="text-[10px] text-white/50 font-mono">
-                        {project.environments} Envs
-                      </span>
-                    </div>
+                  {/* Card Bottom: Last Sync & Actions */}
+                  <div className="mt-3 pt-2.5 border-t border-zinc-800/60 flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-mono text-zinc-500">
+                      Sync: {project.lastUpdated || 'Just now'}
+                    </span>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-white/40 font-mono">
-                        {project.lastUpdated}
-                      </span>
-                      
-                      {/* Delete action */}
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        to={`/dashboard/projects/${project.id}`}
+                        className="h-6 px-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-medium inline-flex items-center gap-1 transition-colors"
+                      >
+                        Inspect
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleDeleteProject(project.id)}
-                        className="p-1.5 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all cursor-pointer"
+                        className="h-6 w-6 rounded bg-zinc-800/40 hover:bg-rose-500/20 hover:text-rose-400 text-zinc-400 flex items-center justify-center transition-colors cursor-pointer"
                         title="Delete Workspace"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })
           )}
         </div>
-      </motion.div>
+
+      </div>
 
       {/* Register Project Modal */}
       <Modal
@@ -307,49 +311,49 @@ export default function UserProjects() {
         onClose={() => setIsCreateModalOpen(false)}
         title="Register Telemetry Node"
       >
-        <form onSubmit={handleCreateProject} className="space-y-4">
-          <div className="flex items-center gap-2 text-violet-400">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs uppercase font-mono tracking-wider font-bold">New Node Setup</span>
+        <form onSubmit={handleCreateProject} className="space-y-3.5">
+          <div className="flex items-center gap-2 text-zinc-300">
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-xs uppercase font-mono tracking-wider font-semibold">New Monitored Node</span>
           </div>
 
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
               {error}
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Project Title</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Workspace Title</label>
             <input
               type="text"
-              placeholder="e.g. Noir"
+              placeholder="e.g. DormCare Microservices"
               value={newProjectTitle}
               onChange={(e) => setNewProjectTitle(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-xs font-mono text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
               required
               disabled={isCreating}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Description</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Description</label>
             <textarea
-              placeholder="e.g. Reliability Engineering Platform"
+              placeholder="e.g. Core microservices cluster fault injection monitoring"
               value={newProjectDesc}
               onChange={(e) => setNewProjectDesc(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors h-16 resize-none"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-xs font-mono text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors h-14 resize-none"
               disabled={isCreating}
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Architecture</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Architecture</label>
               <select
                 value={newProjectArch}
                 onChange={(e) => setNewProjectArch(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
                 disabled={isCreating}
               >
                 <option value="monolith">Monolith</option>
@@ -358,11 +362,11 @@ export default function UserProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Visibility</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Visibility</label>
               <select
                 value={newProjectVis}
                 onChange={(e) => setNewProjectVis(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
                 disabled={isCreating}
               >
                 <option value="private">Private</option>
@@ -371,11 +375,11 @@ export default function UserProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Analysis Mode</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Analysis</label>
               <select
                 value={newProjectAnalysisMode}
                 onChange={(e) => setNewProjectAnalysisMode(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
                 disabled={isCreating}
               >
                 <option value="manual">Manual</option>
@@ -384,25 +388,25 @@ export default function UserProjects() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-3 border-t border-white/5 mt-4">
+          <div className="flex gap-2.5 pt-2 border-t border-zinc-800/80 mt-3">
             <button
               type="submit"
               disabled={isCreating}
-              className="flex-1 py-2.5 rounded-full bg-white hover:bg-stone-200 text-black text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 h-8 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isCreating ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
                   <span>Registering...</span>
                 </>
               ) : (
-                'Register Project'
+                'Register Node'
               )}
             </button>
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-6 py-2.5 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
+              className="h-8 px-4 rounded-md border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 text-xs font-medium transition-colors cursor-pointer"
             >
               Cancel
             </button>

@@ -3,6 +3,7 @@ import sys
 import json
 import time
 import subprocess
+import shlex
 from pathlib import Path
 import typer
 from rich import print
@@ -125,7 +126,7 @@ def run_container(
     print(f"[bold yellow]In-container test runner target: [cyan]{container_test_cmd}[/cyan][/bold yellow]\n")
 
     # 2. CHECK DOCKER INSTALLATION
-    if subprocess.run("docker --version", shell=True, capture_output=True).returncode != 0:
+    if subprocess.run(["docker", "--version"], capture_output=True).returncode != 0:
         print("[red]Error: Docker executable not found. Please ensure Docker daemon is running.[/red]")
         send_log_telemetry(client, project_code, "[Agent] Docker not found, aborting.", event="run_end")
         raise typer.Exit(1)
@@ -133,26 +134,38 @@ def run_container(
     image_name = image
     if not image_name:
         image_name = f"noir-app-{project_code.lower()}"
+    else:
+        image_name = image_name.strip()
+        if ":" in image_name:
+            repo, tag = image_name.rsplit(":", 1)
+            image_name = f"{repo.lower()}:{tag}"
+        else:
+            image_name = image_name.lower()
+
+    if not image:
         print(f"[bold yellow]Building Docker image '[cyan]{image_name}[/cyan]'...[/bold yellow]")
         send_log_telemetry(client, project_code, f"[Agent] Building Docker image '{image_name}'...")
         create_fallback_dockerfile(Path("."))
-        build_proc = subprocess.run(f"docker build -t {image_name} .", shell=True)
+        build_proc = subprocess.run(["docker", "build", "-t", image_name, "."])
         if build_proc.returncode != 0:
             print("[red]Docker build failed.[/red]")
             send_log_telemetry(client, project_code, "[Agent] Docker build failed.", event="run_end")
             raise typer.Exit(1)
 
     container_name = f"noir-run-{project_code.lower()}"
-    subprocess.run(f"docker rm -f {container_name}", shell=True, capture_output=True)
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
 
     print(f"\n[bold green]Launching container '[cyan]{image_name}[/cyan]' ({container_name}) for project '[yellow]{project_code}[/yellow]'...[/bold green]\n")
     send_log_telemetry(client, project_code, f"[Agent] Launching container '{container_name}'...")
 
-    port_flag = f"-p {port}" if port else ""
-    cmd_override = f" {command}" if command else ""
-    docker_run_cmd = f"docker run -d --name {container_name} {port_flag} {image_name}{cmd_override}"
+    docker_run_args = ["docker", "run", "-d", "--name", container_name]
+    if port:
+        docker_run_args.extend(["-p", port])
+    docker_run_args.append(image_name)
+    if command:
+        docker_run_args.extend(shlex.split(command))
 
-    run_proc = subprocess.run(docker_run_cmd, shell=True, capture_output=True, text=True)
+    run_proc = subprocess.run(docker_run_args, capture_output=True, text=True)
     if run_proc.returncode != 0:
         print(f"[red]Failed to start container: {run_proc.stderr}[/red]")
         send_log_telemetry(client, project_code, f"[Agent] Failed to start container: {run_proc.stderr}", event="run_end")
@@ -163,13 +176,12 @@ def run_container(
         print(f"[bold cyan]═══ Executing Tests Inside Container ═══[/bold cyan]")
         print(f"[bold yellow]Running: docker exec {container_name} {container_test_cmd}[/bold yellow]\n")
 
-        exec_cmd = f"docker exec {container_name} {container_test_cmd}"
+        exec_args = ["docker", "exec", container_name] + shlex.split(container_test_cmd)
         start_time = time.time()
         test_logs = []
 
         test_proc = subprocess.Popen(
-            exec_cmd,
-            shell=True,
+            exec_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -219,7 +231,7 @@ def run_container(
     finally:
         # 4. TERMINATE CONTAINER AND CLEAN UP IMMEDIATELY
         print(f"[bold yellow]Terminating and removing container '{container_name}'...[/bold yellow]")
-        subprocess.run(f"docker rm -f {container_name}", shell=True, capture_output=True)
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
 
         send_log_telemetry(
             client, project_code,

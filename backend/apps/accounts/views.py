@@ -23,6 +23,36 @@ from .throttles import LoginThrottle,RegisterThrottle
 
 import requests
 import secrets
+import logging
+from .redis import redis_client
+
+logger = logging.getLogger(__name__)
+
+def _create_oauth_state(client_type: str = "frontend") -> str:
+    state_token = secrets.token_urlsafe(32)
+    clean_client = "frontend" if str(client_type).lower() == "frontend" else "cli"
+    try:
+        redis_client.setex(f"oauth_state:{state_token}", 300, clean_client)
+    except Exception as e:
+        logger.error(f"Failed to save oauth state in Redis: {e}")
+    return state_token
+
+def _consume_oauth_state(state_token: str) -> str | None:
+    if not state_token:
+        return None
+    key = f"oauth_state:{state_token}"
+    try:
+        pipe = redis_client.pipeline()
+        pipe.get(key)
+        pipe.delete(key)
+        results = pipe.execute()
+        client_type = results[0]
+        if not client_type:
+            return None
+        return str(client_type)
+    except Exception as e:
+        logger.error(f"Failed to consume oauth state from Redis: {e}")
+        return None
 
 User = get_user_model()
 
@@ -277,7 +307,8 @@ class EmailTokenObtainPairView(TokenObtainPairView):
 
 @throttle_classes([LoginThrottle])
 def github_login(request):
-    client = request.GET.get("client")
+    client = request.GET.get("client") or "frontend"
+    state_token = _create_oauth_state(client)
     github_client_id = settings.GITHUB_CLIENT_ID
     redirect_uri = settings.BACKEND_BASE_URL
     scope = "read:user user:email"
@@ -289,7 +320,7 @@ def github_login(request):
         f"redirect_uri={redirect_uri}/api/accounts/github/login/callback/&"
         f"scope={scope}&"
         f"response_type={response_type}&"
-        f"state={client}"
+        f"state={state_token}"
     )
     print(f"Redirecting to GitHub OAuth2 URL: {auth_url}")
 
@@ -297,7 +328,11 @@ def github_login(request):
 
 def github_callback(request):
     code = request.GET.get("code")
-    client = request.GET.get("state")
+    state_token = request.GET.get("state")
+
+    client = _consume_oauth_state(state_token)
+    if not client:
+        return redirect(f"{settings.FRONTEND_BASE_URL}/login?error=invalid_state")
 
     if not code:
         return redirect(f"{settings.FRONTEND_BASE_URL}/login?error=no_code")
@@ -305,7 +340,6 @@ def github_callback(request):
     user = GithubOAuthService.authenticate(code)
 
     exchange_code = ExchangeService.create(user)
-
 
     if client == "frontend":
         url = (f"{settings.FRONTEND_BASE_URL}/auth/callback")
@@ -320,11 +354,12 @@ def github_callback(request):
 
 @throttle_classes([LoginThrottle])
 def google_login(request):
+    client = request.GET.get("client") or "frontend"
+    state_token = _create_oauth_state(client)
     google_client_id = settings.GOOGLE_CLIENT_ID
     redirect_uri = settings.BACKEND_BASE_URL
     scope = "openid email profile"
     response_type = "code"
-    client = request.GET.get("client")
 
     auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
@@ -332,7 +367,7 @@ def google_login(request):
         f"redirect_uri={redirect_uri}/api/accounts/google/login/callback/&"
         f"scope={scope}&"
         f"response_type={response_type}&"
-        f"state={client}"
+        f"state={state_token}"
     )
 
     return redirect(auth_url)
@@ -340,8 +375,11 @@ def google_login(request):
 
 def google_callback(request):
     code = request.GET.get("code")
+    state_token = request.GET.get("state")
 
-    client = request.GET.get("state")
+    client = _consume_oauth_state(state_token)
+    if not client:
+        return redirect(f"{settings.FRONTEND_BASE_URL}/login?error=invalid_state")
 
     if not code:
         return redirect(f"{settings.FRONTEND_BASE_URL}/login?error=no_code")
@@ -349,7 +387,6 @@ def google_callback(request):
     user = GoogleOAuthService.authenticate(code)
 
     exchange_code = ExchangeService.create(user)
-
 
     if client == "frontend":
         url = (f"{settings.FRONTEND_BASE_URL}/auth/callback")
@@ -361,6 +398,7 @@ def google_callback(request):
     )
 
     return redirect(url)
+
 
 
 

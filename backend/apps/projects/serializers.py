@@ -3,6 +3,7 @@ from .models import Project,ProjectProfile,Framework,TestRun
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
+from django.core.cache import cache
 
 
 class ProjectUserSerializer(serializers.ModelSerializer):
@@ -13,6 +14,9 @@ class ProjectUserSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     owner = ProjectUserSerializer(read_only=True)
     assigned_teams = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
+    is_daemon_active = serializers.SerializerMethodField()
+    is_stream_active = serializers.SerializerMethodField()
+    containers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -29,7 +33,24 @@ class ProjectSerializer(serializers.ModelSerializer):
             "updated_at",
             "connection_code",
             "assigned_teams",
+            "is_daemon_active",
+            "is_stream_active",
+            "containers_count",
         ]
+
+    def get_is_daemon_active(self, obj):
+        code = (obj.connection_code or "").upper()
+        return bool(code and (cache.get(f"core_daemon_active_{code}") or cache.get(f"core_daemon_active_{code.lower()}")))
+
+    def get_is_stream_active(self, obj):
+        code = (obj.connection_code or "").upper()
+        return bool(code and (cache.get(f"core_active_stream_{code}") or cache.get(f"core_active_stream_{code.lower()}")))
+
+    def get_containers_count(self, obj):
+        profile = getattr(obj, "profile", None)
+        if profile and profile.docker_containers:
+            return len(profile.docker_containers)
+        return 0
 
 class FrameworkSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,6 +82,9 @@ class SingleProjectSerializer(serializers.ModelSerializer):
     owner = ProjectUserSerializer(read_only=True)
     profile = ProjectProfileSerializer(read_only=True)
     assigned_teams = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
+    is_daemon_active = serializers.SerializerMethodField()
+    is_stream_active = serializers.SerializerMethodField()
+    containers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -78,7 +102,24 @@ class SingleProjectSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "assigned_teams",
+            "is_daemon_active",
+            "is_stream_active",
+            "containers_count",
         ]
+
+    def get_is_daemon_active(self, obj):
+        code = (obj.connection_code or "").upper()
+        return bool(code and (cache.get(f"core_daemon_active_{code}") or cache.get(f"core_daemon_active_{code.lower()}")))
+
+    def get_is_stream_active(self, obj):
+        code = (obj.connection_code or "").upper()
+        return bool(code and (cache.get(f"core_active_stream_{code}") or cache.get(f"core_active_stream_{code.lower()}")))
+
+    def get_containers_count(self, obj):
+        profile = getattr(obj, "profile", None)
+        if profile and profile.docker_containers:
+            return len(profile.docker_containers)
+        return 0
 
 
 class TestRunSerializer(serializers.ModelSerializer):
@@ -159,6 +200,24 @@ class FaultInjectionCreateSerializer(serializers.ModelSerializer):
         if not isinstance(params, dict):
             raise serializers.ValidationError({"parameters": "Parameters must be a JSON object / dictionary."})
 
+        # Validate target against project registered containers if profile containers are set
+        target = attrs.get("target")
+        project = self.context.get("project")
+        if target and project and hasattr(project, "profile") and project.profile.docker_containers:
+            registered_names = set()
+            for c in project.profile.docker_containers:
+                if isinstance(c, dict):
+                    for k in ("name", "service", "id"):
+                        val = c.get(k)
+                        if val:
+                            registered_names.add(str(val).lower())
+                elif isinstance(c, str):
+                    registered_names.add(c.lower())
+
+            clean_target = str(target).lower().strip()
+            if registered_names and clean_target not in registered_names and not any(clean_target in r or r in clean_target for r in registered_names):
+                raise serializers.ValidationError({"target": f"Target container '{target}' is not registered under project '{project.connection_code}'."})
+
         # Validate duration if present
         if "duration" in params:
             try:
@@ -168,6 +227,13 @@ class FaultInjectionCreateSerializer(serializers.ModelSerializer):
                 params["duration"] = duration
             except (ValueError, TypeError):
                 raise serializers.ValidationError({"parameters": "Duration must be an integer."})
+
+        # Validate interface format if present
+        if "interface" in params:
+            interface_val = str(params["interface"]).strip()
+            if not re.match(r"^[a-zA-Z0-9_\-]+$", interface_val):
+                raise serializers.ValidationError({"parameters": f"Invalid network interface '{interface_val}'."})
+            params["interface"] = interface_val
 
         # Fault-specific validation
         if fault_type == "network_delay":
@@ -233,17 +299,34 @@ class FaultInjectionCreateSerializer(serializers.ModelSerializer):
         return attrs
 
 
+from .models import FaultInjection, FaultInjectionLog
+
+
+class FaultInjectionLogSerializer(serializers.ModelSerializer):
+    fault_id = serializers.ReadOnlyField(source="fault.id")
+    injection_id = serializers.ReadOnlyField(source="fault.id")
+
+    class Meta:
+        model = FaultInjectionLog
+        fields = ["id", "fault_id", "injection_id", "timestamp", "level", "message"]
+        read_only_fields = ["id", "fault_id", "injection_id", "timestamp"]
+
+
 class FaultInjectionSerializer(serializers.ModelSerializer):
+    injection_id = serializers.ReadOnlyField(source="id")
+    created_at = serializers.ReadOnlyField(source="requested_at")
     project_id = serializers.ReadOnlyField(source="project.id")
     project_title = serializers.ReadOnlyField(source="project.title")
     project_code = serializers.ReadOnlyField(source="project.connection_code")
     requested_by = ProjectUserSerializer(read_only=True)
     duration_seconds = serializers.SerializerMethodField()
+    logs_count = serializers.SerializerMethodField()
 
     class Meta:
         model = FaultInjection
         fields = [
             "id",
+            "injection_id",
             "project",
             "project_id",
             "project_title",
@@ -253,25 +336,30 @@ class FaultInjectionSerializer(serializers.ModelSerializer):
             "target",
             "parameters",
             "status",
+            "created_at",
             "requested_at",
             "started_at",
             "completed_at",
             "duration_seconds",
+            "logs_count",
             "result",
             "error_message",
         ]
         read_only_fields = [
             "id",
+            "injection_id",
             "project",
             "project_id",
             "project_title",
             "project_code",
             "requested_by",
             "status",
+            "created_at",
             "requested_at",
             "started_at",
             "completed_at",
             "duration_seconds",
+            "logs_count",
             "result",
             "error_message",
         ]
@@ -284,8 +372,17 @@ class FaultInjectionSerializer(serializers.ModelSerializer):
             return obj.parameters["duration"]
         return None
 
+    def get_logs_count(self, obj):
+        if hasattr(obj, "logs"):
+            return obj.logs.count()
+        return 0
+
 
 class FaultInjectionReportSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=[FaultInjection.Status.COMPLETED, FaultInjection.Status.FAILED])
+    status = serializers.ChoiceField(choices=[
+        FaultInjection.Status.COMPLETED,
+        FaultInjection.Status.FAILED,
+        FaultInjection.Status.CANCELLED,
+    ])
     result = serializers.JSONField(default=dict, required=False)
     error_message = serializers.CharField(required=False, allow_blank=True, default="")

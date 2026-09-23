@@ -1,7 +1,19 @@
 import time
+import re
+import io
+import subprocess
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import docker
 from docker.errors import DockerException, NotFound, APIError
+
+INTERFACE_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
+
+def _validate_interface(interface: str) -> str:
+    clean = str(interface or "eth0").strip()
+    if not INTERFACE_REGEX.match(clean):
+        raise ValueError(f"Invalid network interface format: '{interface}'")
+    return clean
 
 
 class DockerManager:
@@ -58,12 +70,63 @@ class DockerManager:
             })
         return result
 
+    def get_available_container_names(self, all_containers: bool = True) -> List[Dict[str, str]]:
+        """Return list of available docker containers with their names and status."""
+        try:
+            client = self.require_client()
+            return [
+                {
+                    "name": c.name.lstrip('/'),
+                    "status": c.status,
+                    "id": c.short_id,
+                    "image": c.image.tags[0] if (c.image and c.image.tags) else getattr(c.image, "short_id", "unknown")
+                }
+                for c in client.containers.list(all=all_containers)
+            ]
+        except Exception:
+            return []
+
+    def _raise_container_not_found(self, target: str):
+        available = self.get_available_container_names(all_containers=True)
+        running = [f"'{c['name']}'" for c in available if c['status'] == 'running']
+        stopped = [f"'{c['name']}'" for c in available if c['status'] != 'running']
+
+        workspace = Path(".").resolve()
+        compose_files = [workspace / "docker-compose.yml", workspace / "docker-compose.yaml", workspace / "compose.yml"]
+        has_compose = any(f.exists() for f in compose_files)
+        has_dockerfile = (workspace / "Dockerfile").exists()
+
+        clean_target = re.sub(r'[^a-zA-Z0-9_.-]', '-', target.strip()).lower().strip('-._') or "app"
+        clean_image = clean_target.replace("-", ":") if "-" in clean_target else f"{clean_target}:app"
+
+        if has_compose:
+            solution = f"Target '{target}' is defined in Docker Compose. Start it first with: 'docker compose up -d'"
+        elif has_dockerfile:
+            solution = (
+                f"Target '{target}' is defined in Dockerfile but not started on Docker.\n"
+                f"   Build and start it with:\n"
+                f"     $ docker build -t {clean_image} .\n"
+                f"     $ docker run -d --name {clean_target} -p 8000:8000 {clean_image}"
+            )
+        else:
+            solution = f"Start your container first with: 'docker run -d --name {clean_target} <image>' before injecting faults."
+
+        msg = f"Target container '{target}' not found on Docker daemon.\n👉 {solution}"
+        if running:
+            msg += f"\nCurrently Running: [{', '.join(running)}]."
+        if stopped:
+            msg += f"\nCurrently Stopped: [{', '.join(stopped)}]."
+        if not available:
+            msg += "\nNo Docker containers currently exist on this host."
+        raise NotFound(msg)
+
     def find_container(self, target: str) -> Optional[docker.models.containers.Container]:
         """
-        Find container by exact name, short ID, or Docker Compose service name.
+        Find container by exact name, short ID, Docker Compose service name, or normalized name.
         """
         client = self.require_client()
-        clean_target = target.strip().lower()
+        clean_target = target.strip().lower().lstrip('/')
+        norm_target = re.sub(r'[-_.]', '', clean_target)
 
         # 1. Try exact lookup by name or ID
         try:
@@ -71,18 +134,64 @@ class DockerManager:
         except (NotFound, APIError):
             pass
 
-        # 2. Iterate and match service label or partial name
         candidates = client.containers.list(all=True)
+
+        # 2. Match exact name (case-insensitive, strip slash)
         for c in candidates:
-            if c.name.lower() == clean_target:
-                return c
-            service = (c.labels or {}).get("com.docker.compose.service", "").lower()
-            if service and service == clean_target:
+            c_name = c.name.lower().lstrip('/')
+            if c_name == clean_target:
                 return c
 
+        # 3. Match normalized name (ignoring hyphens/underscores/dots)
         for c in candidates:
-            if clean_target in c.name.lower():
+            c_name = c.name.lower().lstrip('/')
+            norm_name = re.sub(r'[-_.]', '', c_name)
+            if norm_name == norm_target:
                 return c
+
+        # 4. Match service label from Docker Compose or Dockerfile convention
+        for c in candidates:
+            labels = c.labels or {}
+            service = str(labels.get("com.docker.compose.service") or "").lower()
+            if service and (service == clean_target or re.sub(r'[-_.]', '', service) == norm_target):
+                return c
+
+        # 5. Match compose container format: e.g. <project>-<target>-<num>
+        for c in candidates:
+            c_name = c.name.lower().lstrip('/')
+            if (
+                c_name.startswith(f"{clean_target}-")
+                or c_name.startswith(f"{clean_target}_")
+                or c_name.endswith(f"-{clean_target}")
+                or c_name.endswith(f"_{clean_target}")
+            ):
+                return c
+
+        # 6. Substring / partial match
+        for c in candidates:
+            c_name = c.name.lower().lstrip('/')
+            if clean_target in c_name or c_name in clean_target:
+                return c
+
+        # 7. Match image tags
+        for c in candidates:
+            tags = c.image.tags if c.image and c.image.tags else []
+            for tag in tags:
+                tag_lower = tag.lower()
+        # 8. If defined in Docker Compose, attempt auto-launching service
+        workspace = Path(".").resolve()
+        compose_files = [workspace / "docker-compose.yml", workspace / "docker-compose.yaml", workspace / "compose.yml"]
+        if any(f.exists() for f in compose_files):
+            try:
+                up_res = subprocess.run(["docker", "compose", "up", "-d", clean_target], capture_output=True, text=True, timeout=25)
+                if up_res.returncode == 0:
+                    time.sleep(2)
+                    for c in client.containers.list(all=True):
+                        c_name = c.name.lower().lstrip('/')
+                        if c_name == clean_target or clean_target in c_name:
+                            return c
+            except Exception:
+                pass
 
         return None
 
@@ -118,7 +227,7 @@ class DockerManager:
     def restart_container(self, target: str, timeout: int = 10) -> Dict[str, Any]:
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         t0 = time.time()
         container.restart(timeout=timeout)
@@ -135,7 +244,7 @@ class DockerManager:
     def stop_container(self, target: str, timeout: int = 10) -> Dict[str, Any]:
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         container.stop(timeout=timeout)
         container.reload()
@@ -148,7 +257,7 @@ class DockerManager:
     def start_container(self, target: str) -> Dict[str, Any]:
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         if container.status != "running":
             container.start()
@@ -159,43 +268,129 @@ class DockerManager:
             "running": container.status == "running",
         }
 
+    def kill_fault_processes(self, target: str) -> None:
+        """
+        Safely kills any active fault workloads (stress-ng, stress, burnout scripts)
+        inside the container upon cancellation.
+        """
+        container = self.find_container(target)
+        if not container:
+            return
+        try:
+            container.reload()
+            if container.status != "running":
+                return
+            container.exec_run("pkill -9 -f stress-ng", privileged=True)
+            container.exec_run("pkill -9 -f stress", privileged=True)
+            container.exec_run("pkill -9 -f multiprocessing", privileged=True)
+        except Exception:
+            pass
+
     # ==========================================
     # IN-CONTAINER EXECUTION & NETWORK CONTROL
     # ==========================================
 
     def exec_run(self, target: str, cmd: str, privileged: bool = False) -> Tuple[int, str]:
+
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
+
+        # Auto-wake container if stopped on Docker daemon
+        if container.status != "running":
+            try:
+                container.start()
+                container.reload()
+                time.sleep(1)
+            except Exception as start_err:
+                raise RuntimeError(f"Target container '{container.name}' is stopped (status: {container.status}) and failed to auto-start: {start_err}")
 
         res = container.exec_run(cmd, privileged=privileged)
         exit_code = res.exit_code
         output = res.output.decode("utf-8", errors="replace") if res.output else ""
         return exit_code, output
 
+    def _ensure_chaos_netem_image(self) -> str:
+        """Ensure a local image with iproute2/tc exists for sidecar netem execution."""
+        client = self.require_client()
+        image_name = "noir-chaos-netem:latest"
+        try:
+            client.images.get(image_name)
+            return image_name
+        except Exception:
+            pass
+
+        # Try to pull gaiadocker/iproute2 or build local minimal alpine image with iproute2
+        try:
+            client.images.pull("gaiadocker/iproute2:latest")
+            return "gaiadocker/iproute2:latest"
+        except Exception:
+            pass
+
+        try:
+            dockerfile = io.BytesIO(b"FROM alpine:latest\nRUN apk add --no-cache iproute2\nENTRYPOINT [\"tc\"]\n")
+            client.images.build(fileobj=dockerfile, tag=image_name, rm=True)
+            return image_name
+        except Exception:
+            return ""
+
+    def _exec_tc_command(self, target: str, tc_args: str) -> Tuple[int, str]:
+        """
+        Executes a tc (Traffic Control) command inside the target container's network namespace.
+        1. Attempts direct exec inside target container.
+        2. If target lacks 'tc' or NET_ADMIN capability, launches an ephemeral sidecar container
+           attached to the target's network namespace (--net=container:<target> --cap-add=NET_ADMIN).
+        """
+        # 1. Direct exec attempt
+        code, out = self.exec_run(target, f"tc {tc_args}", privileged=True)
+        if code == 0:
+            return code, out
+
+        # 2. Sidecar fallback attached to target network namespace
+        sidecar_image = self._ensure_chaos_netem_image()
+        if sidecar_image:
+            try:
+                client = self.require_client()
+                cmd = tc_args if "noir-chaos-netem" in sidecar_image else f"tc {tc_args}"
+                res = client.containers.run(
+                    image=sidecar_image,
+                    command=cmd,
+                    network_mode=f"container:{target}",
+                    cap_add=["NET_ADMIN"],
+                    remove=True,
+                    stdout=True,
+                    stderr=True,
+                )
+                output = res.decode("utf-8", errors="replace") if isinstance(res, bytes) else str(res or "")
+                return 0, output
+            except docker.errors.ContainerError as ce:
+                err_msg = ce.stderr.decode("utf-8", errors="replace") if hasattr(ce, "stderr") and ce.stderr else str(ce)
+                return ce.exit_status or 1, err_msg
+            except Exception as e:
+                pass
+
+        return code, out
+
     def apply_network_delay(
         self, target: str, latency_ms: int = 500, jitter_ms: int = 50, interface: str = "eth0"
     ) -> Dict[str, Any]:
+        interface = _validate_interface(interface)
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         # Clean existing rule first
         self.remove_network_delay(target, interface=interface)
 
         # Apply netem delay via Linux tc (traffic control)
-        cmd = f"tc qdisc add dev {interface} root netem delay {latency_ms}ms {jitter_ms}ms"
-        code, out = self.exec_run(target, cmd, privileged=True)
+        tc_args = f"qdisc add dev {interface} root netem delay {latency_ms}ms {jitter_ms}ms"
+        code, out = self._exec_tc_command(target, tc_args)
 
         if code != 0:
-            # Check if tc is installed
-            check_code, _ = self.exec_run(target, "which tc")
-            if check_code != 0:
-                raise RuntimeError(
-                    f"Container '{container.name}' lacks 'tc' (iproute2) or NET_ADMIN capability. "
-                    "Install iproute2 or add cap_add: [NET_ADMIN] to Docker Compose."
-                )
-            raise RuntimeError(f"Failed to inject network delay: {out.strip()}")
+            raise RuntimeError(
+                f"Failed to inject network delay on '{container.name}': {out.strip() or 'Exit ' + str(code)}. "
+                f"Ensure interface '{interface}' exists and container has network connectivity."
+            )
 
         return {
             "container_name": container.name,
@@ -206,33 +401,33 @@ class DockerManager:
         }
 
     def remove_network_delay(self, target: str, interface: str = "eth0") -> bool:
+        interface = _validate_interface(interface)
         container = self.find_container(target)
         if not container or container.status != "running":
             return True
 
-        cmd = f"tc qdisc del dev {interface} root"
-        self.exec_run(target, cmd, privileged=True)
+        tc_args = f"qdisc del dev {interface} root"
+        self._exec_tc_command(target, tc_args)
         return True
 
     def apply_network_loss(
         self, target: str, loss_percent: float = 20.0, interface: str = "eth0"
     ) -> Dict[str, Any]:
+        interface = _validate_interface(interface)
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         self.remove_network_delay(target, interface=interface)
 
-        cmd = f"tc qdisc add dev {interface} root netem loss {loss_percent}%"
-        code, out = self.exec_run(target, cmd, privileged=True)
+        tc_args = f"qdisc add dev {interface} root netem loss {loss_percent}%"
+        code, out = self._exec_tc_command(target, tc_args)
 
         if code != 0:
-            check_code, _ = self.exec_run(target, "which tc")
-            if check_code != 0:
-                raise RuntimeError(
-                    f"Container '{container.name}' lacks 'tc' (iproute2) or NET_ADMIN capability."
-                )
-            raise RuntimeError(f"Failed to inject packet loss: {out.strip()}")
+            raise RuntimeError(
+                f"Failed to inject packet loss on '{container.name}': {out.strip() or 'Exit ' + str(code)}. "
+                f"Ensure interface '{interface}' exists and container has network connectivity."
+            )
 
         return {
             "container_name": container.name,
@@ -248,7 +443,7 @@ class DockerManager:
     def apply_cpu_stress(self, target: str, workers: int = 2, duration_sec: int = 10) -> Dict[str, Any]:
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         # Check for stress-ng or stress, otherwise use background python / shell arithmetic loop
         check_stress, _ = self.exec_run(target, "which stress-ng")
@@ -282,7 +477,7 @@ class DockerManager:
     def apply_memory_stress(self, target: str, memory_mb: int = 256, duration_sec: int = 10) -> Dict[str, Any]:
         container = self.find_container(target)
         if not container:
-            raise NotFound(f"Target container '{target}' not found.")
+            self._raise_container_not_found(target)
 
         check_stress, _ = self.exec_run(target, "which stress-ng")
         if check_stress == 0:

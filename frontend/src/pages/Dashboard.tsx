@@ -1,114 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight,
-  Facebook,
-  Instagram,
-  Twitter,
-  Plus,
-  Activity,
-  Copy,
-  Check,
-  Terminal,
   Folder,
+  Plus,
+  Search,
+  Check,
+  Copy,
+  ArrowUpRight,
   Shield,
-  Zap,
-  Sparkles,
-  RefreshCw,
+  Activity,
+  Terminal,
   Building2,
-  UserCheck,
-  X
+  ChevronRight,
+  Cpu,
+  Sparkles,
+  Radio,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
 import { apiFetch } from '../utils/api';
-import { checkAndRefreshToken } from '../utils/auth';
+import { checkAndRefreshToken, getAccessToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, Project, formatLastUpdated } from '../utils/projectCache';
 
-
-// Analytics data mapped per project to make the dashboard dynamic
-const projectAnalyticsData: Record<string, Array<{ time: string; users: number; requests: number }>> = {
-  'prj-1': [
-    { time: '00:00', users: 1200, requests: 900 },
-    { time: '04:00', users: 2100, requests: 1400 },
-    { time: '08:00', users: 800, requests: 600 },
-    { time: '12:00', users: 1600, requests: 1100 },
-    { time: '16:00', users: 2400, requests: 1800 },
-    { time: '20:00', users: 3200, requests: 2600 },
-    { time: '24:00', users: 2800, requests: 2200 },
-  ],
-  'prj-2': [
-    { time: '00:00', users: 800, requests: 400 },
-    { time: '04:00', users: 1500, requests: 700 },
-    { time: '08:00', users: 500, requests: 250 },
-    { time: '12:00', users: 1000, requests: 500 },
-    { time: '16:00', users: 1400, requests: 800 },
-    { time: '20:00', users: 1900, requests: 1100 },
-    { time: '24:00', users: 1700, requests: 950 },
-  ],
-  'prj-3': [
-    { time: '00:00', users: 950, requests: 750 },
-    { time: '04:00', users: 1800, requests: 1200 },
-    { time: '08:00', users: 700, requests: 550 },
-    { time: '12:00', users: 1400, requests: 1000 },
-    { time: '16:00', users: 2000, requests: 1500 },
-    { time: '20:00', users: 2800, requests: 2100 },
-    { time: '24:00', users: 2300, requests: 1750 },
-  ],
-  'prj-4': [
-    { time: '00:00', users: 1400, requests: 1000 },
-    { time: '04:00', users: 2500, requests: 1700 },
-    { time: '08:00', users: 1100, requests: 800 },
-    { time: '12:00', users: 1900, requests: 1300 },
-    { time: '16:00', users: 2900, requests: 2000 },
-    { time: '20:00', users: 3800, requests: 2900 },
-    { time: '24:00', users: 3400, requests: 2500 },
-  ],
-  'prj-5': [
-    { time: '00:00', users: 300, requests: 200 },
-    { time: '04:00', users: 500, requests: 350 },
-    { time: '08:00', users: 200, requests: 150 },
-    { time: '12:00', users: 400, requests: 300 },
-    { time: '16:00', users: 600, requests: 450 },
-    { time: '20:00', users: 800, requests: 600 },
-    { time: '24:00', users: 700, requests: 500 },
-  ]
-};
-
-// Default analytics fallback
-const defaultAnalytics = [
-  { time: '00:00', users: 1000, requests: 800 },
-  { time: '04:00', users: 1800, requests: 1200 },
-  { time: '08:00', users: 600, requests: 400 },
-  { time: '12:00', users: 1200, requests: 900 },
-  { time: '16:00', users: 1900, requests: 1400 },
-  { time: '20:00', users: 2600, requests: 2000 },
-  { time: '24:00', users: 2100, requests: 1600 },
-];
 export { formatLastUpdated };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [projects, setProjects] = useState<Project[]>(() => getCachedProjects());
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => projects[0]?.id || '');
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [isCopiedKey, setIsCopiedKey] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [copiedCliCommand, setCopiedCliCommand] = useState(false);
 
-  // Modals
+  // Selected project for Agent Daemon Live Feed
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+
+  // Real test runs data from backend
+  const [testRuns, setTestRuns] = useState<any[]>([]);
+
+  // Agent Daemon Live Feed State
+  const [daemonStatus, setDaemonStatus] = useState<{
+    is_active: boolean;
+    is_daemon_active: boolean;
+    is_streaming: boolean;
+    last_seen?: string;
+  } | null>(null);
+  const [logs, setLogs] = useState<Array<{ log: string; timestamp?: string; stream?: string }>>([]);
+  const [isWsConnected, setIsWsConnected] = useState(false);
+
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isQuickstartOpen, setIsQuickstartOpen] = useState(false);
-
-  useEffect(() => {
-    if (location.hash === '#quickstart') {
-      setIsQuickstartOpen(true);
-    }
-  }, [location.hash]);
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectArch, setNewProjectArch] = useState('monolith');
@@ -121,8 +69,13 @@ export default function Dashboard() {
   const [companyRequests, setCompanyRequests] = useState<any[]>([]);
   const [developerCompany, setDeveloperCompany] = useState<any>(null);
 
-  // Terminal log stream state
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+  // Computed selected project
+  const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0] || null;
+
+  // Real statistics computation
+  const activeDaemonsCount = projects.filter(p => p.isDaemonActive || p.isStreamActive).length;
+  const passedTestRunsCount = testRuns.filter(r => r.status === 'passed').length;
+  const testPassRate = testRuns.length > 0 ? Math.round((passedTestRunsCount / testRuns.length) * 100) : null;
 
   const fetchDeveloperCompanyInfo = async () => {
     try {
@@ -172,6 +125,26 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch real test runs
+  const fetchTestRuns = async () => {
+    try {
+      const token = await checkAndRefreshToken();
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+      const res = await apiFetch(`${baseUrl}/api/projects/test-runs/`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setTestRuns(data);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching test runs:', err);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
     const userRole = localStorage.getItem('user_role');
     if (userRole === 'company') {
@@ -179,7 +152,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Check authentication
     const token = localStorage.getItem('access_token');
     if (!token) {
       navigate('/login');
@@ -187,17 +159,17 @@ export default function Dashboard() {
     }
 
     fetchDeveloperCompanyInfo();
+    fetchTestRuns();
 
     const loadProjects = async () => {
-      const prjs = await getUserProjects();
+      // Force refresh on dashboard mount to ensure accurate daemon status
+      const prjs = await getUserProjects({ forceRefresh: true });
       setProjects(prjs);
       if (prjs.length > 0) {
         setSelectedProjectId(prev => {
-          if (prjs.some(m => m.id === prev)) return prev;
+          if (prjs.some(p => p.id === prev)) return prev;
           return prjs[0].id;
         });
-      } else {
-        setSelectedProjectId('');
       }
       setIsLoading(false);
     };
@@ -205,52 +177,164 @@ export default function Dashboard() {
     loadProjects();
   }, [navigate]);
 
+  // Connect WebSocket for live daemon telemetry
+  const connectWs = (code: string) => {
+    if (!code) return;
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
 
-  // Terminal logs feed simulation
-  useEffect(() => {
-    if (isLoading) return;
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    let host = apiBase.replace(/^https?:\/\//, '');
+    if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
+    const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+    const token = getAccessToken();
+    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = `${wsProtocol}//${host}/ws/project/${code}/logs/${tokenQuery}`;
 
-    const phrases = [
-      'GET /api/v1/telemetry 200 OK - 32ms',
-      'POST /api/v1/spans/batch 202 Accepted - 18ms',
-      '✔ Agent heartbeat synchronized with central cluster',
-      'Connection status: STABLE',
-      'GET /api/v1/projects 200 OK - 12ms',
-      'Streaming active spans on environment: production',
-      '[INFO] Telemetry compression ratio: 4.8x',
-      '[DEBUG] garbage-collector runs: reclaimed 14.2 MB',
-      'GET /api/v1/metrics/stream 200 OK - 45ms',
-    ];
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    setTerminalLogs([
-      '$ noir-agent start',
-      '[INFO] Starting Noir Telemetry Agent v1.0...',
-      '[INFO] Hooking into process hooks...',
-      '✔ Successfully authenticated as engineer@noir.sh',
-    ]);
+      ws.onopen = () => {
+        setIsWsConnected(true);
+      };
 
-    const interval = setInterval(() => {
-      const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-      setTerminalLogs(prev => {
-        const nextLogs = [...prev, randomPhrase];
-        if (nextLogs.length > 12) nextLogs.shift();
-        return nextLogs;
-      });
-    }, 2500);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-    return () => clearInterval(interval);
-  }, [isLoading]);
+          // Handle daemon status update broadcast
+          if (data.event === 'daemon_start') {
+            setDaemonStatus(prev => ({
+              is_active: true,
+              is_daemon_active: true,
+              is_streaming: prev?.is_streaming || false
+            }));
+            setProjects(prev => prev.map(p => p.connectionCode?.toUpperCase() === code.toUpperCase() ? { ...p, isDaemonActive: true } : p));
+          } else if (data.event === 'daemon_stop') {
+            setDaemonStatus(prev => ({
+              is_active: false,
+              is_daemon_active: false,
+              is_streaming: false
+            }));
+            setProjects(prev => prev.map(p => p.connectionCode?.toUpperCase() === code.toUpperCase() ? { ...p, isDaemonActive: false } : p));
+          }
 
-  const copyCommand = () => {
-    navigator.clipboard.writeText('npm install -g noir-agent\nnoir-agent init');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+          // Handle incoming real log line
+          if (data.log) {
+            setLogs(prev => [...prev.slice(-400), {
+              log: data.log,
+              timestamp: data.timestamp || new Date().toLocaleTimeString(),
+              stream: data.stream || 'stdout'
+            }]);
+          }
+
+          if (data.event === 'run_end' || data.event === 'analysis_end') {
+            fetchTestRuns();
+          }
+        } catch (err) {
+          console.error('Live stream parse error:', err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn('Stream socket error:', err);
+        setIsWsConnected(false);
+      };
+
+      ws.onclose = () => {
+        setIsWsConnected(false);
+        wsRef.current = null;
+      };
+    } catch (e) {
+      console.warn('Stream socket init exception:', e);
+    }
   };
 
-  const copyApiKey = () => {
-    navigator.clipboard.writeText('nr_live_83ba9a102bc0f1c322b7a95');
-    setIsCopiedKey(true);
-    setTimeout(() => setIsCopiedKey(false), 2000);
+  // Poll daemon and stream status for selected project
+  useEffect(() => {
+    if (!selectedProject || !selectedProject.connectionCode) {
+      setDaemonStatus(null);
+      setLogs([]);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setIsWsConnected(false);
+      return;
+    }
+
+    const code = selectedProject.connectionCode;
+    setLogs([]); // Clear logs when switching projects
+
+    const checkStatus = async () => {
+      try {
+        const token = await checkAndRefreshToken();
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+        const res = await apiFetch(`${baseUrl}/api/project/${code}/stream-status/`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setDaemonStatus({
+            is_active: !!data.is_active,
+            is_daemon_active: !!data.is_daemon_active,
+            is_streaming: !!data.is_streaming,
+            last_seen: data.last_seen
+          });
+
+          // Sync project list status
+          setProjects(prev => prev.map(p => {
+            if (p.connectionCode?.toUpperCase() === code.toUpperCase()) {
+              return {
+                ...p,
+                isDaemonActive: !!data.is_daemon_active,
+                isStreamActive: !!data.is_streaming
+              };
+            }
+            return p;
+          }));
+        }
+      } catch (err) {
+        // Fallback
+      }
+    };
+
+    checkStatus();
+    connectWs(code);
+
+    const interval = setInterval(checkStatus, 3000);
+
+    return () => {
+      clearInterval(interval);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [selectedProject?.connectionCode]);
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  const copyConnectionCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  const copyCliDaemonCommand = () => {
+    if (!selectedProject?.connectionCode) return;
+    const cmd = `noir connect ${selectedProject.connectionCode} && noir fault listen`;
+    navigator.clipboard.writeText(cmd);
+    setCopiedCliCommand(true);
+    setTimeout(() => setCopiedCliCommand(false), 2000);
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -289,25 +373,18 @@ export default function Dashboard() {
           status: 'active',
           lastUpdated: 'Just now',
           environments: 1,
-          connectionCode: data.connection_code || ''
+          connectionCode: data.connection_code || '',
+          isDaemonActive: false,
+          isStreamActive: false,
+          containersCount: 0
         };
-
-        // Inject dummy analytics data for new project
-        projectAnalyticsData[newPrj.id] = [
-          { time: '00:00', users: Math.floor(Math.random() * 1000) + 500, requests: Math.floor(Math.random() * 800) + 400 },
-          { time: '04:00', users: Math.floor(Math.random() * 1500) + 800, requests: Math.floor(Math.random() * 1200) + 600 },
-          { time: '08:00', users: Math.floor(Math.random() * 600) + 300, requests: Math.floor(Math.random() * 500) + 200 },
-          { time: '12:00', users: Math.floor(Math.random() * 1200) + 600, requests: Math.floor(Math.random() * 1000) + 500 },
-          { time: '16:00', users: Math.floor(Math.random() * 2000) + 1000, requests: Math.floor(Math.random() * 1500) + 800 },
-          { time: '20:00', users: Math.floor(Math.random() * 3000) + 1500, requests: Math.floor(Math.random() * 2500) + 1200 },
-          { time: '24:00', users: Math.floor(Math.random() * 2500) + 1200, requests: Math.floor(Math.random() * 2000) + 1000 },
-        ];
 
         setProjects(prev => {
           const updated = [newPrj, ...prev];
           localStorage.setItem('noir_user_projects', JSON.stringify(updated));
           return updated;
         });
+
         setSelectedProjectId(newPrj.id);
         
         // Reset form
@@ -330,69 +407,101 @@ export default function Dashboard() {
   };
 
   const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.connectionCode && p.connectionCode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
-  const activeAnalytics = projectAnalyticsData[selectedProjectId] || defaultAnalytics;
+  const currentTime = new Date().toLocaleTimeString();
 
   return (
     <UserLayout>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mt-6 md:mt-10 px-2 md:px-6 space-y-6"
-      >
-        {/* Company Affiliation Banner / Pending Invitations */}
-        {developerCompany ? (
-          <div className="w-full bg-gradient-to-r from-violet-900/30 via-purple-900/20 to-black/40 border border-violet-500/20 rounded-2xl p-4 px-6 backdrop-blur-md flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-mono uppercase tracking-widest text-violet-300">Organization Affiliation</p>
-                <p className="text-sm font-bold text-white">{developerCompany.company_name} <span className="text-xs text-emerald-400 font-mono font-normal ml-2">✓ Verified Team Member</span></p>
-              </div>
+      <div className="max-w-5xl mx-auto space-y-4 py-2">
+        
+        {/* =========================================================================
+            1. MINIMAL HEADER: Clean, Focused, Developer-Grade
+           ========================================================================= */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+              <span>Overview</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-normal">
+                User Workspace
+              </span>
+            </h1>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Live telemetry, real agent daemon status, and automated test audits.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Filter projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 pr-3 text-xs bg-zinc-900 border border-zinc-800 rounded-md text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 w-44 sm:w-56 transition-all"
+              />
             </div>
+
+            {/* New Project Button */}
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="h-8 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Project</span>
+            </button>
+          </div>
+        </div>
+
+        {/* =========================================================================
+            2. PENDING INVITATIONS BANNER (Only when active)
+           ========================================================================= */}
+        {developerCompany ? (
+          <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg px-3.5 py-2 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 text-violet-400" />
+              <span className="text-zinc-400 font-mono text-[11px]">Organization:</span>
+              <span className="font-semibold text-zinc-200">{developerCompany.company_name}</span>
+              <span className="text-emerald-400 font-mono text-[11px]">✓ Team Member</span>
+            </div>
+            <Link to="/organization" className="text-zinc-400 hover:text-zinc-200 font-mono text-[11px] flex items-center gap-1">
+              <span>Teams</span>
+              <ChevronRight className="w-3 h-3" />
+            </Link>
           </div>
         ) : companyRequests.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {companyRequests.map((req) => (
               <div 
                 key={req.id}
-                className="w-full bg-gradient-to-r from-amber-950/60 via-purple-950/40 to-black/60 border border-amber-500/40 rounded-2xl p-4 px-6 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl"
+                className="bg-amber-950/20 border border-amber-600/30 rounded-lg px-3.5 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
-                    <Building2 className="w-5 h-5" />
-                  </div>
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <span>Company Invitation from {req.company_name}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">Action Required</span>
-                    </h3>
-                    <p className="text-xs text-stone-300/80 mt-0.5 italic">"{req.message || `${req.company_name} wants to invite you to join their engineering team.`}"</p>
+                    <span className="font-semibold text-zinc-200">Invitation from {req.company_name}</span>
+                    <span className="text-zinc-400 ml-2">"{req.message || 'Wants you to join their engineering team.'}"</span>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button
                     type="button"
                     onClick={() => handleRespondCompanyRequest(req.id, 'accept')}
-                    className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg flex items-center gap-1.5"
+                    className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium transition-colors cursor-pointer"
                   >
-                    <Check className="w-4 h-4" />
-                    <span>Accept & Join</span>
+                    Accept
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRespondCompanyRequest(req.id, 'reject')}
-                    className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-rose-500/20 hover:border-rose-500/30 text-rose-300 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+                    className="h-7 px-2.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-medium transition-colors cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
-                    <span>Decline</span>
+                    Decline
                   </button>
                 </div>
               </div>
@@ -400,375 +509,492 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        {/* Real-time Analytics Summary Card */}
-        <div className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-6 md:p-8 backdrop-blur-md shadow-lg flex flex-col lg:flex-row gap-8 lg:items-center">
-          {/* KPI Metrics */}
-          <div className="flex flex-col gap-6 lg:w-1/3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-violet-400" />
+        {/* =========================================================================
+            3. REAL METRICS STRIP: 100% Accurate Data (No Fake Mock Numbers)
+           ========================================================================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          
+          {/* Metric 1: Total Projects */}
+          <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Total Projects</span>
+              <div className="text-xl font-bold font-mono text-zinc-100 mt-0.5">
+                {isLoading ? <Skeleton className="h-6 w-12 bg-zinc-800/50" /> : projects.length}
               </div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-white">
-                  {selectedProject ? selectedProject.name : 'Telemetry Stream'}
-                </h2>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono mt-0.5">
-                  Live System Metrics
-                </p>
-              </div>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                {projects.filter(p => p.connectionCode).length} paired with CLI
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-[76px] rounded-2xl bg-white/5" />
-                  <Skeleton className="h-[76px] rounded-2xl bg-white/5" />
-                </>
-              ) : (
-                <>
-                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-violet-500/30 transition-colors">
-                    <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">Active Spans</p>
-                    <p className="text-3xl font-bold text-white">
-                      {selectedProject ? '3,200' : '0'}
-                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ {selectedProject ? '12%' : '0%'}</span>
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-pink-500/30 transition-colors">
-                    <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-1">Ingested Vol</p>
-                    <p className="text-3xl font-bold text-white">
-                      {selectedProject ? '2.6k' : '0k'}
-                      <span className="text-xs text-emerald-400 ml-1.5 font-normal font-mono">↑ {selectedProject ? '8%' : '0%'}</span>
-                    </p>
-                  </div>
-                </>
+            <div className="w-8 h-8 rounded-md bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+              <Folder className="w-4 h-4 text-zinc-400" />
+            </div>
+          </div>
+
+          {/* Metric 2: Real Daemon Cluster Status */}
+          <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Daemon Status</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`w-2 h-2 rounded-full ${activeDaemonsCount > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+                <span className={`text-sm font-semibold font-mono ${activeDaemonsCount > 0 ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                  {activeDaemonsCount > 0 ? `${activeDaemonsCount} Active` : '0 Active (Standby)'}
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                {activeDaemonsCount > 0 ? 'Listening for remote faults' : 'Run noir fault listen to connect'}
+              </p>
+            </div>
+            <div className={`w-8 h-8 rounded-md border flex items-center justify-center ${
+              activeDaemonsCount > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+            }`}>
+              <Radio className={`w-4 h-4 ${activeDaemonsCount > 0 ? 'animate-pulse' : ''}`} />
+            </div>
+          </div>
+
+          {/* Metric 3: Real Pipeline Test Audits */}
+          <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Test Executions</span>
+              <div className="text-xl font-bold font-mono text-zinc-100 mt-0.5">
+                {testRuns.length > 0 ? (
+                  <span>
+                    {testRuns.length} <span className="text-xs text-emerald-400 font-normal">({testPassRate}% Pass)</span>
+                  </span>
+                ) : (
+                  <span className="text-sm font-mono text-zinc-400">0 Runs</span>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                {testRuns.length > 0 
+                  ? `${passedTestRunsCount} passed, ${testRuns.length - passedTestRunsCount} failed`
+                  : 'Execute tests via noir run'
+                }
+              </p>
+            </div>
+            <div className="w-8 h-8 rounded-md bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-violet-400" />
+            </div>
+          </div>
+
+        </div>
+
+        {/* =========================================================================
+            4. CONNECTED PROJECTS TABLE: Accurate Statuses & 1-Click Code Copy
+           ========================================================================= */}
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg overflow-hidden">
+          <div className="p-3 px-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-zinc-400" />
+              <span className="text-xs font-semibold text-zinc-200">Connected Projects</span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                {filteredProjects.length}
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
+              Select project to inspect live feed
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-800/60 text-zinc-400 font-mono text-[11px] uppercase bg-zinc-900/20">
+                  <th className="py-2.5 px-4 font-medium">Project Name</th>
+                  <th className="py-2.5 px-3 font-medium">Daemon Status</th>
+                  <th className="py-2.5 px-3 font-medium">Connection Code</th>
+                  <th className="py-2.5 px-3 font-medium">Containers</th>
+                  <th className="py-2.5 px-3 font-medium">Last Sync</th>
+                  <th className="py-2.5 px-4 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/40">
+                {isLoading ? (
+                  [1, 2, 3].map((n) => (
+                    <tr key={n}>
+                      <td colSpan={6} className="p-3">
+                        <Skeleton className="h-6 w-full bg-zinc-800/40" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-zinc-500">
+                      <Folder className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                      <p className="text-xs text-zinc-300 font-medium">No projects found</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        {searchQuery ? "No projects match your search query." : "Register your first project to start streaming telemetry."}
+                      </p>
+                      {!searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateModalOpen(true)}
+                          className="mt-3 h-7 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Register Project</span>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProjects.map((prj) => {
+                    const isSelected = selectedProjectId === prj.id;
+                    const isDaemon = !!prj.isDaemonActive || (selectedProject?.id === prj.id && daemonStatus?.is_daemon_active);
+                    const isStream = !!prj.isStreamActive || (selectedProject?.id === prj.id && daemonStatus?.is_streaming);
+
+                    return (
+                      <tr
+                        key={prj.id}
+                        onClick={() => setSelectedProjectId(prj.id)}
+                        className={`hover:bg-zinc-900/50 cursor-pointer transition-colors group text-zinc-300 ${
+                          isSelected ? 'bg-zinc-900/40 border-l-2 border-violet-500' : ''
+                        }`}
+                      >
+                        {/* Name */}
+                        <td className="py-2.5 px-4 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold transition-colors ${isSelected ? 'text-violet-300' : 'text-zinc-200 group-hover:text-violet-300'}`}>
+                              {prj.name}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                                Monitored
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Daemon Status (Real) */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {isDaemon ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span>Daemon Active</span>
+                            </span>
+                          ) : isStream ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-400 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                              <span>Streaming</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+                              <span>Inactive (Idle)</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Connection Code with 1-click copy */}
+                        <td className="py-2.5 px-3 font-mono text-[11px]">
+                          {prj.connectionCode ? (
+                            <div 
+                              onClick={(e) => e.stopPropagation()} 
+                              className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-zinc-300"
+                            >
+                              <span>{prj.connectionCode}</span>
+                              <button
+                                type="button"
+                                onClick={() => copyConnectionCode(prj.connectionCode!, prj.id)}
+                                title="Copy code"
+                                className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                              >
+                                {copiedCodeId === prj.id ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-zinc-600 font-mono text-[11px]">Unlinked</span>
+                          )}
+                        </td>
+
+                        {/* Topology / Containers */}
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-zinc-400 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <Cpu className="w-3 h-3 text-zinc-500" />
+                            <span>Docker ({prj.containersCount || 0})</span>
+                          </div>
+                        </td>
+
+                        {/* Last Sync */}
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-zinc-500 whitespace-nowrap">
+                          {prj.lastUpdated || 'Just now'}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedProjectId(prj.id)}
+                              className={`h-6 px-2 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-violet-600 text-white font-medium' 
+                                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+                              }`}
+                            >
+                              {isSelected ? 'Live Feed' : 'Select'}
+                            </button>
+                            <Link
+                              to={`/dashboard/projects/${prj.id}`}
+                              className="h-6 px-2 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 text-[11px] font-medium inline-flex items-center gap-0.5 transition-colors"
+                              title="Open Project Workspace"
+                            >
+                              <span>Open</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* =========================================================================
+            5. AGENT DAEMON LIVE FEED: ONLY REAL DATA (Inactive Daemon Warning if Idle)
+           ========================================================================= */}
+        <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-violet-400" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200">
+                  Agent Daemon Live Feed
+                </h2>
+              </div>
+
+              {/* Project selector dropdown */}
+              {projects.length > 0 && (
+                <div className="flex items-center gap-1.5 ml-0 sm:ml-2">
+                  <span className="text-[10px] text-zinc-500 font-mono">Workspace:</span>
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="h-6 px-2 text-[11px] font-mono bg-zinc-900 border border-zinc-800 rounded text-zinc-200 focus:outline-none focus:border-zinc-700 cursor-pointer"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.connectionCode || 'No code'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
-            {/* Project Switcher */}
-            {!isLoading && (
-              <div className="flex flex-wrap gap-1.5 mt-4 pt-3 border-t border-white/5">
-                {projects.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSelectedProjectId(p.id)}
-                    className={`px-3 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-wider transition-all border cursor-pointer ${p.id === selectedProjectId
-                        ? 'bg-white text-stone-950 border-white font-bold shadow-md'
-                        : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white'
-                      }`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              {/* Daemon Status Badge (Real) */}
+              <span className={`flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded border transition-all ${
+                daemonStatus?.is_daemon_active
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-medium'
+                  : daemonStatus?.is_streaming
+                  ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 font-medium'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  daemonStatus?.is_daemon_active
+                    ? 'bg-emerald-400 animate-pulse'
+                    : daemonStatus?.is_streaming
+                    ? 'bg-cyan-400 animate-pulse'
+                    : 'bg-zinc-600'
+                }`} />
+                {daemonStatus?.is_daemon_active 
+                  ? '● DAEMON ACTIVE' 
+                  : daemonStatus?.is_streaming 
+                  ? '● STREAMING PROCESS' 
+                  : '○ DAEMON INACTIVE'}
+              </span>
 
-          {/* Recharts Graph */}
-          <div className="h-[200px] lg:h-[250px] flex-1 w-full min-w-0">
-            {isLoading ? (
-              <Skeleton className="w-full h-full rounded-2xl bg-white/5" />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={activeAnalytics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D946EF" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#D946EF" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis
-                    dataKey="time"
-                    stroke="rgba(255,255,255,0.3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    dy={10}
-                    fontFamily="monospace"
-                  />
-                  <YAxis
-                    stroke="rgba(255,255,255,0.3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    fontFamily="monospace"
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(10, 7, 24, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: '#fff' }}
-                    itemStyle={{ color: '#E9D5FF' }}
-                  />
-                  <Area type="monotone" dataKey="users" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                  <Area type="monotone" dataKey="requests" stroke="#D946EF" strokeWidth={3} fillOpacity={1} fill="url(#colorRequests)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </motion.div>
+              {/* WebSocket Status Indicator */}
+              <span className="text-[10px] font-mono text-zinc-500 hidden md:inline">
+                {isWsConnected ? 'WS: CONNECTED' : 'WS: STANDBY'}
+              </span>
 
-      {/* Main Content Grid */}
-      <div className="mt-6 md:mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 px-2 md:px-6">
+              {/* Copy quick start CLI command */}
+              {selectedProject?.connectionCode && (
+                <button
+                  type="button"
+                  onClick={copyCliDaemonCommand}
+                  className="h-6 px-2 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] font-mono inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Copy command to start daemon locally"
+                >
+                  {copiedCliCommand ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span className="text-emerald-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3 text-zinc-500" />
+                      <span>Copy CLI Daemon Command</span>
+                    </>
+                  )}
+                </button>
+              )}
 
-        {/* Left Column (Title & Search) */}
-        <div className="lg:col-span-5 flex flex-col justify-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[0.95] tracking-tight mb-8 text-white"
-          >
-            Telemetry<br />
-            systems<br />
-            workspace
-          </motion.h1>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="relative flex items-center w-full max-w-md"
-          >
-            <input
-              type="text"
-              placeholder="Search projects by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-6 pr-14 py-4 rounded-full border border-white/20 bg-white/5 text-white text-sm font-medium placeholder-white/40 focus:outline-none focus:border-violet-500 backdrop-blur-sm transition-all"
-            />
-             <button 
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="absolute right-2 w-10 h-10 bg-white rounded-full flex items-center justify-center text-black shadow hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </motion.div>
-        </div>
-
-        {/* Middle Column (KPI Widgets) */}
-        <div className="lg:col-span-6 flex flex-col md:flex-row gap-6 mt-4 lg:mt-0 lg:pt-16">
-
-          {/* Telemetry traces widget */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-6 text-white flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-md hover:border-violet-500/20 transition-colors"
-          >
-            {isLoading ? (
-              <Skeleton className="absolute inset-0 m-6 rounded-xl bg-white/5" />
-            ) : (
-              <>
-                <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                  <Activity className="w-3.5 h-3.5 text-white/70" />
-                </div>
-
-                <div className="mt-4 mb-8">
-                  <h3 className="text-4xl font-bold mb-2">48.2 k</h3>
-                  <p className="text-xs text-white/50">Trace Triggers Today</p>
-                </div>
-
-                <div className="flex gap-2">
-                  <span className="px-4 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-wider font-mono">Real-time</span>
-                  <span className="px-4 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-wider font-mono">Agent v1</span>
-                </div>
-              </>
-            )}
-          </motion.div>
-
-          {/* SLA / Uptime widget */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex-1 bg-violet-900/20 border border-violet-500/20 rounded-[2rem] p-6 flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-md hover:border-violet-500/40 transition-colors"
-          >
-            {isLoading ? (
-              <Skeleton className="absolute inset-0 m-6 rounded-xl bg-violet-500/10" />
-            ) : (
-              <>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 text-violet-400 mb-1">
-                    <Shield className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider font-mono">Cascades Guard</span>
-                  </div>
-                  <h3 className="text-4xl font-bold text-violet-300 mb-2">99.98%</h3>
-                  <p className="text-xs text-violet-300/70 font-medium">Platform Reliability Score</p>
-                </div>
-
-                {/* Fake Graph */}
-                <div className="absolute bottom-0 left-0 right-0 h-24 opacity-40">
-                  <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full stroke-violet-400 fill-none">
-                    <path d="M0,35 Q15,10 30,28 T60,5 T80,18 T100,10" strokeWidth="1.5" />
-                    <path d="M0,35 Q15,10 30,28 T60,5 T80,18 T100,10 L100,40 L0,40 Z" strokeWidth="0" className="fill-violet-400/10" />
-                  </svg>
-                </div>
-              </>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Right Column (Socials/Actions) */}
-        <div className="lg:col-span-1 flex lg:flex-col justify-center lg:items-end gap-3 mt-6 lg:mt-0 lg:pt-16">
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full border border-white/20 bg-white/5 text-white flex items-center justify-center hover:bg-white/10 hover:border-violet-500/30 transition-all">
-            <Facebook className="w-4 h-4" />
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full border border-white/20 bg-white/5 text-white flex items-center justify-center hover:bg-white/10 hover:border-violet-500/30 transition-all">
-            <Instagram className="w-4 h-4" />
-          </a>
-          <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full border border-white/20 bg-white/5 text-white flex items-center justify-center hover:bg-white/10 hover:border-violet-500/30 transition-all">
-            <Twitter className="w-4 h-4" />
-          </a>
-        </div>
-
-      </div>
-
-      {/* Bottom Section (Projects list, CLI stream log, Setup commands) */}
-      <div className="mt-12 md:mt-20 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 px-2 md:px-6 pb-6">
-
-        {/* Card 1: Robotic Synergy Panel */}
-        <div className="lg:col-span-4 h-64 md:h-[320px] rounded-[2rem] bg-gradient-to-tr from-[#311756] to-[#45276B] shadow-lg border border-white/10 flex flex-col justify-between p-6 relative overflow-hidden group hover:border-violet-500/30 transition-all">
-          <div className="absolute inset-0 bg-radial-gradient from-violet-500/10 via-transparent to-transparent pointer-events-none" />
-
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono uppercase tracking-widest text-violet-300">
-              01 / Autonomous Agent
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-
-          <img
-            src="/robotic_hand.png"
-            className="absolute bottom-0 right-0 w-[60%] h-[70%] object-contain object-bottom-right pointer-events-none opacity-40 group-hover:scale-105 transition-transform duration-700"
-            alt="Robotic Hand Asset"
-          />
-
-          <div className="relative z-10 mt-auto">
-            <h3 className="text-xl font-bold tracking-tight text-white mb-1">
-              Engine Control
-            </h3>
-            <p className="text-[10px] text-white/50 font-mono">
-              Host process telemetry attached
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Human Interface Synergy Panel */}
-        <div className="lg:col-span-4 h-64 md:h-[320px] rounded-[2rem] bg-[#1A1838] border border-white/10 shadow-lg flex flex-col justify-between p-6 relative overflow-hidden group hover:border-pink-500/30 transition-all">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-violet-500/10 pointer-events-none"></div>
-
-          <div className="relative z-10">
-            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono uppercase tracking-widest text-pink-300">
-              02 / Workspace Synergy
-            </span>
-          </div>
-
-          <img
-            src="/human_hand.png"
-            className="absolute bottom-0 right-0 w-[60%] h-[70%] object-contain object-bottom-right pointer-events-none opacity-40 group-hover:scale-105 transition-transform duration-700"
-            alt="Human Hand Asset"
-          />
-
-          <div className="relative z-10 mt-auto">
-            <h3 className="text-xl font-bold tracking-tight text-white mb-1">
-              Active Session
-            </h3>
-            <p className="text-[10px] text-white/50 font-mono">
-              Secure JWT authentication synced
-            </p>
-          </div>
-        </div>
-
-        {/* Setup Config settings info (Interactive Card 3) */}
-        <div className="lg:col-span-4 flex flex-col justify-center px-4 md:px-8 py-8 lg:py-0 relative">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white">
-            Telemetry<br />configuration
-          </h2>
-          <p className="text-xs font-medium text-white/60 leading-relaxed max-w-[280px]">
-            Run instructions to deploy telemetry. Connect and watch traces automatically stream directly to your selected workspace.
-          </p>
-
-          {/* Premium circular text badge graphic */}
-          <div className="absolute top-0 right-0 lg:top-[-45px] lg:right-[-20px] w-28 h-28 opacity-75">
-            <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_25s_linear_infinite]">
-              <path id="circle" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" fill="transparent" />
-              <text className="text-[9.5px] uppercase font-bold tracking-widest fill-violet-400">
-                <textPath href="#circle">
-                  &bull; Autonomous reliability telemetry agent &bull; deploy live
-                </textPath>
-              </text>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center font-bold text-lg text-white">*</div>
-          </div>
-
-          <button
-            onClick={() => navigate('/quickstart')}
-            className="mt-8 flex items-center gap-2 text-sm font-bold w-fit group text-white bg-transparent border-none cursor-pointer focus:outline-none"
-          >
-            Quickstart Guide
-            <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center group-hover:scale-110 active:scale-95 transition-transform shadow-md">
-              <Plus className="w-4 h-4" />
+              {/* Clear Logs Button */}
+              {logs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setLogs([])}
+                  className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 px-2 py-0.5 bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800 transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
             </div>
-          </button>
+          </div>
+
+          {/* Terminal Screen (Real Logs / Inactive Daemon Status) */}
+          <div 
+            ref={terminalRef}
+            className="bg-[#090A0F] border border-zinc-800/80 rounded-md p-3.5 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text"
+          >
+            {logs.length === 0 ? (
+              daemonStatus?.is_active ? (
+                <div className="space-y-1 py-1 text-zinc-400">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>[System] Daemon status: ACTIVE (CONNECTED)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>[System] Noir telemetry daemon is connected to '{selectedProject?.name}'. Awaiting process events...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>[System] Trigger tests with 'noir run' or manual chaos injections from the project view.</span>
+                  </div>
+                </div>
+              ) : (
+                /* EXPLICIT INACTIVE DAEMON LOG (Required by user prompt) */
+                <div className="space-y-1.5 py-1 text-zinc-400">
+                  <div className="flex items-center gap-2 text-amber-400 font-semibold">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>[System] Daemon status: INACTIVE</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>
+                      [System] No active Noir daemon connected to project '{selectedProject?.name || 'Workspace'}' ({selectedProject?.connectionCode || 'UNLINKED'}).
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-400 pl-4 border-l border-zinc-800 my-1">
+                    <span>
+                      To start daemon in this repository, run:
+                      <br />
+                      <span className="text-emerald-400 font-mono font-medium">
+                        $ noir connect {selectedProject?.connectionCode || '<CONNECTION_CODE>'}
+                      </span>
+                      <br />
+                      <span className="text-emerald-400 font-mono font-medium">
+                        $ noir fault listen
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <span className="text-zinc-500 text-[10px] select-none">{currentTime}</span>
+                    <span>[System] Listening for incoming agent daemon heartbeat on WebSocket...</span>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* REAL LOG STREAM */
+              logs.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2 hover:bg-zinc-900/60 p-0.5 rounded transition-colors">
+                  <span className="text-zinc-500 text-[10px] select-none min-w-[55px] font-mono shrink-0">
+                    {item.timestamp}
+                  </span>
+                  <span className={item.stream === 'stderr' ? 'text-rose-400' : 'text-emerald-400'}>
+                    {item.log}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* =========================================================================
+            6. QUICKSTART HELPER BAR: Developer Pairing Guide
+           ========================================================================= */}
+        <div className="p-3 px-4 bg-[#0D0F17] border border-zinc-800/80 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Terminal className="w-4 h-4 text-violet-400 shrink-0" />
+            <div>
+              <span className="font-semibold text-zinc-200">Terminal CLI pairing:</span>
+              <span className="text-zinc-400 ml-1.5 font-mono text-[11px]">
+                Run <code className="text-emerald-400 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800">noir connect &lt;code&gt;</code> in your repository
+              </span>
+            </div>
+          </div>
+          <Link
+            to="/quickstart"
+            className="text-xs font-medium text-zinc-300 hover:text-white flex items-center gap-1 shrink-0 transition-colors"
+          >
+            <span>Quickstart guide</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
       </div>
 
-
-
-      {/* MODAL 1: Create Project Modal */}
+      {/* =========================================================================
+          REGISTER PROJECT MODAL
+         ========================================================================= */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Register Telemetry Node"
+        title="Register New Project"
       >
-        <form onSubmit={handleCreateProject} className="space-y-4">
-          <div className="flex items-center gap-2 text-violet-400">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs uppercase font-mono tracking-wider font-bold">New Node Setup</span>
+        <form onSubmit={handleCreateProject} className="space-y-3.5">
+          <div className="flex items-center gap-2 text-zinc-300">
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-xs uppercase font-mono tracking-wider font-semibold">New Project Workspace</span>
           </div>
 
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
               {error}
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Project Title</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Project Title</label>
             <input
               type="text"
-              placeholder="e.g. Noir"
+              placeholder="e.g. Acme API"
               value={newProjectTitle}
               onChange={(e) => setNewProjectTitle(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-xs font-mono text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition-colors"
               required
               disabled={isCreating}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Description</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Description (Optional)</label>
             <textarea
-              placeholder="e.g. Reliability Engineering Platform"
+              placeholder="Brief summary of service dependencies..."
               value={newProjectDesc}
               onChange={(e) => setNewProjectDesc(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors h-16 resize-none"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-xs font-mono text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition-colors resize-none h-16"
               disabled={isCreating}
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Architecture</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Architecture</label>
               <select
                 value={newProjectArch}
                 onChange={(e) => setNewProjectArch(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-700 transition-colors cursor-pointer"
                 disabled={isCreating}
               >
                 <option value="monolith">Monolith</option>
@@ -777,11 +1003,11 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Visibility</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Visibility</label>
               <select
                 value={newProjectVis}
                 onChange={(e) => setNewProjectVis(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-700 transition-colors cursor-pointer"
                 disabled={isCreating}
               >
                 <option value="private">Private</option>
@@ -790,11 +1016,11 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Analysis Mode</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Analysis Mode</label>
               <select
                 value={newProjectAnalysisMode}
                 onChange={(e) => setNewProjectAnalysisMode(e.target.value)}
-                className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-700 transition-colors cursor-pointer"
                 disabled={isCreating}
               >
                 <option value="manual">Manual</option>
@@ -803,15 +1029,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-3 border-t border-white/5 mt-4">
+          <div className="flex gap-2 pt-3 border-t border-zinc-800 mt-3">
             <button
               type="submit"
               disabled={isCreating}
-              className="flex-1 py-2.5 rounded-full bg-white hover:bg-stone-200 text-black text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {isCreating ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
                   <span>Registering...</span>
                 </>
               ) : (
@@ -821,7 +1047,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-6 py-2.5 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
+              className="px-4 py-2 rounded-md border border-zinc-800 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 text-xs font-medium transition-colors cursor-pointer"
             >
               Cancel
             </button>

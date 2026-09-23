@@ -44,18 +44,38 @@ class ContainerStopExecutor(FaultExecutor):
 
         t0 = time.time()
         try:
+            if context and context.get("log"):
+                context["log"](f"Stopping container '{container_name}' (timeout: {timeout}s)...")
+
             # 1. Stop container
             docker_mgr.stop_container(container_name, timeout=timeout)
+            if context and context.get("log"):
+                context["log"](f"Container '{container_name}' stopped. Holding offline state for {duration}s...")
 
-            # 2. Hold stopped state for duration
-            time.sleep(duration)
+            # 2. Hold stopped state for duration with cancellation checking
+            step = 0.5
+            loops = int(duration / step)
+            for i in range(loops):
+                if context and context.get("is_cancelled") and context["is_cancelled"]():
+                    self.rollback(docker_mgr, container_name, params)
+                    if context.get("log"):
+                        context["log"](f"Execution cancelled by user. Restarted container '{container_name}'.", level="WARN")
+                    raise InterruptedError(f"Container stop on '{container_name}' cancelled by user.")
+                time.sleep(step)
+                if context and context.get("log") and (i + 1) % 4 == 0:
+                    elapsed_sec = int((i + 1) * step)
+                    context["log"](f"Container offline: '{container_name}' ({elapsed_sec}s / {duration}s)")
 
             # 3. Automatically recover / start container back up
+            if context and context.get("log"):
+                context["log"](f"Holding duration complete. Recovering and starting container '{container_name}'...")
             start_res = docker_mgr.start_container(container_name)
             elapsed = round(time.time() - t0, 2)
             recovered = start_res.get("running", False)
 
             if recovered:
+                if context and context.get("log"):
+                    context["log"](f"Container '{container_name}' restarted and healthy.")
                 return FaultResult(
                     success=True,
                     message=f"Container '{container_name}' successfully stopped for {duration}s and recovered.",
@@ -77,6 +97,16 @@ class ContainerStopExecutor(FaultExecutor):
                     recovered=False,
                     error="Container restart failed after stop window.",
                 )
+        except InterruptedError as ie:
+            elapsed = round(time.time() - t0, 2)
+            return FaultResult(
+                success=False,
+                message=str(ie),
+                details={"target": container_name, "cancelled": True},
+                duration_seconds=elapsed,
+                recovered=True,
+                error="Cancelled by user.",
+            )
         except Exception as e:
             # Attempt recovery
             self.rollback(docker_mgr, container_name, params)
@@ -89,6 +119,7 @@ class ContainerStopExecutor(FaultExecutor):
                 recovered=False,
                 error=str(e),
             )
+
 
     def rollback(
         self,

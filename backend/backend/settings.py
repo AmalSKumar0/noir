@@ -38,14 +38,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+from django.core.exceptions import ImproperlyConfigured
+
+DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2qx=0=y&(p@o9s%59obad+$q1lz%m)dv-lf4392o2b$*9&5ze0'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-2qx=0=y&(p@o9s%59obad+$q1lz%m)dv-lf4392o2b$*9&5ze0")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith("django-insecure")):
+    raise ImproperlyConfigured("In production (DEBUG=False), SECRET_KEY must be set to a secure secret in environment variables.")
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS")
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

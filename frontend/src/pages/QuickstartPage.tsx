@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Terminal, 
@@ -17,7 +18,10 @@ import {
   GitBranch, 
   AlertTriangle,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  ArrowUpRight,
+  CheckCircle2,
+  Folder
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { getUserRole } from '../utils/auth';
@@ -39,6 +43,14 @@ const COMMANDS: CommandItem[] = [
     desc: 'Pairs current workspace directory with a Noir project instance using connection code.',
     category: 'Core',
     example: 'noir connect NR-8X92A1P'
+  },
+  {
+    cmd: 'fault listen',
+    args: '',
+    usage: 'noir fault listen',
+    desc: 'Runs daemon to listen for manual chaos injections and report container targets.',
+    category: 'Execution',
+    example: 'noir fault listen'
   },
   {
     cmd: 'run',
@@ -183,207 +195,267 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
 
   return (
     <UserLayout>
-      <div className="max-w-6xl mx-auto space-y-8 pb-16">
+      <div className="space-y-3.5 pb-12">
         
-        {/* Header Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#120B2E] via-[#0D0822] to-[#05030D] border border-white/10 p-8 md:p-10 shadow-2xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl -z-0 pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-mono font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>NOIR CLI AGENT ARCHITECTURE & COMMAND GUIDE</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-                Noir CLI Agent & Telemetry Documentation
-              </h1>
-              <p className="text-sm md:text-base text-gray-400 max-w-2xl leading-relaxed">
-                Autonomous reliability engineering agent. Runs in local workspace or CI/CD pipelines, profiles tech stacks, executes in-container tests, and streams real-time telemetry.
-              </p>
+        {/* =========================================================================
+            1. COMPACT COMMAND HEADER BAR
+           ========================================================================= */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+              <Link to="/dashboard" className="hover:text-zinc-300">Noir</Link>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-300">Developer Documentation</span>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-400">CLI & Architecture</span>
             </div>
-
-            <div className="flex items-center gap-3 self-start md:self-auto">
-              <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md text-right">
-                <div className="text-xs text-gray-400">Agent Version</div>
-                <div className="text-sm font-bold font-mono text-emerald-400">v1.2.0-stable</div>
-              </div>
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-violet-400" />
+                <span>CLI Agent & Telemetry Guide</span>
+              </h1>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
+                v1.2.0-stable
+              </span>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-8 pt-6 border-t border-white/10 overflow-x-auto no-scrollbar">
-            {[
-              { id: 'quickstart', label: '1. Quick Start Workflow', icon: Zap },
-              { id: 'commands', label: '2. CLI Command Reference', icon: Terminal },
-              { id: 'architecture', label: '3. System Architecture & Flow', icon: Layers },
-              { id: 'adr', label: '4. Tech Stack & ADR', icon: Cpu }
-            ].map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
-                    isActive 
-                      ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30 font-semibold' 
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+          {/* Quick Install Pill */}
+          <div className="flex items-center gap-2">
+            <div className="h-8 px-2.5 rounded-md bg-[#0D0F17] border border-zinc-800 flex items-center gap-2 font-mono text-xs">
+              <span className="text-zinc-500 text-[10px] select-none">INSTALL:</span>
+              <span className="text-emerald-400 font-semibold">pip install noir-agent</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard('pip install noir-agent')}
+                className="text-zinc-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+                title="Copy install command"
+              >
+                {copiedText === 'pip install noir-agent' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            <Link
+              to="/dashboard"
+              className="h-8 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium inline-flex items-center gap-1.5 transition-colors shadow-sm"
+            >
+              <span>Back to Overview</span>
+            </Link>
           </div>
         </div>
 
-        {/* TAB 1: QUICKSTART WORKFLOW */}
-        {activeTab === 'quickstart' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            
-            {/* Quick Install Banner */}
-            <div className="bg-[#0D0822]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-violet-400" />
-                  Noir CLI Agent Installation
-                </h3>
-                <p className="text-xs md:text-sm text-gray-400 mt-1">
-                  Install the agent globally or in your virtual environment using Python's package manager:
-                </p>
-              </div>
+        {/* =========================================================================
+            2. LINEAR TAB NAVIGATION
+           ========================================================================= */}
+        <div className="flex items-center gap-1 border-b border-zinc-800/80 pb-2 text-xs font-medium overflow-x-auto">
+          {[
+            { id: 'quickstart', label: '1. Quickstart Workflow', icon: Zap },
+            { id: 'commands', label: '2. Command Reference', icon: Terminal, badge: COMMANDS.length },
+            { id: 'architecture', label: '3. Telemetry Pipeline', icon: Layers },
+            { id: 'adr', label: '4. Tech Stack & ADR', icon: Cpu }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`h-7 px-3 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  isActive 
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold shadow-sm' 
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-violet-400' : 'text-zinc-500'}`} />
+                <span>{tab.label}</span>
+                {tab.badge !== undefined && (
+                  <span className="px-1 py-0.2 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-              <div className="w-full md:w-auto bg-black/80 border border-white/10 rounded-xl p-3 flex items-center justify-between gap-4 font-mono text-xs text-emerald-400">
-                <span>pip install noir-agent</span>
-                <button 
-                  onClick={() => copyToClipboard('pip install noir-agent')}
-                  className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                >
-                  {copiedText === 'pip install noir-agent' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
+        {/* =========================================================================
+            TAB 1: QUICKSTART WORKFLOW (High-density 4-step grid)
+           ========================================================================= */}
+        {activeTab === 'quickstart' && (
+          <div className="space-y-3.5">
+            {/* Summary strip */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 px-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-violet-400 shrink-0" />
+                <span className="text-zinc-300 font-medium">
+                  Connect any Dockerized codebase to Noir in 4 commands: authenticate, pair, execute, and inspect.
+                </span>
               </div>
+              <span className="text-[11px] font-mono text-zinc-500 shrink-0">
+                Setup time: &lt; 60 seconds
+              </span>
             </div>
 
-            {/* 4-Step Onboarding Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 4-Column Workflow Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               
               {/* Step 1 */}
-              <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4 hover:border-violet-500/40 transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 font-bold font-mono text-xs flex items-center justify-center border border-violet-500/30">01</span>
-                  <span className="text-xs text-gray-400 font-mono">Authentication</span>
+              <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                      STEP 01
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Auth</span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-zinc-200">Authenticate Agent</h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    Authenticate your local CLI agent with your Noir user account session.
+                  </p>
                 </div>
-                <h4 className="text-base font-bold text-white">Login to Noir Account</h4>
-                <p className="text-xs text-gray-400">
-                  Authenticate your local CLI agent with your Noir backend user account.
-                </p>
-                <div className="bg-black/80 border border-white/10 rounded-xl p-3 flex items-center justify-between font-mono text-xs text-emerald-400">
+                <div className="mt-3 bg-[#090A0F] border border-zinc-800/80 rounded px-2 py-1.5 flex items-center justify-between font-mono text-[11px] text-emerald-400">
                   <span>noir login</span>
                   <button 
                     onClick={() => copyToClipboard('noir login')}
-                    className="p-1 text-gray-400 hover:text-white"
+                    className="text-zinc-500 hover:text-zinc-200 p-0.5 transition-colors cursor-pointer"
+                    title="Copy command"
                   >
-                    {copiedText === 'noir login' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedText === 'noir login' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               </div>
 
               {/* Step 2 */}
-              <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4 hover:border-violet-500/40 transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 font-bold font-mono text-xs flex items-center justify-center border border-violet-500/30">02</span>
-                  <span className="text-xs text-gray-400 font-mono">Pairing</span>
+              <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                      STEP 02
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Pairing</span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-zinc-200">Connect Workspace</h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    Pair your current working directory using your unique connection code.
+                  </p>
                 </div>
-                <h4 className="text-base font-bold text-white">Connect Active Workspace</h4>
-                <p className="text-xs text-gray-400">
-                  Pair your current project directory using the unique project connection code.
-                </p>
-                <div className="bg-black/80 border border-white/10 rounded-xl p-3 flex items-center justify-between font-mono text-xs text-emerald-400">
-                  <span>noir connect NR-KO2Y3DZZ</span>
+                <div className="mt-3 bg-[#090A0F] border border-zinc-800/80 rounded px-2 py-1.5 flex items-center justify-between font-mono text-[11px] text-emerald-400 truncate">
+                  <span className="truncate">noir connect &lt;CODE&gt;</span>
                   <button 
                     onClick={() => copyToClipboard('noir connect NR-KO2Y3DZZ')}
-                    className="p-1 text-gray-400 hover:text-white"
+                    className="text-zinc-500 hover:text-zinc-200 p-0.5 transition-colors cursor-pointer shrink-0 ml-1"
+                    title="Copy command"
                   >
-                    {copiedText === 'noir connect NR-KO2Y3DZZ' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedText === 'noir connect NR-KO2Y3DZZ' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               </div>
 
               {/* Step 3 */}
-              <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4 hover:border-violet-500/40 transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 font-bold font-mono text-xs flex items-center justify-center border border-violet-500/30">03</span>
-                  <span className="text-xs text-gray-400 font-mono">Container Execution</span>
+              <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                      STEP 03
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Execution</span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-zinc-200">Stream Telemetry</h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    Builds container, runs tests inside container, and streams real-time logs.
+                  </p>
                 </div>
-                <h4 className="text-base font-bold text-white">Run In-Container Engine & Live Stream</h4>
-                <p className="text-xs text-gray-400">
-                  Builds Docker container, runs tests inside container via <code className="text-violet-300 font-mono">docker exec</code>, and streams stdout/stderr to WebSocket.
-                </p>
-                <div className="bg-black/80 border border-white/10 rounded-xl p-3 flex items-center justify-between font-mono text-xs text-emerald-400">
+                <div className="mt-3 bg-[#090A0F] border border-zinc-800/80 rounded px-2 py-1.5 flex items-center justify-between font-mono text-[11px] text-emerald-400">
                   <span>noir run</span>
                   <button 
                     onClick={() => copyToClipboard('noir run')}
-                    className="p-1 text-gray-400 hover:text-white"
+                    className="text-zinc-500 hover:text-zinc-200 p-0.5 transition-colors cursor-pointer"
+                    title="Copy command"
                   >
-                    {copiedText === 'noir run' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedText === 'noir run' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               </div>
 
               {/* Step 4 */}
-              <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4 hover:border-violet-500/40 transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 font-bold font-mono text-xs flex items-center justify-center border border-violet-500/30">04</span>
-                  <span className="text-xs text-gray-400 font-mono">AI Inspection</span>
+              <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                      STEP 04
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Chaos</span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-zinc-200">Chaos Daemon</h4>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    Starts listener daemon to execute network delays, stops, and stress injections.
+                  </p>
                 </div>
-                <h4 className="text-base font-bold text-white">Run AI Reliability Scan</h4>
-                <p className="text-xs text-gray-400">
-                  Performs Lynx AST analysis, scans workspace dependencies, and generates architecture reports.
-                </p>
-                <div className="bg-black/80 border border-white/10 rounded-xl p-3 flex items-center justify-between font-mono text-xs text-emerald-400">
-                  <span>noir analyze</span>
+                <div className="mt-3 bg-[#090A0F] border border-zinc-800/80 rounded px-2 py-1.5 flex items-center justify-between font-mono text-[11px] text-emerald-400">
+                  <span>noir fault listen</span>
                   <button 
-                    onClick={() => copyToClipboard('noir analyze')}
-                    className="p-1 text-gray-400 hover:text-white"
+                    onClick={() => copyToClipboard('noir fault listen')}
+                    className="text-zinc-500 hover:text-zinc-200 p-0.5 transition-colors cursor-pointer"
+                    title="Copy command"
                   >
-                    {copiedText === 'noir analyze' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedText === 'noir fault listen' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               </div>
 
             </div>
 
-          </motion.div>
+            {/* Quick Diagnostic Doctor bar */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-2 text-zinc-400">
+                <Activity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>Verify local environment dependencies (Docker daemon, Python, Git):</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="text-zinc-200 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-[11px]">
+                  noir doctor
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard('noir doctor')}
+                  className="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer"
+                  title="Copy doctor command"
+                >
+                  {copiedText === 'noir doctor' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* TAB 2: COMMAND REFERENCE */}
+        {/* =========================================================================
+            TAB 2: CLI COMMAND REFERENCE (Compact Table)
+           ========================================================================= */}
         {activeTab === 'commands' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="space-y-3">
             
-            {/* Search & Filter Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            {/* Filter Controls Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-2.5 px-3">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search commands (e.g. run, test, connect)..."
+                  placeholder="Filter commands (run, connect, fault)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  className="w-full h-7 bg-zinc-900 border border-zinc-800 rounded-md pl-7 pr-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors font-mono"
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
                 {['All', 'Core', 'Execution', 'Diagnostics', 'Auth'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                    className={`h-6 px-2.5 rounded text-[11px] font-mono transition-colors cursor-pointer whitespace-nowrap ${
                       selectedCategory === cat
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-white/5 text-gray-400 hover:text-white'
+                        ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                     }`}
                   >
                     {cat}
@@ -392,26 +464,26 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
               </div>
             </div>
 
-            {/* Commands Table / Cards */}
-            <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+            {/* Commands Table */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/5 text-xs text-gray-400 font-mono">
-                      <th className="py-3.5 px-6 font-semibold">Command</th>
-                      <th className="py-3.5 px-6 font-semibold">Category</th>
-                      <th className="py-3.5 px-6 font-semibold">Description</th>
-                      <th className="py-3.5 px-6 font-semibold text-right">Example Action</th>
+                    <tr className="border-b border-zinc-800/60 text-zinc-400 font-mono text-[11px] uppercase bg-zinc-900/20">
+                      <th className="py-2 px-3.5 font-medium">Command</th>
+                      <th className="py-2 px-3 font-medium">Category</th>
+                      <th className="py-2 px-3 font-medium">Description</th>
+                      <th className="py-2 px-3.5 text-right font-medium">Example (Copyable)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-xs">
+                  <tbody className="divide-y divide-zinc-800/40 font-mono text-[11px]">
                     {filteredCommands.map((cmd) => (
-                      <tr key={cmd.cmd} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 px-6 font-mono font-bold text-violet-300">
-                          noir {cmd.cmd} {cmd.args && <span className="text-gray-500 font-normal">{cmd.args}</span>}
+                      <tr key={cmd.cmd} className="hover:bg-zinc-900/40 text-zinc-300">
+                        <td className="py-2.5 px-3.5 font-bold text-violet-300 whitespace-nowrap">
+                          noir {cmd.cmd} {cmd.args && <span className="text-zinc-500 font-normal">{cmd.args}</span>}
                         </td>
-                        <td className="py-4 px-6">
-                          <span className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-bold ${
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase ${
                             cmd.category === 'Execution' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                             cmd.category === 'Core' ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' :
                             cmd.category === 'Diagnostics' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
@@ -420,16 +492,17 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
                             {cmd.category}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-gray-300 leading-relaxed max-w-md">
+                        <td className="py-2.5 px-3 text-zinc-400 font-sans max-w-sm">
                           {cmd.desc}
                         </td>
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
                           <button
+                            type="button"
                             onClick={() => copyToClipboard(cmd.example)}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-black/60 hover:bg-violet-600/30 border border-white/10 hover:border-violet-500/40 rounded-lg text-emerald-400 font-mono text-xs transition-all"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded text-emerald-400 font-mono text-[11px] transition-colors cursor-pointer"
                           >
                             <span>{cmd.example}</span>
-                            {copiedText === cmd.example ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
+                            {copiedText === cmd.example ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-zinc-500" />}
                           </button>
                         </td>
                       </tr>
@@ -439,29 +512,33 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
               </div>
             </div>
 
-          </motion.div>
+          </div>
         )}
 
-        {/* TAB 3: SYSTEM ARCHITECTURE */}
+        {/* =========================================================================
+            TAB 3: SYSTEM ARCHITECTURE & DATA FLOW
+           ========================================================================= */}
         {activeTab === 'architecture' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="space-y-3.5">
             
-            {/* ASCII Architecture Diagram Card */}
-            <div className="bg-[#0D0822]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-violet-400" />
-                Noir Agent Telemetry Architecture & Data Flow
-              </h3>
-              <p className="text-xs text-gray-400">
-                End-to-end telemetry pipeline connecting local developer workspace containers to backend Django ASGI channels and frontend React dashboards.
-              </p>
+            {/* ASCII Architecture Diagram Panel */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
+                <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200 flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-violet-400" />
+                  Noir Telemetry Architecture & Data Flow
+                </h3>
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Full-Duplex ASGI + WebSockets
+                </span>
+              </div>
 
-              <div className="bg-black/90 border border-white/10 rounded-xl p-6 font-mono text-xs text-violet-300 overflow-x-auto leading-relaxed">
+              <div className="bg-[#090A0F] border border-zinc-800/80 rounded p-4 font-mono text-[11px] text-zinc-300 overflow-x-auto leading-tight select-text">
 {`                              ┌─────────────────────────────────────────┐
                               │             Noir CLI Agent              │
                               ├─────────────────────────────────────────┤
-                              │  - Typer CLI Router                     │
-                              │  - Lynx AST & Stack Profiler            │
+                              │  - Typer CLI Router & Rich Output       │
+                              │  - Lynx AST & Dependency Profiler       │
                               │  - Intelligent Test Detector            │
                               │  - Docker Container Orchestrator        │
                               │  - REST & WebSocket Telemetry Client    │
@@ -480,76 +557,85 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
               </div>
             </div>
 
-            {/* Execution Sequence List */}
-            <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4">
-              <h4 className="text-base font-bold text-white">End-to-End Execution Sequence (<code className="text-violet-300 font-mono">noir run</code>)</h4>
+            {/* Execution Sequence Grid */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-2.5">
+              <h4 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200">
+                Execution Lifecycle (<code className="text-violet-400">noir run</code>)
+              </h4>
               
-              <div className="space-y-3 text-xs text-gray-300">
-                <div className="p-4 bg-white/5 border border-white/5 rounded-xl flex items-start gap-3">
-                  <span className="font-mono text-violet-400 font-bold">1.</span>
-                  <div>
-                    <strong className="text-white">Workspace Scanning & Profiling:</strong> Scans active workspace using the <span className="text-violet-300">Lynx Engine</span>, detecting primary languages (Python, JS/TS, Go, Rust, Java) and test runners (<code className="text-emerald-400">pytest</code>, <code className="text-emerald-400">npm test</code>, etc.).
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-2.5 bg-[#090A0F] border border-zinc-800/80 rounded">
+                  <span className="font-mono text-violet-400 font-bold block mb-1 text-[11px]">01. Profiling</span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Scans active workspace with <strong className="text-zinc-200">Lynx Engine</strong>, detecting languages & test runners.
+                  </p>
                 </div>
 
-                <div className="p-4 bg-white/5 border border-white/5 rounded-xl flex items-start gap-3">
-                  <span className="font-mono text-violet-400 font-bold">2.</span>
-                  <div>
-                    <strong className="text-white">Test File Guard Check:</strong> If no test files are detected, execution is safely aborted with <code className="text-rose-400 font-mono">no test files found aborting noir</code> before building containers.
-                  </div>
+                <div className="p-2.5 bg-[#090A0F] border border-zinc-800/80 rounded">
+                  <span className="font-mono text-violet-400 font-bold block mb-1 text-[11px]">02. Guard Check</span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Verifies test suite exists before building containers to prevent empty Docker builds.
+                  </p>
                 </div>
 
-                <div className="p-4 bg-white/5 border border-white/5 rounded-xl flex items-start gap-3">
-                  <span className="font-mono text-violet-400 font-bold">3.</span>
-                  <div>
-                    <strong className="text-white">In-Container Test Runner (<code className="text-violet-300 font-mono">docker exec</code>):</strong> Builds container image dynamically and executes tests directly inside the isolated container environment.
-                  </div>
+                <div className="p-2.5 bg-[#090A0F] border border-zinc-800/80 rounded">
+                  <span className="font-mono text-violet-400 font-bold block mb-1 text-[11px]">03. In-Container Exec</span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Builds container image and executes test runner inside isolated runtime (<code className="text-zinc-300">docker exec</code>).
+                  </p>
                 </div>
 
-                <div className="p-4 bg-white/5 border border-white/5 rounded-xl flex items-start gap-3">
-                  <span className="font-mono text-violet-400 font-bold">4.</span>
-                  <div>
-                    <strong className="text-white">Sub-10ms Telemetry Stream:</strong> Transmits output across stdout terminal and backend WebSocket channel (<code className="text-emerald-400 font-mono">ws://.../ws/project/&lt;code&gt;/logs/</code>) for live dashboard display.
-                  </div>
+                <div className="p-2.5 bg-[#090A0F] border border-zinc-800/80 rounded">
+                  <span className="font-mono text-violet-400 font-bold block mb-1 text-[11px]">04. Live Telemetry</span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Streams stdout/stderr across WebSockets (&lt;10ms latency) to dashboard monitors.
+                  </p>
                 </div>
               </div>
             </div>
 
-          </motion.div>
+          </div>
         )}
 
-        {/* TAB 4: TECH STACK & ADR */}
+        {/* =========================================================================
+            TAB 4: TECH STACK & ADR (Architectural Decision Record)
+           ========================================================================= */}
         {activeTab === 'adr' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="space-y-3.5">
             
-            <div className="bg-[#0D0822]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                <Cpu className="w-5 h-5 text-violet-400" />
-                Architectural Decision Record (ADR) & Honest Self-Evaluation
-              </h3>
-              <p className="text-xs text-gray-400 mb-6">
-                We believe in authentic engineering transparency. Below is an authentic evaluation of our technology choices, questioning our own decisions and stating better high-performance alternatives.
-              </p>
+            {/* ADR Grid */}
+            <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-3">
+              <div className="pb-2 border-b border-zinc-800/80 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200 flex items-center gap-2">
+                    <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                    Architectural Decision Records (ADR)
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                    Engineering self-evaluation of technology choices and performance tradeoffs.
+                  </p>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {ADR_DECISIONS.map((adr, i) => (
-                  <div key={i} className="bg-black/50 border border-white/10 rounded-xl p-5 space-y-3">
-                    <h4 className="text-sm font-bold text-white font-mono">{adr.title}</h4>
+                  <div key={i} className="bg-[#090A0F] border border-zinc-800/80 rounded-lg p-3 space-y-2">
+                    <h4 className="text-xs font-bold text-zinc-200 font-mono">{adr.title}</h4>
                     
-                    <div className="space-y-2 text-xs">
+                    <div className="space-y-1.5 text-[11px]">
                       <div>
-                        <span className="text-violet-400 font-semibold">Why We Chose It: </span>
-                        <span className="text-gray-300">{adr.why}</span>
+                        <span className="text-zinc-500 font-mono">Decision: </span>
+                        <span className="text-zinc-300">{adr.why}</span>
                       </div>
 
-                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5">
-                        <span className="text-rose-300 font-bold block mb-1">❓ {adr.question}</span>
-                        <span className="text-gray-300">{adr.evaluation}</span>
+                      <div className="bg-rose-950/20 border border-rose-600/30 rounded p-2">
+                        <span className="text-rose-400 font-mono font-semibold block mb-0.5">❓ {adr.question}</span>
+                        <span className="text-zinc-400">{adr.evaluation}</span>
                       </div>
 
-                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5">
-                        <span className="text-emerald-400 font-bold block mb-1">🚀 Better Alternative Approach:</span>
-                        <span className="text-gray-300">{adr.alternative}</span>
+                      <div className="bg-emerald-950/20 border border-emerald-600/30 rounded p-2">
+                        <span className="text-emerald-400 font-mono font-semibold block mb-0.5">🚀 High-Performance Alternative:</span>
+                        <span className="text-zinc-400">{adr.alternative}</span>
                       </div>
                     </div>
                   </div>
@@ -557,37 +643,34 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
               </div>
             </div>
 
-            {/* Performance Benchmarks Card */}
-            <div className="bg-[#0D0822]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-4">
-              <h4 className="text-base font-bold text-white flex items-center gap-2">
-                <Activity className="w-4 h-4 text-emerald-400" />
-                Performance Benchmarks & Target Metrics
-              </h4>
+            {/* Performance Benchmarks Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-[#0D0F17] border border-zinc-800/80 rounded-lg">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Scan Latency (10k files)</span>
+                <span className="text-xl font-bold font-mono text-emerald-400 mt-1 block">140ms</span>
+                <span className="text-[10px] text-zinc-500 font-mono">Lynx AST Engine</span>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="text-xs text-gray-400">Scan Latency (10k files)</div>
-                  <div className="text-xl font-bold font-mono text-emerald-400 mt-1">140 ms</div>
-                </div>
+              <div className="p-3 bg-[#0D0F17] border border-zinc-800/80 rounded-lg">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">RAM Baseline Overhead</span>
+                <span className="text-xl font-bold font-mono text-violet-400 mt-1 block">~35MB</span>
+                <span className="text-[10px] text-zinc-500 font-mono">Rich UI Runtime</span>
+              </div>
 
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="text-xs text-gray-400">RAM Baseline Overhead</div>
-                  <div className="text-xl font-bold font-mono text-violet-400 mt-1">~35 MB</div>
-                </div>
+              <div className="p-3 bg-[#0D0F17] border border-zinc-800/80 rounded-lg">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Container Exec Latency</span>
+                <span className="text-xl font-bold font-mono text-amber-400 mt-1 block">&lt; 50ms</span>
+                <span className="text-[10px] text-zinc-500 font-mono">Subprocess IPC</span>
+              </div>
 
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="text-xs text-gray-400">Container Exec Latency</div>
-                  <div className="text-xl font-bold font-mono text-amber-400 mt-1">&lt; 50 ms</div>
-                </div>
-
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="text-xs text-gray-400">WebSocket Stream Latency</div>
-                  <div className="text-xl font-bold font-mono text-blue-400 mt-1">&lt; 12 ms</div>
-                </div>
+              <div className="p-3 bg-[#0D0F17] border border-zinc-800/80 rounded-lg">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">WebSocket Stream Latency</span>
+                <span className="text-xl font-bold font-mono text-blue-400 mt-1 block">&lt; 12ms</span>
+                <span className="text-[10px] text-zinc-500 font-mono">Django Channels ASGI</span>
               </div>
             </div>
 
-          </motion.div>
+          </div>
         )}
 
       </div>

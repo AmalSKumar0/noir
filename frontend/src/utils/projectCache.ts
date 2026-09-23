@@ -8,6 +8,9 @@ export interface Project {
   lastUpdated: string;
   environments: number;
   connectionCode?: string;
+  isDaemonActive?: boolean;
+  isStreamActive?: boolean;
+  containersCount?: number;
 }
 
 const STORAGE_KEY = 'noir_user_projects';
@@ -93,7 +96,10 @@ export async function getUserProjects(options?: { forceRefresh?: boolean }): Pro
           status: p.status === 'active' ? 'active' : p.status === 'error' ? 'error' : 'archived',
           lastUpdated: p.updated_at ? formatLastUpdated(p.updated_at) : 'Just now',
           environments: 1,
-          connectionCode: p.connection_code || ''
+          connectionCode: p.connection_code || '',
+          isDaemonActive: !!p.is_daemon_active,
+          isStreamActive: !!p.is_stream_active,
+          containersCount: p.containers_count || 0
         }));
 
         setCachedProjects(mapped);

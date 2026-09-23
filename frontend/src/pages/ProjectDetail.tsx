@@ -20,7 +20,10 @@ import {
   Info,
   BarChart3,
   Zap,
-  Boxes
+  Boxes,
+  ArrowUpRight,
+  ChevronRight,
+  Server
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -111,8 +114,8 @@ export default function ProjectDetail() {
               id: Number(found.id.replace('prj-', '')),
               connection_code: found.connectionCode || 'NR-5BG6IXEL',
               owner: {
-                id: 9,
-                username: 'AmalSKumar0'
+                username: 'AmalSKumar0',
+                email: 'engineer@noir.sh'
               },
               title: found.name,
               description: 'Reliability Engineering Platform Workspace Node.',
@@ -121,6 +124,7 @@ export default function ProjectDetail() {
               analysis_mode: 'manual',
               status: found.status,
               profile: {
+                id: 1,
                 framework: {
                   id: 1,
                   name: 'Django',
@@ -183,203 +187,208 @@ export default function ProjectDetail() {
 
   return (
     <UserLayout>
-      <div className="max-w-6xl mx-auto mt-6 md:mt-10 px-4 md:px-8 pb-24 text-white">
-        {/* Back Link */}
-        <Link 
-          to="/dashboard/projects" 
-          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs font-mono uppercase tracking-widest transition-colors mb-8 cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Projects
-        </Link>
-
-        {isLoading ? (
-          <div className="space-y-8">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2 w-1/2">
-                <Skeleton className="w-full h-10 rounded-xl bg-white/5" />
-                <Skeleton className="w-1/3 h-4 rounded-xl bg-white/5" />
-              </div>
-              <Skeleton className="w-24 h-8 rounded-full bg-white/5" />
+      <div className="space-y-3.5 pb-12">
+        {/* Navigation Breadcrumb Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+              <Link to="/dashboard" className="hover:text-zinc-300">Noir</Link>
+              <span className="text-zinc-600">/</span>
+              <Link to="/dashboard/projects" className="hover:text-zinc-300">Workspaces</Link>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-200 truncate max-w-[200px]">{project?.title || 'Node Details'}</span>
             </div>
-            <Skeleton className="w-full h-64 rounded-[2rem] bg-white/5" />
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                <span>{project?.title || 'Workspace Overview'}</span>
+              </h1>
+              {project && (
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border ${
+                  project.status === 'active'
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                    : 'bg-zinc-800/60 border-zinc-700 text-zinc-400'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'active' ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                  <span>{project.status === 'active' ? 'Active' : project.status}</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Info & Actions */}
+          {project && (
+            <div className="flex items-center flex-wrap gap-2">
+              {/* Connection Code Pill */}
+              <div className="h-8 px-2.5 rounded-md bg-zinc-900 border border-zinc-800 flex items-center gap-2 text-xs font-mono">
+                <span className="text-zinc-500 text-[10px] uppercase">Connection:</span>
+                <span className="text-zinc-200 font-semibold">{project.connection_code}</span>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  title="Copy connection code"
+                  className="text-zinc-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+                >
+                  {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* Analytics Page Link */}
+              <Link
+                to={`/dashboard/projects/${projectId}/analytics`}
+                className="h-8 px-3 rounded-md bg-zinc-900 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
+                <span>Analytics ({testRuns.length})</span>
+              </Link>
+
+              {/* Back to Workspaces */}
+              <Link
+                to="/dashboard/projects"
+                className="h-8 px-3 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>All Workspaces</span>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="h-10 w-full bg-zinc-900/60 rounded-md animate-pulse" />
+            <div className="h-64 w-full bg-zinc-900/60 rounded-lg animate-pulse" />
           </div>
         ) : error || !project ? (
-          <div className="py-16 text-center bg-white/5 border border-white/10 rounded-[2rem] p-6">
-            <Activity className="w-12 h-12 text-rose-500/50 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white">Error Loading Project</h3>
-            <p className="text-xs text-white/50 mt-1 max-w-[280px] mx-auto font-mono">
+          <div className="py-12 text-center bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-6">
+            <Activity className="w-8 h-8 text-rose-500/60 mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-zinc-200">Failed to load workspace</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-[320px] mx-auto font-mono">
               {error || 'The requested project could not be found or retrieved.'}
             </p>
           </div>
         ) : (
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-white/5">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                    {project.title}
-                  </h1>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-widest border ${
-                    project.status === 'active' 
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                      : 'bg-stone-500/10 border-white/10 text-white/40'
-                  }`}>
-                    {project.status}
-                  </span>
-                </div>
-                <p className="text-sm text-white/50 mt-1 font-light">{project.description || 'No description provided.'}</p>
-              </div>
-              
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-3.5 w-full md:w-auto">
-                <div>
-                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">Connection Code</p>
-                  <p className="font-mono text-sm text-violet-300 font-bold tracking-wider mt-0.5">{project.connection_code}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="ml-auto p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-white transition-all cursor-pointer"
-                  title="Copy connection code"
-                >
-                  {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Sub-Page Navigation Tabs */}
-            <div className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-4 font-mono text-xs">
+          <div className="space-y-3.5">
+            
+            {/* Sub-Navigation Tab Strip */}
+            <div className="flex items-center gap-1 border-b border-zinc-800/80 pb-2 text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setActiveTab('monitoring')}
-                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`h-7 px-3 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'monitoring'
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
-                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                 }`}
               >
-                <Activity className="w-4 h-4 text-emerald-400" />
-                Live Telemetry Monitoring
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Live Telemetry</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('specs')}
-                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`h-7 px-3 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'specs'
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
-                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                 }`}
               >
-                <Cpu className="w-4 h-4 text-violet-400" />
-                System Stack & Specs
+                <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                <span>Stack & Containers</span>
+                {project.profile?.docker_containers && project.profile.docker_containers.length > 0 && (
+                  <span className="px-1 py-0.2 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400">
+                    {project.profile.docker_containers.length}
+                  </span>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('faults')}
-                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`h-7 px-3 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'faults'
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
-                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                 }`}
               >
-                <Zap className="w-4 h-4 text-amber-400" />
-                Manual Fault Injection
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Chaos Injection</span>
               </button>
-
-              <Link
-                to={`/dashboard/projects/${projectId}/analytics`}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <BarChart3 className="w-4 h-4 text-violet-400" />
-                Test Analytics & Failure Logs
-                <span className="bg-violet-500/20 text-violet-300 text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 font-bold">
-                  {testRuns.length}
-                </span>
-              </Link>
             </div>
 
-            {/* DEFAULT TAB: LIVE MONITORING */}
+            {/* TAB 1: LIVE MONITORING */}
             {activeTab === 'monitoring' && (
-              <div className="space-y-8">
-                {/* Real-time Telemetry & Container Stream Terminal */}
+              <div className="space-y-3.5">
+                {/* Live Terminal */}
                 <LiveStreamTerminal connectionCode={project.connection_code} onRunEnd={fetchProjectDetails} />
 
-                {/* Bottom Section: Minor Details of Project */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                {/* 3 Compact Operational Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   
-                  {/* Card 1: Connection & CLI Quick Run */}
-                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
-                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
-                      <Terminal className="w-4 h-4" />
-                      Agent Command Link
+                  {/* Card 1: Agent CLI Run */}
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 space-y-2">
+                    <h3 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-violet-400" />
+                      CLI Quick Run
                     </h3>
-                    <div className="bg-black/60 border border-white/5 rounded-xl p-3 font-mono text-[11px] text-stone-300 space-y-1">
-                      <div className="text-white/40"># Run container & stream telemetry</div>
-                      <div className="text-emerald-400 font-bold">$ noir run</div>
-                      <div className="text-white/40 pt-1"># Connect workspace</div>
-                      <div className="text-violet-300">$ noir connect {project.connection_code}</div>
+                    <div className="bg-[#090A0F] border border-zinc-800/80 rounded p-2.5 font-mono text-[11px] text-zinc-300 space-y-1">
+                      <div className="text-zinc-500"># Connect workspace</div>
+                      <div className="text-zinc-200">noir connect {project.connection_code}</div>
+                      <div className="text-zinc-500 pt-1"># Stream telemetry</div>
+                      <div className="text-emerald-400">noir run</div>
                     </div>
                   </div>
 
-                  {/* Card 2: Scanned Runtime Stack Quick Glance */}
-                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
-                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
-                      <Cpu className="w-4 h-4" />
-                      Scanned Stack
+                  {/* Card 2: Scanned Runtime Stack */}
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 space-y-2">
+                    <h3 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                      Runtime Topology
                     </h3>
                     {project.profile ? (
-                      <div className="space-y-2 font-mono text-xs">
-                        <div className="flex justify-between items-center py-1 border-b border-white/5">
-                          <span className="text-white/40">Language</span>
-                          <span className="text-white font-semibold">{project.profile.framework?.language || 'Python / Node'}</span>
+                      <div className="space-y-1.5 font-mono text-[11px]">
+                        <div className="flex justify-between items-center text-zinc-400 border-b border-zinc-800/60 pb-1">
+                          <span>Language</span>
+                          <span className="text-zinc-200">{project.profile.framework?.language || 'Python / Node'}</span>
                         </div>
-                        <div className="flex justify-between items-center py-1 border-b border-white/5">
-                          <span className="text-white/40">Framework</span>
-                          <span className="text-white font-semibold">{project.profile.framework?.name || 'Custom'}</span>
+                        <div className="flex justify-between items-center text-zinc-400 border-b border-zinc-800/60 pb-1">
+                          <span>Framework</span>
+                          <span className="text-zinc-200">{project.profile.framework?.name || 'Django'}</span>
                         </div>
-                        <div className="flex justify-between items-center py-1 border-b border-white/5">
-                          <span className="text-white/40">Package Mgr</span>
-                          <span className="text-violet-300 uppercase">{project.profile.package_manager || 'pip/npm'}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-1">
-                          <span className="text-white/40">Containers</span>
-                          <span className="text-cyan-300 font-semibold flex items-center gap-1.5">
-                            <Boxes className="w-3.5 h-3.5 text-cyan-400" />
-                            {project.profile.docker_containers?.length || 0} Detected
+                        <div className="flex justify-between items-center text-zinc-400">
+                          <span>Containers</span>
+                          <span className="text-cyan-400 font-semibold">
+                            {project.profile.docker_containers?.length || 0} active
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs font-mono text-white/40 py-2">No runtime scanned yet. Run <code className="text-violet-300">noir connect</code>.</p>
+                      <p className="text-[11px] font-mono text-zinc-500 py-1">
+                        Run <code className="text-zinc-300">noir connect</code> to scan topology.
+                      </p>
                     )}
                   </div>
 
-                  {/* Card 3: Project Metadata Specifications */}
-                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 backdrop-blur-md space-y-4">
-                    <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
-                      <Info className="w-4 h-4" />
-                      Project Specifications
+                  {/* Card 3: Specifications */}
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3 space-y-2">
+                    <h3 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-violet-400" />
+                      Node Parameters
                     </h3>
-                    <div className="space-y-2 font-mono text-xs">
-                      <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span className="text-white/40">Architecture</span>
-                        <span className="text-white font-semibold uppercase">{project.architecture}</span>
+                    <div className="space-y-1.5 font-mono text-[11px]">
+                      <div className="flex justify-between items-center text-zinc-400 border-b border-zinc-800/60 pb-1">
+                        <span>Architecture</span>
+                        <span className="text-zinc-200 uppercase">{project.architecture}</span>
                       </div>
-                      <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span className="text-white/40">Analysis Mode</span>
-                        <span className="text-white font-semibold uppercase">{project.analysis_mode}</span>
+                      <div className="flex justify-between items-center text-zinc-400 border-b border-zinc-800/60 pb-1">
+                        <span>Visibility</span>
+                        <span className="text-zinc-200 uppercase">{project.visibility}</span>
                       </div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-white/40">Created</span>
-                        <span className="text-white/70">{new Date(project.created_at).toLocaleDateString()}</span>
+                      <div className="flex justify-between items-center text-zinc-400">
+                        <span>Analysis Mode</span>
+                        <span className="text-zinc-200 uppercase">{project.analysis_mode}</span>
                       </div>
                     </div>
                   </div>
@@ -388,253 +397,175 @@ export default function ProjectDetail() {
               </div>
             )}
 
-            {/* OPTIONAL TAB 2: SYSTEM STACK & SPECS OVERVIEW */}
+            {/* TAB 2: SYSTEM STACK & CONTAINERS */}
             {activeTab === 'specs' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
                 
-                {/* Left & Middle Column: Stack Profiler & Guide */}
-                <div className="lg:col-span-2 space-y-6">
+                {/* Left (8 cols): Runtime Profile & Container Table */}
+                <div className="lg:col-span-8 space-y-3.5">
                   
-                  {/* Auto Detected System Profile Card */}
-                  <div className="relative overflow-hidden bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Cpu className="w-5 h-5 text-violet-400" />
-                        Auto-Detected Runtime Stack
+                  {/* Runtime Stack Grid */}
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
+                      <h2 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200 flex items-center gap-2">
+                        <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                        Scanned Runtime Environment
                       </h2>
                       {project.profile && (
-                        <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                          SYNCED
+                        <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          PROFILE ACTIVE
                         </span>
                       )}
                     </div>
 
                     {project.profile ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Language</p>
-                          <div className="flex items-center gap-2">
-                            <Code className="w-4 h-4 text-violet-400" />
-                            <span className="text-sm font-semibold">{project.profile.framework?.language || 'Unknown'}</span>
-                          </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 font-mono text-[11px]">
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Language</span>
+                          <span className="font-semibold text-zinc-200">{project.profile.framework?.language || 'Unknown'}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Framework</p>
-                          <div className="flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-violet-400" />
-                            <span className="text-sm font-semibold">{project.profile.framework?.name || 'Vanilla'}</span>
-                          </div>
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Framework</span>
+                          <span className="font-semibold text-zinc-200">{project.profile.framework?.name || 'Vanilla'}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Runtime Version</p>
-                          <div className="flex items-center gap-2">
-                            <Cpu className="w-4 h-4 text-violet-400" />
-                            <span className="text-sm font-mono font-semibold">{project.profile.runtime_version}</span>
-                          </div>
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Runtime Version</span>
+                          <span className="font-semibold text-zinc-200">{project.profile.runtime_version || '3.14'}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Package Manager</p>
-                          <div className="flex items-center gap-2">
-                            <Package className="w-4 h-4 text-violet-400" />
-                            <span className="text-sm font-semibold uppercase font-mono">{project.profile.package_manager}</span>
-                          </div>
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Package Manager</span>
+                          <span className="font-semibold text-zinc-200 uppercase">{project.profile.package_manager || 'pip'}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Operating System</p>
-                          <div className="flex items-center gap-2">
-                            <Laptop className="w-4 h-4 text-violet-400" />
-                            <span className="text-sm font-semibold">{project.profile.operating_system}</span>
-                          </div>
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Operating System</span>
+                          <span className="font-semibold text-zinc-200">{project.profile.operating_system || 'Linux'}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-violet-500/20 transition-all col-span-2 sm:col-span-1">
-                          <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Profile Scanned</p>
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-violet-400" />
-                            <span className="text-xs font-mono">{new Date(project.profile.detected_at).toLocaleDateString()}</span>
-                          </div>
+                        <div className="p-2.5 rounded bg-zinc-900/80 border border-zinc-800/80">
+                          <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Detected At</span>
+                          <span className="text-zinc-400">{new Date(project.profile.detected_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="py-8 flex flex-col items-center justify-center text-center bg-black/20 border border-white/5 rounded-2xl p-6">
-                        <Sparkles className="w-8 h-8 text-white/20 mb-3 animate-pulse" />
-                        <h4 className="text-sm font-semibold text-white/80">No runtime profile detected</h4>
-                        <p className="text-xs text-white/40 mt-1 max-w-[340px]">
-                          Start your local daemon using the connection key to scan runtime, operating system, and language environment profiles.
-                        </p>
-                      </div>
+                      <p className="text-xs text-zinc-500 font-mono py-2">
+                        No runtime profile scanned yet. Run <code className="text-zinc-300">noir connect</code> in your workspace.
+                      </p>
                     )}
                   </div>
 
-                  {/* Docker Containers & Microservices Section */}
-                  <div className="relative overflow-hidden bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Boxes className="w-5 h-5 text-cyan-400" />
-                        Docker Containers & Microservices
-                      </h2>
-                      {project.profile?.docker_containers && project.profile.docker_containers.length > 0 ? (
-                        <span className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                          {project.profile.docker_containers.length} DETECTED
+                  {/* Docker Containers Table */}
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg overflow-hidden">
+                    <div className="p-3 px-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
+                      <div className="flex items-center gap-2">
+                        <Boxes className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-xs font-semibold text-zinc-200">Discovered Docker Containers</span>
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                          {project.profile?.docker_containers?.length || 0}
                         </span>
-                      ) : (
-                        <span className="text-[10px] font-mono text-white/40">
-                          0 DETECTED
-                        </span>
-                      )}
+                      </div>
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        Targetable for Chaos Injections
+                      </span>
                     </div>
 
-                    {project.profile?.docker_containers && project.profile.docker_containers.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {project.profile.docker_containers.map((c, idx) => {
-                          const isRunning = c.status?.toLowerCase() === 'running';
-                          const isDefined = c.status?.toLowerCase() === 'defined';
-                          return (
-                            <div
-                              key={c.id && c.id !== '-' ? c.id : `${c.name}-${idx}`}
-                              className="p-5 rounded-2xl bg-black/30 border border-white/10 hover:border-cyan-500/30 transition-all space-y-3"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`w-2 h-2 rounded-full ${
-                                      isRunning
-                                        ? 'bg-emerald-400 animate-pulse'
-                                        : isDefined
-                                        ? 'bg-amber-400'
-                                        : 'bg-stone-500'
-                                    }`}
-                                  />
-                                  <span className="text-sm font-bold text-white font-mono">{c.name}</span>
-                                </div>
-                                <span
-                                  className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded-full border ${
-                                    isRunning
-                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                      : isDefined
-                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                      : 'bg-white/5 text-white/50 border-white/10'
-                                  }`}
-                                >
-                                  {c.status || 'unknown'}
-                                </span>
-                              </div>
-
-                              <div className="space-y-1 text-xs font-mono text-white/60">
-                                <div className="flex justify-between">
-                                  <span className="text-white/40">Service</span>
-                                  <span className="text-white/80">{c.service || '-'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-white/40">Image</span>
-                                  <span className="text-cyan-300 truncate max-w-[180px]">{c.image || '-'}</span>
-                                </div>
-                                {c.id && c.id !== '-' && (
-                                  <div className="flex justify-between">
-                                    <span className="text-white/40">Container ID</span>
-                                    <span className="text-white/50">{c.id}</span>
-                                  </div>
-                                )}
-                                {c.ports && c.ports.length > 0 && (
-                                  <div className="flex justify-between">
-                                    <span className="text-white/40">Ports</span>
-                                    <span className="text-violet-300">{c.ports.join(', ')}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="pt-2 border-t border-white/5 flex justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveTab('faults')}
-                                  className="text-[10px] font-mono text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors cursor-pointer"
-                                >
-                                  <Zap className="w-3 h-3" />
-                                  Target for Chaos Injection →
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="py-8 flex flex-col items-center justify-center text-center bg-black/20 border border-white/5 rounded-2xl p-6">
-                        <Boxes className="w-8 h-8 text-white/20 mb-3" />
-                        <h4 className="text-sm font-semibold text-white/80">No Docker containers detected</h4>
-                        <p className="text-xs text-white/40 mt-1 max-w-[360px]">
-                          Run <code className="text-cyan-300">noir scan</code> or <code className="text-cyan-300">noir connect</code> in your project workspace with Docker or Compose running to automatically discover containers.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Technical Integration CLI Card */}
-                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md shadow-lg space-y-4">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <Terminal className="w-5 h-5 text-violet-400" />
-                      Agent Registration Instructions
-                    </h2>
-                    <p className="text-xs text-white/50 leading-relaxed font-light">
-                      Install the central telemetry daemon inside your application workspace environment:
-                    </p>
-                    
-                    <div className="bg-black/60 border border-white/5 rounded-xl p-4 font-mono text-xs text-violet-300 space-y-2 overflow-x-auto">
-                      <div># 1. Connect workspace</div>
-                      <div className="text-stone-300">$ noir connect {project.connection_code}</div>
-                      
-                      <div className="pt-2"># 2. Run container with live WebSocket telemetry stream</div>
-                      <div className="text-stone-300">$ noir run</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-zinc-800/60 text-zinc-400 font-mono text-[11px] uppercase bg-zinc-900/20">
+                            <th className="py-2 px-3.5 font-medium">Container</th>
+                            <th className="py-2 px-3 font-medium">Status</th>
+                            <th className="py-2 px-3 font-medium">Service</th>
+                            <th className="py-2 px-3 font-medium">Docker Image</th>
+                            <th className="py-2 px-3 font-medium">Ports</th>
+                            <th className="py-2 px-3.5 text-right font-medium">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-800/40 font-mono text-[11px]">
+                          {project.profile?.docker_containers && project.profile.docker_containers.length > 0 ? (
+                            project.profile.docker_containers.map((c, idx) => {
+                              const isRunning = c.status?.toLowerCase() === 'running';
+                              return (
+                                <tr key={c.id && c.id !== '-' ? c.id : `${c.name}-${idx}`} className="hover:bg-zinc-900/40 text-zinc-300">
+                                  <td className="py-2 px-3.5 font-semibold text-zinc-200">
+                                    {c.name}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <span className="inline-flex items-center gap-1 text-[10px]">
+                                      <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                                      <span className={isRunning ? 'text-emerald-400' : 'text-zinc-500'}>{c.status || 'unknown'}</span>
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-zinc-400">
+                                    {c.service || '-'}
+                                  </td>
+                                  <td className="py-2 px-3 text-cyan-400 truncate max-w-[140px]">
+                                    {c.image || '-'}
+                                  </td>
+                                  <td className="py-2 px-3 text-zinc-400 truncate max-w-[100px]">
+                                    {c.ports && c.ports.length > 0 ? c.ports.join(', ') : '-'}
+                                  </td>
+                                  <td className="py-2 px-3.5 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveTab('faults')}
+                                      className="h-6 px-2 rounded bg-zinc-800 hover:bg-zinc-700 text-amber-300 hover:text-amber-200 text-[10px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    >
+                                      <Zap className="w-2.5 h-2.5 text-amber-400" />
+                                      <span>Inject Fault</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={6} className="py-6 text-center text-zinc-500">
+                                <p className="text-xs">No local containers detected.</p>
+                                <p className="text-[10px] text-zinc-600 mt-0.5">
+                                  Run <code className="text-zinc-400">noir fault listen</code> with Docker active to discover services.
+                                </p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
+
                 </div>
 
-                {/* Right Column: Spec Sidebar */}
-                <div className="space-y-6">
-                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-6">
-                    <h3 className="text-base font-bold flex items-center gap-2 border-b border-white/5 pb-4">
-                      <Settings className="w-4 h-4 text-violet-400" />
-                      Specifications
+                {/* Right (4 cols): Workspace Configuration Sidebar */}
+                <div className="lg:col-span-4 space-y-3.5">
+                  <div className="bg-[#0D0F17] border border-zinc-800/80 rounded-lg p-3.5 space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-zinc-200 flex items-center gap-1.5 pb-2 border-b border-zinc-800/80">
+                      <Settings className="w-3.5 h-3.5 text-violet-400" />
+                      Workspace Metadata
                     </h3>
 
-                    <div className="space-y-4 font-mono text-xs">
+                    <div className="space-y-2 font-mono text-[11px]">
                       <div>
-                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Deployment Type</span>
-                        <span className="text-white font-semibold uppercase">{project.architecture}</span>
+                        <span className="text-zinc-500 block text-[10px] uppercase">Deployment Type</span>
+                        <span className="text-zinc-200 font-semibold uppercase">{project.architecture}</span>
                       </div>
                       <div>
-                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Visibility Mode</span>
-                        <span className="text-white font-semibold uppercase">{project.visibility}</span>
+                        <span className="text-zinc-500 block text-[10px] uppercase">Visibility</span>
+                        <span className="text-zinc-200 font-semibold uppercase">{project.visibility}</span>
                       </div>
                       <div>
-                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Analysis Routine</span>
-                        <span className="text-white font-semibold uppercase">{project.analysis_mode}</span>
+                        <span className="text-zinc-500 block text-[10px] uppercase">Analysis Routine</span>
+                        <span className="text-zinc-200 font-semibold uppercase">{project.analysis_mode}</span>
                       </div>
                       <div>
-                        <span className="text-white/40 block text-[9px] uppercase tracking-wider mb-0.5">Workspace Owner</span>
-                        <span className="text-white font-semibold">{project.owner?.username || 'Unknown'}</span>
+                        <span className="text-zinc-500 block text-[10px] uppercase">Owner</span>
+                        <span className="text-zinc-200 font-semibold">{project.owner?.username || 'engineer'}</span>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-md shadow-lg space-y-4 font-mono text-xs">
-                    <div className="flex items-center gap-2.5 text-white/50">
-                      <Calendar className="w-4 h-4 text-violet-400" />
-                      <div>
-                        <span className="block text-[8px] uppercase text-white/30 tracking-wider">Created</span>
-                        <span>{new Date(project.created_at).toLocaleString()}</span>
+                      <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between text-zinc-400">
+                        <span className="text-zinc-500">Created:</span>
+                        <span>{new Date(project.created_at).toLocaleDateString()}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-white/50 border-t border-white/5 pt-3">
-                      <Clock className="w-4 h-4 text-violet-400" />
-                      <div>
-                        <span className="block text-[8px] uppercase text-white/30 tracking-wider">Last Sync</span>
-                        <span>{new Date(project.updated_at).toLocaleString()}</span>
+                      <div className="flex items-center justify-between text-zinc-400">
+                        <span className="text-zinc-500">Last Sync:</span>
+                        <span>{new Date(project.updated_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -643,7 +574,7 @@ export default function ProjectDetail() {
               </div>
             )}
 
-            {/* FAULT INJECTION TAB */}
+            {/* TAB 3: FAULT INJECTION */}
             {activeTab === 'faults' && (
               <FaultInjectionPanel 
                 projectIdentifier={project.id || projectId || project.connection_code} 
@@ -651,7 +582,8 @@ export default function ProjectDetail() {
                 initialContainers={project.profile?.docker_containers || []}
               />
             )}
-          </motion.div>
+
+          </div>
         )}
       </div>
     </UserLayout>

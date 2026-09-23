@@ -12,6 +12,50 @@ from apps.users.throttles import UserListThrottle, UserDeleteThrottle
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
+def get_project_with_permission(identifier, user):
+    """
+    Look up project by ID or connection_code and check user permissions.
+    Returns (project, None) on success or (None, Response) on error.
+    """
+    if str(identifier).isdigit():
+        project = Project.objects.filter(id=int(identifier)).first()
+    else:
+        project = Project.objects.filter(connection_code__iexact=identifier).first()
+
+    if not project:
+        return None, Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if user.is_staff or user.is_superuser or project.owner == user:
+        return project, None
+
+    if user.role == User.Role.COMPANY:
+        if hasattr(user, "company_profile") and project.owner.company == user.company_profile:
+            return project, None
+        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+    if user.role == User.Role.DEVELOPER and user.company:
+        company_owner = user.company.user
+        if (
+            project.owner == company_owner
+            or (hasattr(project, "assigned_teams") and project.assigned_teams.filter(members=user).exists())
+        ):
+            return project, None
+        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+    return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+
+
+def _normalize_container_item(c):
+    if not isinstance(c, dict):
+        return c
+    norm = dict(c)
+    if "image" in norm and isinstance(norm["image"], str):
+        norm["image"] = norm["image"].strip().lower()
+    if "name" in norm and isinstance(norm["name"], str):
+        if norm.get("status") in ("defined", "defined (not started)"):
+            norm["name"] = norm["name"].strip().lower()
+    return norm
+
 
 class ProjectListView(ListAPIView):
     queryset = Project.objects.all()
@@ -119,13 +163,9 @@ class TestRunListCreateView(APIView):
         if not project_id:
             return Response({"detail": "Project ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            if str(project_id).isdigit():
-                project = Project.objects.get(id=int(project_id))
-            else:
-                project = Project.objects.get(connection_code=project_id)
-        except (Project.DoesNotExist, ValueError):
-            return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+        project, err_resp = get_project_with_permission(project_id, user)
+        if err_resp:
+            return err_resp
 
         # Detect team
         team = None
@@ -167,20 +207,27 @@ class TestRunListCreateView(APIView):
 class TestRunDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_object(self, pk, user):
+        test_run = TestRun.objects.filter(pk=pk).select_related("project").first()
+        if not test_run:
+            return None, Response({"detail": "Test run not found."}, status=status.HTTP_404_NOT_FOUND)
+        _, err_resp = get_project_with_permission(test_run.project.id, user)
+        if err_resp:
+            return None, err_resp
+        return test_run, None
+
     def get(self, request, pk):
-        try:
-            test_run = TestRun.objects.get(pk=pk)
-            return Response(TestRunSerializer(test_run).data)
-        except TestRun.DoesNotExist:
-            return Response({"detail": "Test run not found."}, status=status.HTTP_404_NOT_FOUND)
+        test_run, err = self.get_object(pk, request.user)
+        if err:
+            return err
+        return Response(TestRunSerializer(test_run).data)
 
     def delete(self, request, pk):
-        try:
-            test_run = TestRun.objects.get(pk=pk)
-            test_run.delete()
-            return Response({"message": "Test run deleted successfully."})
-        except TestRun.DoesNotExist:
-            return Response({"detail": "Test run not found."}, status=status.HTTP_404_NOT_FOUND)
+        test_run, err = self.get_object(pk, request.user)
+        if err:
+            return err
+        test_run.delete()
+        return Response({"message": "Test run deleted successfully."})
 
 
 class ProjectProfileUpdateAPIView(APIView):
@@ -188,25 +235,9 @@ class ProjectProfileUpdateAPIView(APIView):
 
     def post(self, request, identifier):
         user = request.user
-
-        project = None
-        if str(identifier).isdigit():
-            project = Project.objects.filter(id=int(identifier)).first()
-        if not project:
-            project = Project.objects.filter(connection_code=identifier).first()
-
-        if not project:
-            return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        if user.role == User.Role.COMPANY:
-            if project.owner != user and getattr(user, 'company_profile', None) != project.owner.company:
-                pass
-        elif user.role == User.Role.DEVELOPER and user.company:
-            company_owner = user.company.user
-            if project.owner != user and project.owner != company_owner and not project.assigned_teams.filter(members=user).exists():
-                return Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
-        elif project.owner != user:
-            return Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+        project, err_resp = get_project_with_permission(identifier, user)
+        if err_resp:
+            return err_resp
 
         framework_name = request.data.get("framework_name") or request.data.get("framework") or "Generic"
         language = request.data.get("language") or "Python"
@@ -236,6 +267,9 @@ class ProjectProfileUpdateAPIView(APIView):
             existing = ProjectProfile.objects.filter(project=project).first()
             docker_containers = existing.docker_containers if existing else []
 
+        if isinstance(docker_containers, list):
+            docker_containers = [_normalize_container_item(c) for c in docker_containers]
+
         profile, _ = ProjectProfile.objects.update_or_create(
             project=project,
             defaults={
@@ -262,13 +296,11 @@ from channels.layers import get_channel_layer
 
 class StreamProjectLogsAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    throttle_classes = []
 
     def post(self, request, identifier):
-        if identifier.isdigit():
-            project = get_object_or_404(Project, pk=identifier)
-        else:
-            project = get_object_or_404(Project, connection_code__iexact=identifier)
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
 
         log_line = request.data.get("log", "")
         stream_type = request.data.get("stream", "stdout")
@@ -281,12 +313,18 @@ class StreamProjectLogsAPIView(APIView):
         # Mark project stream as active in cache for 120 seconds
         cache_key_upper = f"core_active_stream_{code_upper}"
         cache_key_lower = f"core_active_stream_{code_lower}"
-        if event in ["run_end", "analysis_end"]:
+        if event in ["run_end", "analysis_end", "daemon_stop"]:
             cache.delete(cache_key_upper)
             cache.delete(cache_key_lower)
+            if event == "daemon_stop":
+                cache.delete(f"core_daemon_active_{code_upper}")
+                cache.delete(f"core_daemon_active_{code_lower}")
         else:
             cache.set(cache_key_upper, True, timeout=120)
             cache.set(cache_key_lower, True, timeout=120)
+            if event == "daemon_start":
+                cache.set(f"core_daemon_active_{code_upper}", True, timeout=15)
+                cache.set(f"core_daemon_active_{code_lower}", True, timeout=15)
 
         channel_layer = get_channel_layer()
         if channel_layer:
@@ -308,64 +346,58 @@ class StreamProjectLogsAPIView(APIView):
 
 class ProjectStreamStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    throttle_classes = []
 
     def get(self, request, identifier):
-        if identifier.isdigit():
-            project = get_object_or_404(Project, pk=identifier)
-        else:
-            project = get_object_or_404(Project, connection_code__iexact=identifier)
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
 
         code_upper = project.connection_code.upper()
         code_lower = project.connection_code.lower()
-        is_active = bool(cache.get(f"core_active_stream_{code_upper}") or cache.get(f"core_active_stream_{code_lower}"))
+        is_streaming = bool(cache.get(f"core_active_stream_{code_upper}") or cache.get(f"core_active_stream_{code_lower}"))
+        is_daemon_active = bool(cache.get(f"core_daemon_active_{code_upper}") or cache.get(f"core_daemon_active_{code_lower}"))
+        last_seen = cache.get(f"core_daemon_last_seen_{code_upper}")
 
         return Response({
-            "is_active": is_active,
+            "is_active": is_streaming or is_daemon_active,
+            "is_streaming": is_streaming,
+            "is_daemon_active": is_daemon_active,
+            "last_seen": last_seen,
             "project_code": project.connection_code
         }, status=status.HTTP_200_OK)
 
 
 from django.utils import timezone
-from .models import FaultInjection
+from django.conf import settings
+from .models import FaultInjection, FaultInjectionLog
 from .serializers import (
     FaultInjectionSerializer,
     FaultInjectionCreateSerializer,
     FaultInjectionReportSerializer,
+    FaultInjectionLogSerializer,
 )
 
 
-def get_project_with_permission(identifier, user):
+def broadcast_fault_event(project, event_dict):
     """
-    Look up project by ID or connection_code and check user permissions.
-    Returns (project, None) on success or (None, Response) on error.
+    Broadcasts structured fault injection event across Django Channels groups:
+    project_{code_upper} and project_{code_lower}.
     """
-    if str(identifier).isdigit():
-        project = Project.objects.filter(id=int(identifier)).first()
-    else:
-        project = Project.objects.filter(connection_code__iexact=identifier).first()
-
-    if not project:
-        return None, Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    if user.is_staff or user.is_superuser or project.owner == user:
-        return project, None
-
-    if user.role == User.Role.COMPANY:
-        if hasattr(user, "company_profile") and project.owner.company == user.company_profile:
-            return project, None
-        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
-
-    if user.role == User.Role.DEVELOPER and user.company:
-        company_owner = user.company.user
-        if (
-            project.owner == company_owner
-            or (hasattr(project, "assigned_teams") and project.assigned_teams.filter(members=user).exists())
-        ):
-            return project, None
-        return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
-
-    return None, Response({"detail": "Permission denied for this project."}, status=status.HTTP_403_FORBIDDEN)
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    code = getattr(project, "connection_code", None)
+    if not code:
+        return
+    payload = {
+        "type": "log_message",
+        "data": event_dict,
+    }
+    try:
+        async_to_sync(channel_layer.group_send)(f"project_{code.upper()}", payload)
+        async_to_sync(channel_layer.group_send)(f"project_{code.lower()}", payload)
+    except Exception as e:
+        print(f"[Broadcast Error] Failed to broadcast fault event: {e}")
 
 
 class ProjectFaultListCreateAPIView(APIView):
@@ -377,11 +409,14 @@ class ProjectFaultListCreateAPIView(APIView):
             return err_resp
 
         status_filter = request.query_params.get("status")
-        queryset = project.fault_injections.all()
+        queryset = project.fault_injections.all().order_by("-requested_at")
         if status_filter:
+            # Map legacy 'pending' query to 'queued'
+            if status_filter.lower() == "pending":
+                status_filter = FaultInjection.Status.QUEUED
             queryset = queryset.filter(status=status_filter)
 
-        serializer = FaultInjectionSerializer(queryset[:100], many=True)
+        serializer = FaultInjectionSerializer(queryset[:150], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, identifier):
@@ -389,13 +424,30 @@ class ProjectFaultListCreateAPIView(APIView):
         if err_resp:
             return err_resp
 
-        serializer = FaultInjectionCreateSerializer(data=request.data)
+        serializer = FaultInjectionCreateSerializer(data=request.data, context={"project": project})
         serializer.is_valid(raise_exception=True)
         fault = serializer.save(
             project=project,
             requested_by=request.user,
-            status=FaultInjection.Status.PENDING,
+            status=FaultInjection.Status.QUEUED,
         )
+
+        # Log initial queued state
+        queue_pos = project.fault_injections.filter(status=FaultInjection.Status.QUEUED).count()
+        FaultInjectionLog.objects.create(
+            fault=fault,
+            level="INFO",
+            message=f"Fault injection #{fault.id} ({fault.fault_type}) queued for target '{fault.target}' (position #{queue_pos}).",
+        )
+
+        # Broadcast real-time status event
+        broadcast_fault_event(project, {
+            "type": "injection.status",
+            "injection_id": fault.id,
+            "status": FaultInjection.Status.QUEUED,
+            "fault": FaultInjectionSerializer(fault).data,
+        })
+
         return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_201_CREATED)
 
 
@@ -407,16 +459,55 @@ class ProjectFaultPendingAPIView(APIView):
         if err_resp:
             return err_resp
 
+        # Mark daemon active on every poll (timeout=12s covers standard 2s polling interval)
+        code_upper = project.connection_code.upper()
+        code_lower = project.connection_code.lower()
+        cache.set(f"core_daemon_active_{code_upper}", True, timeout=12)
+        cache.set(f"core_daemon_active_{code_lower}", True, timeout=12)
+        cache.set(f"core_daemon_last_seen_{code_upper}", timezone.now().isoformat(), timeout=3600)
+
+        # Check concurrency limit policy
+        try:
+            param_concurrency = int(request.query_params.get("concurrency", 0))
+        except (ValueError, TypeError):
+            param_concurrency = 0
+
+        max_concurrency = param_concurrency or getattr(settings, "MAX_CONCURRENT_INJECTIONS", 1)
+        running_count = project.fault_injections.filter(status=FaultInjection.Status.RUNNING).count()
+
+        if running_count >= max_concurrency:
+            return Response(
+                {
+                    "pending": False,
+                    "fault": None,
+                    "reason": "concurrency_limit_reached",
+                    "running_count": running_count,
+                    "max_concurrency": max_concurrency,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # Retrieve next FIFO queued injection
         pending = (
-            project.fault_injections.filter(status=FaultInjection.Status.PENDING)
+            project.fault_injections.filter(status__in=[FaultInjection.Status.QUEUED, "pending"])
             .order_by("requested_at")
             .first()
         )
         if not pending:
-            return Response({"pending": False, "fault": None}, status=status.HTTP_200_OK)
+            return Response({
+                "pending": False, 
+                "fault": None,
+                "running_count": running_count,
+                "max_concurrency": max_concurrency,
+            }, status=status.HTTP_200_OK)
 
         return Response(
-            {"pending": True, "fault": FaultInjectionSerializer(pending).data},
+            {
+                "pending": True,
+                "fault": FaultInjectionSerializer(pending).data,
+                "running_count": running_count,
+                "max_concurrency": max_concurrency,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -442,15 +533,55 @@ class ProjectFaultCancelAPIView(APIView):
             return err_resp
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
-        if fault.status != FaultInjection.Status.PENDING:
-            return Response(
-                {"detail": f"Cannot cancel fault in '{fault.status}' state."},
-                status=status.HTTP_400_BAD_REQUEST,
+
+        # 1. Queued injection cancellation -> immediate CANCELLED
+        if fault.status in (FaultInjection.Status.QUEUED, "pending"):
+            fault.status = FaultInjection.Status.CANCELLED
+            fault.completed_at = timezone.now()
+            fault.save(update_fields=["status", "completed_at"])
+
+            FaultInjectionLog.objects.create(
+                fault=fault,
+                level="WARN",
+                message="Fault injection was cancelled while queued.",
             )
 
-        fault.status = FaultInjection.Status.CANCELLED
-        fault.save(update_fields=["status"])
-        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+            broadcast_fault_event(project, {
+                "type": "injection.cancelled",
+                "injection_id": fault.id,
+                "status": FaultInjection.Status.CANCELLED,
+                "fault": FaultInjectionSerializer(fault).data,
+            })
+            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+        # 2. Running injection cancellation -> CANCEL_REQUESTED (worker safely terminates Docker workload)
+        if fault.status == FaultInjection.Status.RUNNING:
+            fault.status = FaultInjection.Status.CANCEL_REQUESTED
+            fault.save(update_fields=["status"])
+
+            FaultInjectionLog.objects.create(
+                fault=fault,
+                level="WARN",
+                message="Stop requested by user. Signalling execution worker to terminate Docker operations...",
+            )
+
+            broadcast_fault_event(project, {
+                "type": "injection.status",
+                "injection_id": fault.id,
+                "status": FaultInjection.Status.CANCEL_REQUESTED,
+                "fault": FaultInjectionSerializer(fault).data,
+            })
+            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+        # 3. Idempotent cases
+        if fault.status in (FaultInjection.Status.CANCEL_REQUESTED, FaultInjection.Status.CANCELLED):
+            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+        # 4. Terminal states cannot be cancelled
+        return Response(
+            {"detail": f"Cannot cancel fault in terminal '{fault.status}' state."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class ProjectFaultClaimAPIView(APIView):
@@ -462,7 +593,7 @@ class ProjectFaultClaimAPIView(APIView):
             return err_resp
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
-        if fault.status != FaultInjection.Status.PENDING:
+        if fault.status not in (FaultInjection.Status.QUEUED, "pending"):
             return Response(
                 {"detail": f"Fault is in '{fault.status}' state and cannot be claimed."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -471,6 +602,21 @@ class ProjectFaultClaimAPIView(APIView):
         fault.status = FaultInjection.Status.RUNNING
         fault.started_at = timezone.now()
         fault.save(update_fields=["status", "started_at"])
+
+        FaultInjectionLog.objects.create(
+            fault=fault,
+            level="INFO",
+            message=f"Claimed by Noir execution worker. Execution started on target '{fault.target}'.",
+        )
+
+        broadcast_fault_event(project, {
+            "type": "injection.status",
+            "injection_id": fault.id,
+            "status": FaultInjection.Status.RUNNING,
+            "started_at": fault.started_at.isoformat(),
+            "fault": FaultInjectionSerializer(fault).data,
+        })
+
         return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
 
 
@@ -483,7 +629,7 @@ class ProjectFaultReportAPIView(APIView):
             return err_resp
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
-        if fault.status not in (FaultInjection.Status.RUNNING, FaultInjection.Status.PENDING):
+        if fault.status in (FaultInjection.Status.COMPLETED, FaultInjection.Status.CANCELLED, FaultInjection.Status.FAILED):
             return Response(
                 {"detail": f"Fault is already in terminal state '{fault.status}'."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -492,12 +638,117 @@ class ProjectFaultReportAPIView(APIView):
         serializer = FaultInjectionReportSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        fault.status = serializer.validated_data["status"]
+        new_status = serializer.validated_data["status"]
+        fault.status = new_status
         fault.completed_at = timezone.now()
         fault.result = serializer.validated_data.get("result", {})
         fault.error_message = serializer.validated_data.get("error_message", "")
         fault.save(update_fields=["status", "completed_at", "result", "error_message"])
+
+        # Persist final log
+        log_level = "INFO" if new_status == FaultInjection.Status.COMPLETED else ("WARN" if new_status == FaultInjection.Status.CANCELLED else "ERROR")
+        log_msg = f"Fault execution completed with status: {new_status.upper()}."
+        if fault.error_message:
+            log_msg += f" Details: {fault.error_message}"
+
+        FaultInjectionLog.objects.create(
+            fault=fault,
+            level=log_level,
+            message=log_msg,
+        )
+
+        # Broadcast final event
+        if new_status == FaultInjection.Status.COMPLETED:
+            event_type = "injection.completed"
+        elif new_status == FaultInjection.Status.CANCELLED:
+            event_type = "injection.cancelled"
+        else:
+            event_type = "injection.status"
+
+        broadcast_fault_event(project, {
+            "type": event_type,
+            "injection_id": fault.id,
+            "status": new_status,
+            "result": fault.result,
+            "error_message": fault.error_message,
+            "completed_at": fault.completed_at.isoformat(),
+            "fault": FaultInjectionSerializer(fault).data,
+        })
+
         return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+
+
+class ProjectFaultLogsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        queryset = fault.logs.all().order_by("timestamp", "id")
+
+        since = request.query_params.get("since")
+        if since:
+            try:
+                queryset = queryset.filter(timestamp__gt=since)
+            except Exception:
+                pass
+
+        serializer = FaultInjectionLogSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProjectFaultAppendLogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        message = (request.data.get("message") or request.data.get("log") or "").strip()
+        if not message:
+            return Response({"detail": "Log message cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+
+        level = (request.data.get("level") or "INFO").strip().upper()
+
+        log_entry = FaultInjectionLog.objects.create(
+            fault=fault,
+            level=level,
+            message=message,
+        )
+
+        broadcast_fault_event(project, {
+            "type": "injection.log",
+            "injection_id": fault.id,
+            "timestamp": log_entry.timestamp.isoformat(),
+            "level": log_entry.level,
+            "message": log_entry.message,
+        })
+
+        return Response(FaultInjectionLogSerializer(log_entry).data, status=status.HTTP_201_CREATED)
+
+
+class ProjectFaultStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        return Response({
+            "id": fault.id,
+            "injection_id": fault.id,
+            "status": fault.status,
+            "cancel_requested": fault.status == FaultInjection.Status.CANCEL_REQUESTED,
+            "is_terminal": fault.is_terminal,
+        }, status=status.HTTP_200_OK)
+
 
 
 class ProjectContainersAPIView(APIView):
@@ -510,12 +761,13 @@ class ProjectContainersAPIView(APIView):
 
         profile = getattr(project, "profile", None)
         containers = profile.docker_containers if profile else []
+        norm_containers = [_normalize_container_item(c) for c in containers]
         return Response({
             "project_id": project.id,
             "connection_code": project.connection_code,
-            "containers": containers,
-            "docker_containers": containers,
-            "total": len(containers)
+            "containers": norm_containers,
+            "docker_containers": norm_containers,
+            "total": len(norm_containers)
         }, status=status.HTTP_200_OK)
 
     def post(self, request, identifier):
@@ -528,6 +780,8 @@ class ProjectContainersAPIView(APIView):
             containers = request.data.get("docker_containers", [])
         if not isinstance(containers, list):
             return Response({"detail": "containers must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+
+        containers = [_normalize_container_item(c) for c in containers]
 
         profile = getattr(project, "profile", None)
         if not profile:

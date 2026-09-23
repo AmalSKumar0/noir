@@ -8,13 +8,13 @@ interface UserLayoutProps {
 export default function UserLayout({ children }: UserLayoutProps) {
   return (
     <div 
-      className="min-h-screen font-sans text-white selection:bg-violet-500/30 overflow-x-hidden pb-12"
+      className="min-h-screen font-sans text-zinc-100 selection:bg-violet-500/30 bg-[#090A0F] overflow-x-hidden pb-10"
       style={{
-        background: 'radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.22) 0%, rgba(99, 102, 241, 0.08) 35%, rgba(3, 2, 14, 1) 100%)'
+        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), rgba(255, 255, 255, 0))'
       }}
     >
       <UserNavBar />
-      <div className="pl-24 md:pl-28 max-w-[1400px] mx-auto px-4 py-4 md:px-8 md:py-6 overflow-hidden">
+      <div className="pl-20 md:pl-24 pr-4 md:pr-8 py-3 max-w-[1680px] mx-auto overflow-hidden">
         {children}
       </div>
     </div>

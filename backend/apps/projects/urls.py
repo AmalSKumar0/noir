@@ -17,6 +17,9 @@ from .views import (
     ProjectFaultCancelAPIView,
     ProjectFaultClaimAPIView,
     ProjectFaultReportAPIView,
+    ProjectFaultLogsAPIView,
+    ProjectFaultAppendLogAPIView,
+    ProjectFaultStatusAPIView,
     ProjectContainersAPIView,
 )
 
@@ -36,7 +39,11 @@ urlpatterns = [
     path("<str:identifier>/faults/<int:fault_id>/claim/", ProjectFaultClaimAPIView.as_view(), name="project_fault_claim"),
     path("<str:identifier>/faults/<int:fault_id>/report/", ProjectFaultReportAPIView.as_view(), name="project_fault_report"),
     path("<str:identifier>/faults/<int:fault_id>/cancel/", ProjectFaultCancelAPIView.as_view(), name="project_fault_cancel"),
+    path("<str:identifier>/faults/<int:fault_id>/logs/", ProjectFaultLogsAPIView.as_view(), name="project_fault_logs"),
+    path("<str:identifier>/faults/<int:fault_id>/log/", ProjectFaultAppendLogAPIView.as_view(), name="project_fault_append_log"),
+    path("<str:identifier>/faults/<int:fault_id>/status/", ProjectFaultStatusAPIView.as_view(), name="project_fault_status"),
     path("test-runs/", TestRunListCreateView.as_view(), name="test_runs_list_create"),
     path("test-runs/<int:pk>/", TestRunDetailView.as_view(), name="test_run_detail"),
 ]
+
 

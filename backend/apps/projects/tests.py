@@ -40,14 +40,15 @@ class FaultInjectionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["fault_type"], "container_restart")
         self.assertEqual(response.data["target"], "web-service")
-        self.assertEqual(response.data["status"], "pending")
+        self.assertEqual(response.data["status"], FaultInjection.Status.QUEUED)
         self.assertEqual(response.data["parameters"]["timeout"], 15)
 
         # Verify database record
         fault = FaultInjection.objects.get(id=response.data["id"])
         self.assertEqual(fault.project, self.project)
         self.assertEqual(fault.requested_by, self.owner)
-        self.assertEqual(fault.status, FaultInjection.Status.PENDING)
+        self.assertEqual(fault.status, FaultInjection.Status.QUEUED)
+
 
     def test_create_fault_unapproved_type_rejected(self):
         self.client.force_authenticate(user=self.owner)
@@ -157,9 +158,11 @@ class FaultInjectionAPITests(APITestCase):
         fault.refresh_from_db()
         self.assertEqual(fault.status, FaultInjection.Status.CANCELLED)
 
-        # Cannot cancel already cancelled
+        # Calling cancel again is idempotent and returns 200 without error
         response2 = self.client.post(cancel_url)
-        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        self.assertEqual(response2.data["status"], "cancelled")
+
 
     def test_unauthorized_user_forbidden(self):
         self.client.force_authenticate(user=self.other_user)
