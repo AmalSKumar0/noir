@@ -466,23 +466,49 @@ def _execute_single_fault(
         "log": emit_log,
     }
 
-    # 3. Steady-State Baseline Evaluation (Principles of Chaos Engineering)
+    # 3. High-fidelity Baseline Evaluation — builds a statistical distribution
     probe_url = params.get("probe_url")
     if not probe_url:
         probe_url = docker_mgr.get_container_endpoint(target)
 
     expected_status = int(params.get("expected_status", 200))
-    evaluator = SteadyStateEvaluator(probe_url=probe_url, expected_status=expected_status)
+    # Use 10 baseline probes (1s apart) to build a proper distribution;
+    # fall back to 5 for short experiments (<15s configured duration).
+    configured_dur = int(params.get("duration", 30))
+    baseline_probes = 10 if configured_dur >= 15 else 5
+    evaluator = SteadyStateEvaluator(
+        probe_url=probe_url,
+        expected_status=expected_status,
+        baseline_probe_count=baseline_probes,
+        baseline_interval_sec=1.0,
+        fault_probe_interval=1.0,
+        recovery_probe_interval=0.5,
+        recovery_consecutive_required=3,
+        rolling_window_sec=5.0,
+        docker_mgr=docker_mgr,
+        container_name=target,
+    )
 
     if probe_url:
-        emit_log(f"[STEADY STATE] Measuring baseline health on target endpoint '{probe_url}'...")
-        baseline = evaluator.measure_baseline(count=3, interval=0.3)
+        emit_log(f"[STEADY STATE] Measuring baseline ({baseline_probes} probes, 1s interval) on '{probe_url}'...")
+        baseline = evaluator.measure_baseline()
+        dist = baseline.get("distribution") or {}
         if baseline.get("healthy"):
-            emit_log(f"[STEADY STATE] Baseline healthy: HTTP {expected_status} (~{baseline.get('avg_latency_ms', 0)}ms avg latency).")
+            emit_log(
+                f"[STEADY STATE] Baseline healthy: HTTP {expected_status} | "
+                f"mean={baseline.get('avg_latency_ms', 0)}ms | "
+                f"p95={dist.get('p95') or 'N/A'}ms | "
+                f"stddev={dist.get('stddev') or 'N/A'}ms | "
+                f"n={baseline.get('sample_count', 0)}"
+            )
         else:
             sample_err = baseline.get("sample_errors", [])
             err_desc = f" ({sample_err[0]})" if sample_err else ""
-            emit_log(f"[STEADY STATE] Target endpoint was UNREACHABLE or returned unexpected status before fault{err_desc}. Note: In-fault metrics will reflect pre-existing application outages rather than chaos impact.", level="WARN")
+            emit_log(
+                f"[STEADY STATE] Target endpoint UNREACHABLE before fault{err_desc}. "
+                "In-fault metrics will reflect pre-existing outages, not chaos impact.",
+                level="WARN"
+            )
 
     # Start active in-fault synthetic probing
     evaluator.start_in_fault_probing(interval_sec=1.0)
@@ -504,9 +530,15 @@ def _execute_single_fault(
     # Stop in-fault probing and gather impact metrics — pass fault_window_end for precise timing
     in_fault_metrics = evaluator.stop_in_fault_probing(fault_window_end=fault_window_end)
     if in_fault_metrics.get("probes_count", 0) > 0:
+        comp = in_fault_metrics.get("baseline_comparison") or {}
+        anoms = in_fault_metrics.get("anomaly_summary") or {}
         emit_log(
             f"[CHAOS IMPACT] In-fault availability: {in_fault_metrics['availability_percent']}% | "
-            f"Avg Latency: {in_fault_metrics['avg_latency_ms']}ms (P95: {in_fault_metrics['p95_latency_ms']}ms)."
+            f"mean={in_fault_metrics.get('avg_latency_ms', 0)}ms "
+            f"(+{comp.get('percentage_delta', 0):.1f}% vs baseline) | "
+            f"P95={in_fault_metrics.get('p95_latency_ms', 'N/A')}ms | "
+            f"spikes={anoms.get('spike_count', 0)} | "
+            f"max_consec_fails={anoms.get('max_consecutive_failures', 0)}"
         )
 
     is_cancelled = (
@@ -543,6 +575,7 @@ def _execute_single_fault(
         experiment_metrics=in_fault_metrics,
         recovery_metrics=recovery_metrics,
         rollback_success=result.recovered,
+        anomaly_summary=in_fault_metrics.get("anomaly_summary"),
     )
 
     # --- Accurate lifecycle timing from evaluator (not executor's command time) ---
@@ -582,6 +615,11 @@ def _execute_single_fault(
     result_payload["experiment_metrics"] = in_fault_metrics
     result_payload["recovery_metrics"] = recovery_metrics
     result_payload["recommendations"] = resilience_report["recommendations"]
+    result_payload["anomaly_summary"] = in_fault_metrics.get("anomaly_summary", {})
+    result_payload["experiment_confidence"] = resilience_report.get("confidence", "low")
+    result_payload["experiment_confidence_reason"] = resilience_report.get("confidence_reason", "")
+    # Raw observations (all phases) for evidence-based report reproduction
+    result_payload["raw_observations"] = evaluator.all_raw_observations()
     # Lifecycle timing: experiment-level durations, NOT executor command time
     result_payload["lifecycle_timing"] = {
         **lifecycle,
