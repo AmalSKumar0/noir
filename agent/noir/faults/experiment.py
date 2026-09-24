@@ -105,6 +105,10 @@ class SteadyStateEvaluator:
     1. Pre-fault steady state baseline measurement
     2. In-fault active synthetic probing
     3. Post-fault recovery time objective (RTO) verification
+
+    Lifecycle timestamps are tracked explicitly so the orchestrator can
+    build accurate timing reports that reflect the *experiment* duration,
+    not the executor's internal command-run time.
     """
 
     def __init__(self, probe_url: Optional[str] = None, expected_status: int = 200):
@@ -115,9 +119,23 @@ class SteadyStateEvaluator:
         self._stop_probing = threading.Event()
         self._probe_thread: Optional[threading.Thread] = None
 
+        # Explicit lifecycle timestamps — set by each phase method
+        self._experiment_start: Optional[float] = None   # set in measure_baseline
+        self._baseline_start: Optional[float] = None
+        self._baseline_end: Optional[float] = None
+        self._fault_window_start: Optional[float] = None  # set in start_in_fault_probing
+        self._fault_window_end: Optional[float] = None    # set in stop_in_fault_probing
+        self._recovery_start: Optional[float] = None      # set in measure_recovery
+        self._recovery_end: Optional[float] = None
+
     def measure_baseline(self, count: int = 3, interval: float = 0.5) -> Dict[str, Any]:
         """Probes the target application before fault injection to establish normal operation."""
+        self._baseline_start = time.time()
+        if self._experiment_start is None:
+            self._experiment_start = self._baseline_start
+
         if not self.probe_url:
+            self._baseline_end = time.time()
             self.baseline = {
                 "available": False,
                 "reason": "No probe URL configured.",
@@ -129,6 +147,8 @@ class SteadyStateEvaluator:
             res = ChaosProbe.probe(self.probe_url, expected_status=self.expected_status)
             probes.append(res)
             time.sleep(interval)
+
+        self._baseline_end = time.time()
 
         successes = [p for p in probes if p.success]
         success_rate = (len(successes) / len(probes)) * 100 if probes else 0
@@ -154,6 +174,10 @@ class SteadyStateEvaluator:
 
     def start_in_fault_probing(self, interval_sec: float = 1.0):
         """Starts background probing during the fault execution window."""
+        self._fault_window_start = time.time()
+        if self._experiment_start is None:
+            self._experiment_start = self._fault_window_start
+
         if not self.probe_url:
             return
 
@@ -169,8 +193,14 @@ class SteadyStateEvaluator:
         self._probe_thread = threading.Thread(target=_worker, daemon=True)
         self._probe_thread.start()
 
-    def stop_in_fault_probing(self) -> Dict[str, Any]:
-        """Stops in-fault probing and calculates impact metrics."""
+    def stop_in_fault_probing(self, fault_window_end: Optional[float] = None) -> Dict[str, Any]:
+        """Stops in-fault probing and calculates impact metrics.
+
+        Args:
+            fault_window_end: Optional wall-clock time (from time.time()) marking when
+                              the fault actually ended. If None, uses now().
+        """
+        self._fault_window_end = fault_window_end if fault_window_end is not None else time.time()
         self._stop_probing.set()
         if self._probe_thread and self._probe_thread.is_alive():
             self._probe_thread.join(timeout=2.0)
@@ -241,6 +271,24 @@ class SteadyStateEvaluator:
             "probe_events": events,
         }
 
+    def lifecycle_timestamps(self) -> Dict[str, Any]:
+        """Returns a snapshot of all phase timestamps for use in the final timing report."""
+        now = time.time()
+
+        def _dur(start: Optional[float], end: Optional[float]) -> Optional[float]:
+            if start is None:
+                return None
+            return round((end if end is not None else now) - start, 2)
+
+        return {
+            "experiment_start": round(self._experiment_start, 3) if self._experiment_start else None,
+            "baseline_duration_seconds": _dur(self._baseline_start, self._baseline_end),
+            "fault_window_start": round(self._fault_window_start, 3) if self._fault_window_start else None,
+            "fault_window_duration_seconds": _dur(self._fault_window_start, self._fault_window_end),
+            "recovery_duration_seconds": _dur(self._recovery_start, self._recovery_end),
+            "total_experiment_duration_seconds": _dur(self._experiment_start, self._recovery_end or self._fault_window_end),
+        }
+
     def measure_recovery(self, max_wait_sec: float = 15.0, poll_interval: float = 0.5, rto_target_sec: float = 5.0) -> Dict[str, Any]:
         """Measures recovery duration and validates whether the configured RTO target was achieved."""
         if not self.probe_url:
@@ -254,7 +302,8 @@ class SteadyStateEvaluator:
                 "post_recovery_latency_ms": None,
             }
 
-        t_start = time.time()
+        self._recovery_start = time.time()
+        t_start = self._recovery_start
         deadline = t_start + max_wait_sec
         recovered = False
         post_lat = None
@@ -267,7 +316,8 @@ class SteadyStateEvaluator:
                 break
             time.sleep(poll_interval)
 
-        rec_time = round(time.time() - t_start, 2)
+        self._recovery_end = time.time()
+        rec_time = round(self._recovery_end - t_start, 2)
         rto_met = recovered and (rec_time <= rto_target_sec)
 
         return {

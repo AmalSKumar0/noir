@@ -257,8 +257,11 @@ def inject_fault(
     console.print(f"\n[bold yellow]⚡ Injecting fault: {executor.display_name}...[/bold yellow]")
     with console.status(f"[bold cyan]Applying fault on '{container.name}'...[/bold cyan]"):
         result: FaultResult = executor.execute(docker_mgr, container.name, validated_params)
+    fault_window_end = time.time()
 
-    in_fault_metrics = evaluator.stop_in_fault_probing()
+    in_fault_metrics = evaluator.stop_in_fault_probing(fault_window_end=fault_window_end)
+    lifecycle = evaluator.lifecycle_timestamps()
+    fault_window_dur = lifecycle.get("fault_window_duration_seconds") or result.duration_seconds
 
     # Recovery Verification (RTO)
     rto_target_sec = float(validated_params.get("rto_target_seconds", 5.0))
@@ -283,6 +286,7 @@ def inject_fault(
         f"[bold white]{resilience_report['score']}/100[/bold white] "
         f"([dim]{resilience_report['classification']}[/dim])\n\n"
         f"[bold]Steady-State Probe:[/bold] {resolved_probe_url or 'None'}\n"
+        f"[bold]Fault Window Duration:[/bold] {fault_window_dur}s (configured: {validated_params.get('duration', '?')}s)\n"
         f"[bold]In-Fault Availability:[/bold] {in_fault_metrics.get('availability_percent', 100)}%\n"
         f"[bold]In-Fault Latency P95:[/bold] {in_fault_metrics.get('p95_latency_ms', 0)}ms\n"
         f"[bold]Recovery Time (RTO):[/bold] {recovery_metrics.get('rto_seconds', 0)}s\n"
@@ -308,6 +312,11 @@ def inject_fault(
             payload["experiment_metrics"] = in_fault_metrics
             payload["recovery_metrics"] = recovery_metrics
             payload["recommendations"] = resilience_report["recommendations"]
+            payload["lifecycle_timing"] = {
+                **lifecycle,
+                "configured_fault_duration_seconds": int(validated_params.get("duration", 0)),
+                "actual_fault_window_seconds": fault_window_dur,
+            }
 
             client.send_request_to_backend(
                 f"/projects/{project_id}/faults/{fault_record_id}/report/",
@@ -479,6 +488,7 @@ def _execute_single_fault(
     evaluator.start_in_fault_probing(interval_sec=1.0)
 
     emit_log(f"Executing {executor.display_name} on target '{target}'...")
+    fault_exec_t0 = time.time()
     try:
         result: FaultResult = executor.execute(docker_mgr, target, params, context=context)
     except Exception as e:
@@ -488,9 +498,11 @@ def _execute_single_fault(
             recovered=False,
             error=str(e),
         )
+    fault_window_end = time.time()
+    actual_fault_duration = round(fault_window_end - fault_exec_t0, 2)
 
-    # Stop in-fault probing and gather impact metrics
-    in_fault_metrics = evaluator.stop_in_fault_probing()
+    # Stop in-fault probing and gather impact metrics — pass fault_window_end for precise timing
+    in_fault_metrics = evaluator.stop_in_fault_probing(fault_window_end=fault_window_end)
     if in_fault_metrics.get("probes_count", 0) > 0:
         emit_log(
             f"[CHAOS IMPACT] In-fault availability: {in_fault_metrics['availability_percent']}% | "
@@ -532,15 +544,31 @@ def _execute_single_fault(
         recovery_metrics=recovery_metrics,
         rollback_success=result.recovered,
     )
+
+    # --- Accurate lifecycle timing from evaluator (not executor's command time) ---
+    lifecycle = evaluator.lifecycle_timestamps()
+    fault_window_dur = lifecycle.get("fault_window_duration_seconds") or actual_fault_duration
+    total_exp_dur = lifecycle.get("total_experiment_duration_seconds") or fault_window_dur
+    recovery_dur = lifecycle.get("recovery_duration_seconds")
+    baseline_dur = lifecycle.get("baseline_duration_seconds")
+
     if not is_cancelled:
-        emit_log(f"[RESILIENCE AUDIT] Score: {resilience_report['score']}/100 | Grade: {resilience_report['grade']} ({resilience_report['classification']})")
+        emit_log(
+            f"[RESILIENCE AUDIT] Score: {resilience_report['score']}/100 | Grade: {resilience_report['grade']} ({resilience_report['classification']})"
+        )
 
     # 4. Report final result
     if is_cancelled:
         status_str = "cancelled"
     elif result.success:
         status_str = "completed"
-        emit_log(f"Fault #{fault_id} completed successfully in {result.duration_seconds}s.", level="INFO")
+        emit_log(
+            f"Fault #{fault_id} completed. "
+            f"Fault window: {fault_window_dur}s | "
+            + (f"Recovery: {recovery_dur}s | " if recovery_dur is not None else "")
+            + f"Total experiment: {total_exp_dur}s.",
+            level="INFO",
+        )
     else:
         status_str = "failed"
         emit_log(f"Fault #{fault_id} failed: {result.error}", level="ERROR")
@@ -554,6 +582,12 @@ def _execute_single_fault(
     result_payload["experiment_metrics"] = in_fault_metrics
     result_payload["recovery_metrics"] = recovery_metrics
     result_payload["recommendations"] = resilience_report["recommendations"]
+    # Lifecycle timing: experiment-level durations, NOT executor command time
+    result_payload["lifecycle_timing"] = {
+        **lifecycle,
+        "configured_fault_duration_seconds": int(params.get("duration", 0)),
+        "actual_fault_window_seconds": fault_window_dur,
+    }
 
     try:
         client.send_request_to_backend(
@@ -571,7 +605,11 @@ def _execute_single_fault(
     batcher.close()
 
     if status_str == "completed":
-        console.print(f"  [bold green]✔ Fault #{fault_id} Completed ({result.duration_seconds}s) - Resilience: {resilience_report['grade']} ({resilience_report['score']}/100)[/bold green]")
+        console.print(
+            f"  [bold green]✔ Fault #{fault_id} Completed — "
+            f"Fault window: {fault_window_dur}s (configured: {params.get('duration', '?')}s) — "
+            f"Resilience: {resilience_report['grade']} ({resilience_report['score']}/100)[/bold green]"
+        )
     elif status_str == "cancelled":
         console.print(f"  [bold yellow]■ Fault #{fault_id} Cancelled & Cleaned Up[/bold yellow]")
     else:
