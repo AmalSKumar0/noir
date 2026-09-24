@@ -137,7 +137,38 @@ export default function ChaosCollectiveReportPage({ isCompanyView = false }: Cha
         if (!resp.ok) {
           throw new Error(`Failed to load collective chaos report (HTTP ${resp.status})`);
         }
-        const json = await resp.json();
+        const raw = await resp.json();
+        // Normalize to prevent render crashes on missing/null fields
+        const json: CollectiveReportData = {
+          project: {
+            id: 0,
+            title: '',
+            connection_code: '',
+            architecture: undefined,
+            ...(raw.project || {}),
+          },
+          summary: {
+            total_experiments: 0,
+            completed: 0,
+            failed: 0,
+            cancelled: 0,
+            hypotheses_validated: 0,
+            hypotheses_partially_validated: 0,
+            hypotheses_violated: 0,
+            hypotheses_inconclusive: 0,
+            avg_recovery_seconds: 0,
+            longest_recovery_seconds: 0,
+            rto_violations_count: 0,
+            overall_resilience_score: 0,
+            overall_resilience_grade: 'N/A',
+            ...(raw.summary || {}),
+          },
+          overview_matrix: Array.isArray(raw.overview_matrix) ? raw.overview_matrix : [],
+          outliers: Array.isArray(raw.outliers) ? raw.outliers : [],
+          cross_experiment_patterns: Array.isArray(raw.cross_experiment_patterns) ? raw.cross_experiment_patterns : [],
+          consolidated_recommendations: Array.isArray(raw.consolidated_recommendations) ? raw.consolidated_recommendations : [],
+          follow_up_roadmap: Array.isArray(raw.follow_up_roadmap) ? raw.follow_up_roadmap : [],
+        };
         if (isMounted) {
           setData(json);
         }

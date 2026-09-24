@@ -179,7 +179,102 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: Cha
         if (!resp.ok) {
           throw new Error(`Failed to load experiment report (HTTP ${resp.status})`);
         }
-        const data = await resp.json();
+        const raw = await resp.json();
+        // Normalize: guarantee all nested objects exist so renders never crash on undefined access
+        const data: ExperimentReportData = {
+          ...raw,
+          metadata: {
+            id: 0,
+            project_id: 0,
+            project_title: '',
+            project_code: '',
+            fault_type: '',
+            target: '',
+            status: '',
+            duration_seconds: 0,
+            requested_at: null,
+            started_at: null,
+            completed_at: null,
+            requested_by: null,
+            parameters: {},
+            ...(raw.metadata || {}),
+          },
+          score_summary: {
+            score: 0,
+            grade: 'N/A',
+            classification: 'Unscored',
+            why: [],
+            ...(raw.score_summary || {}),
+          },
+          executive_summary: raw.executive_summary || '',
+          hypothesis: {
+            hypothesis: '',
+            expected_behavior: '',
+            verdict: 'INCONCLUSIVE',
+            confidence: 'Low',
+            reason: '',
+            criteria_evaluated: [],
+            ...(raw.hypothesis || {}),
+          },
+          timeline: Array.isArray(raw.timeline) ? raw.timeline : [],
+          baseline: {
+            available: false,
+            probe_url: '',
+            http_method: 'GET',
+            expected_status: 200,
+            actual_status: null,
+            probes_count: 0,
+            availability_percent: 0,
+            p50_latency_ms: null,
+            p95_latency_ms: null,
+            p99_latency_ms: null,
+            mean_latency_ms: null,
+            min_latency_ms: null,
+            max_latency_ms: null,
+            connection_errors_count: 0,
+            http_5xx_count: 0,
+            ...(raw.baseline || {}),
+          },
+          experiment_metrics: {
+            probes_count: 0,
+            successful_probes: 0,
+            failed_probes: 0,
+            availability_percent: 0,
+            p50_latency_ms: null,
+            p95_latency_ms: null,
+            p99_latency_ms: null,
+            mean_latency_ms: null,
+            min_latency_ms: null,
+            max_latency_ms: null,
+            latency_multiplier: 1,
+            connection_errors_count: 0,
+            http_5xx_count: 0,
+            sample_errors: [],
+            ...(raw.experiment_metrics || {}),
+          },
+          recovery: {
+            recovery_time_seconds: 0,
+            rto_target_seconds: 60,
+            rto_target_met: false,
+            recovered: false,
+            timed_out: false,
+            post_recovery_latency_ms: null,
+            metrics_returned_to_baseline: false,
+            ...(raw.recovery || {}),
+          },
+          comparison_table: {
+            availability: { baseline: 'N/A', during_fault: 'N/A', delta: 'N/A', percent_change: null, status: 'Unknown' },
+            p50_latency: { baseline: 'N/A', during_fault: 'N/A', delta: 'N/A', percent_change: null, status: 'Unknown' },
+            p95_latency: { baseline: 'N/A', during_fault: 'N/A', delta: 'N/A', percent_change: null, status: 'Unknown' },
+            http_5xx: { baseline: 'N/A', during_fault: 'N/A', delta: 'N/A', percent_change: null, status: 'Unknown' },
+            connection_errors: { baseline: 'N/A', during_fault: 'N/A', delta: 'N/A', percent_change: null, status: 'Unknown' },
+            ...(raw.comparison_table || {}),
+          },
+          findings: Array.isArray(raw.findings) ? raw.findings : [],
+          anomalies: Array.isArray(raw.anomalies) ? raw.anomalies : [],
+          root_causes: Array.isArray(raw.root_causes) ? raw.root_causes : [],
+          recommendations: Array.isArray(raw.recommendations) ? raw.recommendations : [],
+        };
         if (isMounted) {
           setReport(data);
         }
@@ -267,7 +362,7 @@ ${report.findings.map(f => `### [${f.severity.toUpperCase()}] ${f.title} (${f.id
 - **Description:** ${f.description}
 - **Evidence:** ${f.evidence}
 - **Impact:** ${f.impact}
-- **Affected Components:** ${f.affected_components.join(', ')}
+- **Affected Components:** ${(f.affected_components || []).join(', ')}
 `).join('\n')}
 
 ---
@@ -837,7 +932,7 @@ ${rec.next_experiment ? `- **Next Validation Experiment:**
                           {f.severity} • {f.id}
                         </span>
                         <span className="text-[11px] text-muted-foreground font-mono">
-                          {f.affected_components.join(', ')}
+                          {(f.affected_components || []).join(', ')}
                         </span>
                       </div>
 

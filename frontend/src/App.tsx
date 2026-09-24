@@ -19,6 +19,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import ProjectAnalyticsPage from './pages/ProjectAnalyticsPage';
 import ChaosReportPage from './pages/ChaosReportPage';
 import ChaosExperimentReportPage from './pages/ChaosExperimentReportPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import ChaosCollectiveReportPage from './pages/ChaosCollectiveReportPage';
 import OrganizationProfile from './pages/OrganizationProfile';
 import UserProfile from './pages/UserProfile';
@@ -204,7 +205,7 @@ function AnimatedRoutes() {
                 exit={{ opacity: 0 }}
                 transition={pageTransition}
               >
-                <ChaosExperimentReportPage isCompanyView />
+                <ErrorBoundary><ChaosExperimentReportPage isCompanyView /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 
@@ -219,7 +220,7 @@ function AnimatedRoutes() {
                 exit={{ opacity: 0 }}
                 transition={pageTransition}
               >
-                <ChaosCollectiveReportPage isCompanyView />
+                <ErrorBoundary><ChaosCollectiveReportPage isCompanyView /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 
@@ -472,7 +473,7 @@ function AnimatedRoutes() {
                 exit={{ opacity: 0 }}
                 transition={pageTransition}
               >
-                <ChaosExperimentReportPage />
+                <ErrorBoundary><ChaosExperimentReportPage /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 
@@ -487,7 +488,7 @@ function AnimatedRoutes() {
                 exit={{ opacity: 0 }}
                 transition={pageTransition}
               >
-                <ChaosCollectiveReportPage />
+                <ErrorBoundary><ChaosCollectiveReportPage /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 

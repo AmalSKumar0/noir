@@ -814,8 +814,8 @@ class CollectiveReportAggregator:
             if rec_sec is not None:
                 recovery_times.append(float(rec_sec))
 
-            rto_target = rec_m.get("rto_target_seconds", 5.0)
-            if rec_sec and float(rec_sec) > float(rto_target):
+            rto_target = float(rec_m.get("rto_target_seconds") or 5.0)
+            if rec_sec and float(rec_sec) > rto_target:
                 rto_violations += 1
                 pattern_bucket["rto_exceeded"].append(exp_id)
 
@@ -824,12 +824,14 @@ class CollectiveReportAggregator:
             if sc is not None:
                 scores.append(float(sc))
 
-            # Metrics
+            # Metrics — use `or` fallbacks because stored values may be explicitly None,
+            # which defeats .get(key, default) (default only applies when key is missing, not None).
             exp_m = res.get("experiment_metrics") or {}
-            avail = exp_m.get("availability_percent", 100.0)
-            p95 = exp_m.get("p95_latency_ms", 0.0)
-            conn_errs = exp_m.get("connection_errors_count", 0)
-            http_5xx = exp_m.get("http_5xx_count", 0)
+            avail = float(exp_m.get("availability_percent") or 100.0)
+            p95 = float(exp_m.get("p95_latency_ms") or 0.0)
+            conn_errs = int(exp_m.get("connection_errors_count") or 0)
+            http_5xx = int(exp_m.get("http_5xx_count") or 0)
+            latency_multiplier = float(exp_m.get("latency_multiplier") or 1.0)
 
             # Key Finding summary
             findings = res.get("findings") or (exp.get("structured_report") or {}).get("findings") or []
@@ -857,8 +859,8 @@ class CollectiveReportAggregator:
             elif avail < 80.0:
                 standout_reasons.append(f"Availability dropped to {avail}%")
 
-            if p95 > 500.0 or exp_m.get("latency_multiplier", 1.0) >= 4.0:
-                standout_reasons.append(f"P95 latency surged to {p95}ms ({exp_m.get('latency_multiplier', 1.0)}x)")
+            if p95 > 500.0 or latency_multiplier >= 4.0:
+                standout_reasons.append(f"P95 latency surged to {p95}ms ({latency_multiplier}x)")
                 pattern_bucket["latency_surge"].append(exp_id)
             if rec_sec and float(rec_sec) > 8.0:
                 standout_reasons.append(f"Lengthy recovery time of {rec_sec:.1f}s")
