@@ -82,19 +82,45 @@ export default function FaultReportModal({
     const now = new Date().toLocaleString();
 
     if (mode === 'single' && singleRecord) {
+      const res = singleRecord.result?.resilience || {};
+      const score = singleRecord.resilience_score ?? res.score;
+      const grade = singleRecord.resilience_grade ?? res.grade;
+      const classification = singleRecord.classification ?? res.classification;
+      const recs: string[] = singleRecord.recommendations ?? res.recommendations ?? [];
+      const baseline = singleRecord.result?.steady_state_baseline || res.steady_state_baseline;
+      const expMetrics = singleRecord.result?.experiment_metrics || res.experiment_metrics;
+      const recMetrics = singleRecord.result?.recovery_metrics || res.recovery_metrics;
+
       md = `# Noir Chaos Engineering Experiment Report
 **Project:** ${projectTitle} (${projectCode})  
 **Report Generated:** ${now}  
 **Experiment ID:** #${singleRecord.id}  
 **Status:** ${singleRecord.status.toUpperCase()}  
-
+${score !== undefined && score !== null ? `**Resilience Score:** ${Math.round(score)}/100 (Grade ${grade}) — ${classification || 'Evaluated'}\n` : ''}
 ## Specifications
 - **Strategy:** ${singleRecord.fault_type}
 - **Target Container:** ${singleRecord.target}
 - **Hold Duration:** ${singleRecord.duration_seconds ?? singleRecord.result?.duration_seconds ?? 0}s
 - **Rollback Recovered:** ${singleRecord.result?.recovered !== false ? 'Yes' : 'No'}
 - **Requested By:** ${singleRecord.requested_by?.username || 'User'} (${singleRecord.requested_at})
-
+${baseline ? `
+## Steady-State Baseline
+- **Status:** ${baseline.status ? 'Healthy' : 'Unhealthy'} (HTTP ${baseline.status_code || 200})
+- **Baseline Mean Latency:** ${baseline.mean_latency_ms ? `${baseline.mean_latency_ms.toFixed(1)}ms` : 'N/A'}
+- **Samples:** ${baseline.sample_count || 0} probes
+` : ''}${expMetrics ? `
+## In-Fault Synthetic Impact
+- **Availability:** ${expMetrics.availability_pct !== undefined ? `${expMetrics.availability_pct.toFixed(1)}%` : 'N/A'} (${expMetrics.success_count || 0}/${expMetrics.probe_count || 0} probes succeeded)
+- **P50 Latency:** ${expMetrics.p50_latency_ms ? `${expMetrics.p50_latency_ms.toFixed(1)}ms` : 'N/A'} | **P95 Latency:** ${expMetrics.p95_latency_ms ? `${expMetrics.p95_latency_ms.toFixed(1)}ms` : 'N/A'}
+- **Degradation Factor:** ${expMetrics.latency_degradation_factor ? `${expMetrics.latency_degradation_factor.toFixed(2)}x` : 'N/A'}
+` : ''}${recMetrics ? `
+## Recovery & Rollback
+- **Recovery Time Objective (RTO):** ${recMetrics.rto_seconds !== undefined ? `${recMetrics.rto_seconds.toFixed(2)}s` : 'N/A'}
+- **Post-Recovery Latency:** ${recMetrics.post_recovery_latency_ms ? `${recMetrics.post_recovery_latency_ms.toFixed(1)}ms` : 'N/A'}
+` : ''}${recs && recs.length > 0 ? `
+## Architectural Recommendations
+${recs.map((r: string) => `- ${r}`).join('\n')}
+` : ''}
 ## Verdict & Message
 ${singleRecord.result?.message || singleRecord.error_message || 'N/A'}
 
@@ -300,6 +326,123 @@ ${allRecords
                 </div>
               </div>
 
+              {/* RESILIENCE AUDIT ASSESSMENT & EXPERIMENT SCORECARD */}
+              {(() => {
+                const sc = singleRecord.resilience_score ?? singleRecord.result?.resilience?.score ?? singleRecord.result?.resilience_score;
+                const gr = singleRecord.resilience_grade ?? singleRecord.result?.resilience?.grade ?? singleRecord.result?.resilience_grade;
+                const cls = singleRecord.classification ?? singleRecord.result?.resilience?.classification ?? singleRecord.result?.classification;
+                const base = singleRecord.result?.steady_state_baseline ?? singleRecord.result?.resilience?.steady_state_baseline;
+                const expM = singleRecord.result?.experiment_metrics ?? singleRecord.result?.resilience?.experiment_metrics;
+                const recM = singleRecord.result?.recovery_metrics ?? singleRecord.result?.resilience?.recovery_metrics;
+                const recs: string[] = singleRecord.recommendations ?? singleRecord.result?.recommendations ?? singleRecord.result?.resilience?.recommendations ?? [];
+
+                if (sc === undefined || sc === null || !gr) return null;
+
+                return (
+                  <div className="space-y-3 print-avoid-break">
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-700/80 space-y-3 font-mono print-border">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-white/10 print-border">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg font-black border ${
+                            gr === 'A' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                            gr === 'B' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                            gr === 'C' ? 'bg-orange-500/20 text-orange-300 border-orange-500/40' :
+                            'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                          }`}>
+                            {gr}
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400">Resilience Engineering Score</div>
+                            <div className="text-lg font-black text-white flex items-center gap-2">
+                              <span>{Math.round(sc)} / 100</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                gr === 'A' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                                gr === 'B' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                                gr === 'C' ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                                'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                              }`}>
+                                Grade {gr}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        {cls && (
+                          <div className="text-right">
+                            <div className="text-[10px] uppercase text-slate-400">Classification</div>
+                            <div className="text-xs font-bold text-violet-300 uppercase tracking-wide">
+                              {cls}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3-STAGE LIFECYCLE */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                        <div className="p-3 rounded-lg bg-black/40 border border-white/5 space-y-1 print-border">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Phase 1: Baseline</span>
+                            <span className={`w-2 h-2 rounded-full ${base?.status ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                          </div>
+                          <div className="text-sm font-bold text-white">
+                            {base?.mean_latency_ms !== undefined ? `${base.mean_latency_ms.toFixed(1)} ms` : 'Active'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            HTTP {base?.status_code || 200} | {base?.sample_count || 1} probes
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-lg bg-black/40 border border-white/5 space-y-1 print-border">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Phase 2: In-Fault Probing</span>
+                            <span className={`w-2 h-2 rounded-full ${
+                              (expM?.availability_pct ?? 100) >= 90 ? 'bg-emerald-400' :
+                              (expM?.availability_pct ?? 100) >= 50 ? 'bg-amber-400' : 'bg-rose-400'
+                            }`} />
+                          </div>
+                          <div className="text-sm font-bold text-white">
+                            {expM?.availability_pct !== undefined ? `${expM.availability_pct.toFixed(0)}% Availability` : 'Probed'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            P95: {expM?.p95_latency_ms ? `${expM.p95_latency_ms.toFixed(1)}ms` : '-'} | {expM?.latency_degradation_factor ? `${expM.latency_degradation_factor.toFixed(1)}x lag` : 'Normal'}
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-lg bg-black/40 border border-white/5 space-y-1 print-border">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Phase 3: Rollback & RTO</span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          </div>
+                          <div className="text-sm font-bold text-emerald-400">
+                            {recM?.rto_seconds !== undefined ? `${recM.rto_seconds.toFixed(2)}s RTO` : 'Clean Rollback'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Steady-State Restored
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RECOMMENDATIONS */}
+                    {recs && recs.length > 0 && (
+                      <div className="space-y-1.5 print-avoid-break">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-1 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
+                          Architectural & Resilience Recommendations
+                        </h3>
+                        <div className="p-3 rounded-xl bg-violet-950/20 border border-violet-500/20 text-[11px] font-mono space-y-1.5 text-slate-300">
+                          {recs.map((rec, idx) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <span className="text-violet-400 font-bold shrink-0">→</span>
+                              <span className="leading-relaxed">{rec}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* EXPERIMENT SPECIFICATIONS */}
               <div className="space-y-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-1">
@@ -466,6 +609,7 @@ ${allRecords
                         <th className="p-2">#ID</th>
                         <th className="p-2">Strategy</th>
                         <th className="p-2">Target</th>
+                        <th className="p-2">Resilience</th>
                         <th className="p-2">Parameters</th>
                         <th className="p-2">Duration</th>
                         <th className="p-2">Rollback</th>
@@ -479,6 +623,25 @@ ${allRecords
                           <td className="p-2 text-slate-400 font-bold">#{r.id}</td>
                           <td className="p-2 font-bold text-violet-300">{r.fault_type}</td>
                           <td className="p-2 text-cyan-300">{r.target}</td>
+                          <td className="p-2 whitespace-nowrap">
+                            {(() => {
+                              const sc = r.resilience_score ?? r.result?.resilience?.score ?? r.result?.resilience_score;
+                              const gr = r.resilience_grade ?? r.result?.resilience?.grade ?? r.result?.resilience_grade;
+                              if (gr && sc !== undefined && sc !== null) {
+                                return (
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                    gr === 'A' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                    gr === 'B' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                    gr === 'C' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
+                                    'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  }`}>
+                                    Grade {gr} ({Math.round(sc)}%)
+                                  </span>
+                                );
+                              }
+                              return <span className="text-slate-600">—</span>;
+                            })()}
+                          </td>
                           <td className="p-2 text-slate-400 max-w-[150px] truncate" title={JSON.stringify(r.parameters)}>
                             {Object.entries(r.parameters || {})
                               .map(([k, v]) => `${k}=${v}`)

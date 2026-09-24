@@ -1,3 +1,5 @@
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -375,12 +377,17 @@ class StreamProjectLogsAPIView(APIView):
             if event == "daemon_stop":
                 cache.delete(f"core_daemon_active_{code_upper}")
                 cache.delete(f"core_daemon_active_{code_lower}")
+                cache.delete(f"core_daemon_last_seen_{code_upper}")
+                cache.delete(f"core_daemon_last_seen_{code_lower}")
+                broadcast_fault_event(project, {
+                    "type": "daemon.status",
+                    "is_daemon_active": False,
+                })
         else:
             cache.set(cache_key_upper, True, timeout=120)
             cache.set(cache_key_lower, True, timeout=120)
             if event == "daemon_start":
-                cache.set(f"core_daemon_active_{code_upper}", True, timeout=15)
-                cache.set(f"core_daemon_active_{code_lower}", True, timeout=15)
+                mark_daemon_active(project, timeout=60)
 
         channel_layer = get_channel_layer()
         if channel_layer:
@@ -400,6 +407,48 @@ class StreamProjectLogsAPIView(APIView):
         return Response({"status": "broadcasted", "project_code": project.connection_code}, status=status.HTTP_200_OK)
 
 
+from datetime import datetime
+from django.utils import timezone
+from django.conf import settings
+from django.db.models import Count
+from .models import FaultInjection, FaultInjectionLog
+from .serializers import (
+    FaultInjectionSerializer,
+    FaultInjectionListSerializer,
+    FaultInjectionCreateSerializer,
+    FaultInjectionReportSerializer,
+    FaultInjectionLogSerializer,
+)
+
+
+def mark_daemon_active(project, timeout=60):
+    """Refreshes the daemon active heartbeat (60s TTL) and last_seen timestamp in cache."""
+    if not project or not getattr(project, "connection_code", None):
+        return
+    code_upper = project.connection_code.upper()
+    code_lower = project.connection_code.lower()
+    was_active = bool(cache.get(f"core_daemon_active_{code_upper}") or cache.get(f"core_daemon_active_{code_lower}"))
+    cache.set(f"core_daemon_active_{code_upper}", True, timeout=timeout)
+    cache.set(f"core_daemon_active_{code_lower}", True, timeout=timeout)
+    cache.set(f"core_daemon_last_seen_{code_upper}", timezone.now().isoformat(), timeout=3600)
+    if not was_active:
+        broadcast_fault_event(project, {
+            "type": "daemon.status",
+            "is_daemon_active": True,
+        })
+
+
+def is_daemon_active_for_project(project) -> bool:
+    """
+    Determines if 'noir fault listen' daemon is active based on the 60s active cache key.
+    """
+    if not project or not getattr(project, "connection_code", None):
+        return False
+    code_upper = project.connection_code.upper()
+    code_lower = project.connection_code.lower()
+    return bool(cache.get(f"core_daemon_active_{code_upper}") or cache.get(f"core_daemon_active_{code_lower}"))
+
+
 class ProjectStreamStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -411,27 +460,16 @@ class ProjectStreamStatusAPIView(APIView):
         code_upper = project.connection_code.upper()
         code_lower = project.connection_code.lower()
         is_streaming = bool(cache.get(f"core_active_stream_{code_upper}") or cache.get(f"core_active_stream_{code_lower}"))
-        is_daemon_active = bool(cache.get(f"core_daemon_active_{code_upper}") or cache.get(f"core_daemon_active_{code_lower}"))
+        is_daemon = is_daemon_active_for_project(project)
         last_seen = cache.get(f"core_daemon_last_seen_{code_upper}")
 
         return Response({
-            "is_active": is_streaming or is_daemon_active,
+            "is_active": is_streaming or is_daemon,
             "is_streaming": is_streaming,
-            "is_daemon_active": is_daemon_active,
+            "is_daemon_active": is_daemon,
             "last_seen": last_seen,
             "project_code": project.connection_code
         }, status=status.HTTP_200_OK)
-
-
-from django.utils import timezone
-from django.conf import settings
-from .models import FaultInjection, FaultInjectionLog
-from .serializers import (
-    FaultInjectionSerializer,
-    FaultInjectionCreateSerializer,
-    FaultInjectionReportSerializer,
-    FaultInjectionLogSerializer,
-)
 
 
 def broadcast_fault_event(project, event_dict):
@@ -445,9 +483,14 @@ def broadcast_fault_event(project, event_dict):
     code = getattr(project, "connection_code", None)
     if not code:
         return
+    try:
+        clean_event = json.loads(json.dumps(event_dict, cls=DjangoJSONEncoder))
+    except Exception:
+        clean_event = event_dict
+
     payload = {
         "type": "log_message",
-        "data": event_dict,
+        "data": clean_event,
     }
     try:
         async_to_sync(channel_layer.group_send)(f"project_{code.upper()}", payload)
@@ -465,14 +508,19 @@ class ProjectFaultListCreateAPIView(APIView):
             return err_resp
 
         status_filter = request.query_params.get("status")
-        queryset = project.fault_injections.all().order_by("-requested_at")
+        queryset = (
+            project.fault_injections.all()
+            .select_related("project", "requested_by")
+            .annotate(annotated_logs_count=Count("logs"))
+            .order_by("-requested_at")
+        )
         if status_filter:
             # Map legacy 'pending' query to 'queued'
             if status_filter.lower() == "pending":
                 status_filter = FaultInjection.Status.QUEUED
             queryset = queryset.filter(status=status_filter)
 
-        serializer = FaultInjectionSerializer(queryset[:150], many=True)
+        serializer = FaultInjectionListSerializer(queryset[:150], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, identifier):
@@ -481,20 +529,14 @@ class ProjectFaultListCreateAPIView(APIView):
             return err_resp
 
         # Verify that 'noir fault listen' daemon is actively running
-        code_upper = project.connection_code.upper()
-        code_lower = project.connection_code.lower()
-        is_daemon_active = bool(
-            cache.get(f"core_daemon_active_{code_upper}") or 
-            cache.get(f"core_daemon_active_{code_lower}")
-        )
-
+        is_daemon = is_daemon_active_for_project(project)
         allow_offline = (
             request.data.get("allow_offline", False) or 
             request.query_params.get("allow_offline", False) or
             getattr(settings, "ALLOW_OFFLINE_QUEUING", False)
         )
 
-        if not is_daemon_active and not allow_offline:
+        if not is_daemon and not allow_offline:
             return Response(
                 {
                     "detail": "Cannot queue fault: The Noir daemon ('noir fault listen') is not running. Please start the listener in your project workspace using 'noir fault listen' first.",
@@ -520,15 +562,16 @@ class ProjectFaultListCreateAPIView(APIView):
             message=f"Fault injection #{fault.id} ({fault.fault_type}) queued for target '{fault.target}' (position #{queue_pos}).",
         )
 
-        # Broadcast real-time status event
+        # Broadcast real-time status event with lightweight list serializer
+        fault_data = FaultInjectionListSerializer(fault).data
         broadcast_fault_event(project, {
             "type": "injection.status",
             "injection_id": fault.id,
             "status": FaultInjection.Status.QUEUED,
-            "fault": FaultInjectionSerializer(fault).data,
+            "fault": fault_data,
         })
 
-        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_201_CREATED)
+        return Response(fault_data, status=status.HTTP_201_CREATED)
 
 
 class ProjectFaultPendingAPIView(APIView):
@@ -539,12 +582,8 @@ class ProjectFaultPendingAPIView(APIView):
         if err_resp:
             return err_resp
 
-        # Mark daemon active on every poll (timeout=12s covers standard 2s polling interval)
-        code_upper = project.connection_code.upper()
-        code_lower = project.connection_code.lower()
-        cache.set(f"core_daemon_active_{code_upper}", True, timeout=12)
-        cache.set(f"core_daemon_active_{code_lower}", True, timeout=12)
-        cache.set(f"core_daemon_last_seen_{code_upper}", timezone.now().isoformat(), timeout=3600)
+        # Mark daemon active on every poll (60s TTL covers standard 2s polling interval comfortably)
+        mark_daemon_active(project, timeout=60)
 
         # Check concurrency limit policy
         try:
@@ -570,6 +609,7 @@ class ProjectFaultPendingAPIView(APIView):
         # Retrieve next FIFO queued injection
         pending = (
             project.fault_injections.filter(status__in=[FaultInjection.Status.QUEUED, "pending"])
+            .select_related("project", "requested_by")
             .order_by("requested_at")
             .first()
         )
@@ -584,7 +624,7 @@ class ProjectFaultPendingAPIView(APIView):
         return Response(
             {
                 "pending": True,
-                "fault": FaultInjectionSerializer(pending).data,
+                "fault": FaultInjectionListSerializer(pending).data,
                 "running_count": running_count,
                 "max_concurrency": max_concurrency,
             },
@@ -626,13 +666,14 @@ class ProjectFaultCancelAPIView(APIView):
                 message="Fault injection was cancelled while queued.",
             )
 
+            fault_data = FaultInjectionListSerializer(fault).data
             broadcast_fault_event(project, {
                 "type": "injection.cancelled",
                 "injection_id": fault.id,
                 "status": FaultInjection.Status.CANCELLED,
-                "fault": FaultInjectionSerializer(fault).data,
+                "fault": fault_data,
             })
-            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+            return Response(fault_data, status=status.HTTP_200_OK)
 
         # 2. Running injection cancellation -> CANCEL_REQUESTED (worker safely terminates Docker workload)
         if fault.status == FaultInjection.Status.RUNNING:
@@ -645,17 +686,18 @@ class ProjectFaultCancelAPIView(APIView):
                 message="Stop requested by user. Signalling execution worker to terminate Docker operations...",
             )
 
+            fault_data = FaultInjectionListSerializer(fault).data
             broadcast_fault_event(project, {
                 "type": "injection.status",
                 "injection_id": fault.id,
                 "status": FaultInjection.Status.CANCEL_REQUESTED,
-                "fault": FaultInjectionSerializer(fault).data,
+                "fault": fault_data,
             })
-            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+            return Response(fault_data, status=status.HTTP_200_OK)
 
         # 3. Idempotent cases
         if fault.status in (FaultInjection.Status.CANCEL_REQUESTED, FaultInjection.Status.CANCELLED):
-            return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+            return Response(FaultInjectionListSerializer(fault).data, status=status.HTTP_200_OK)
 
         # 4. Terminal states cannot be cancelled
         return Response(
@@ -671,6 +713,8 @@ class ProjectFaultClaimAPIView(APIView):
         project, err_resp = get_project_with_permission(identifier, request.user)
         if err_resp:
             return err_resp
+
+        mark_daemon_active(project, timeout=60)
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
         if fault.status not in (FaultInjection.Status.QUEUED, "pending"):
@@ -689,15 +733,16 @@ class ProjectFaultClaimAPIView(APIView):
             message=f"Claimed by Noir execution worker. Execution started on target '{fault.target}'.",
         )
 
+        fault_data = FaultInjectionListSerializer(fault).data
         broadcast_fault_event(project, {
             "type": "injection.status",
             "injection_id": fault.id,
             "status": FaultInjection.Status.RUNNING,
             "started_at": fault.started_at.isoformat(),
-            "fault": FaultInjectionSerializer(fault).data,
+            "fault": fault_data,
         })
 
-        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+        return Response(fault_data, status=status.HTTP_200_OK)
 
 
 class ProjectFaultReportAPIView(APIView):
@@ -707,6 +752,8 @@ class ProjectFaultReportAPIView(APIView):
         project, err_resp = get_project_with_permission(identifier, request.user)
         if err_resp:
             return err_resp
+
+        mark_daemon_active(project, timeout=60)
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
         if fault.status in (FaultInjection.Status.COMPLETED, FaultInjection.Status.CANCELLED, FaultInjection.Status.FAILED):
@@ -745,6 +792,7 @@ class ProjectFaultReportAPIView(APIView):
         else:
             event_type = "injection.status"
 
+        fault_data = FaultInjectionListSerializer(fault).data
         broadcast_fault_event(project, {
             "type": event_type,
             "injection_id": fault.id,
@@ -752,10 +800,46 @@ class ProjectFaultReportAPIView(APIView):
             "result": fault.result,
             "error_message": fault.error_message,
             "completed_at": fault.completed_at.isoformat(),
-            "fault": FaultInjectionSerializer(fault).data,
+            "fault": fault_data,
         })
 
-        return Response(FaultInjectionSerializer(fault).data, status=status.HTTP_200_OK)
+        return Response(fault_data, status=status.HTTP_200_OK)
+
+    def get(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        from .chaos_reporting import generate_experiment_report
+        report = generate_experiment_report(fault)
+        return Response(report, status=status.HTTP_200_OK)
+
+
+class ProjectChaosCollectiveReportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identifier):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        faults = project.fault_injections.all().order_by("-requested_at")
+        experiments_data = FaultInjectionSerializer(faults, many=True).data
+
+        from .chaos_reporting import CollectiveReportAggregator
+        project_data = {
+            "id": project.id,
+            "title": project.title,
+            "connection_code": project.connection_code,
+            "architecture": project.architecture,
+            "owner": {
+                "username": project.owner.username,
+                "email": project.owner.email,
+            } if project.owner else None,
+        }
+        collective = CollectiveReportAggregator.aggregate(project_data, experiments_data)
+        return Response(collective, status=status.HTTP_200_OK)
 
 
 class ProjectFaultLogsAPIView(APIView):
@@ -788,6 +872,8 @@ class ProjectFaultAppendLogAPIView(APIView):
         if err_resp:
             return err_resp
 
+        mark_daemon_active(project, timeout=60)
+
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
         message = (request.data.get("message") or request.data.get("log") or "").strip()
         if not message:
@@ -812,6 +898,68 @@ class ProjectFaultAppendLogAPIView(APIView):
         return Response(FaultInjectionLogSerializer(log_entry).data, status=status.HTTP_201_CREATED)
 
 
+class ProjectFaultLogsBatchAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier, fault_id):
+        project, err_resp = get_project_with_permission(identifier, request.user)
+        if err_resp:
+            return err_resp
+
+        mark_daemon_active(project, timeout=60)
+
+        fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
+        raw_logs = request.data.get("logs") or request.data.get("events") or []
+        if not isinstance(raw_logs, list) or not raw_logs:
+            return Response({"detail": "logs array is required and must not be empty."}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        log_instances = []
+        broadcast_items = []
+
+        for item in raw_logs:
+            if not isinstance(item, dict):
+                continue
+            message = (item.get("message") or item.get("log") or "").strip()
+            if not message:
+                continue
+            level = (item.get("level") or "INFO").strip().upper()
+            ts_str = item.get("timestamp")
+            parsed_ts = now
+            if ts_str:
+                try:
+                    parsed_ts = datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
+                except Exception:
+                    parsed_ts = now
+
+            log_entry = FaultInjectionLog(
+                fault=fault,
+                level=level,
+                message=message,
+                timestamp=parsed_ts,
+            )
+            log_instances.append(log_entry)
+            broadcast_items.append({
+                "injection_id": fault.id,
+                "timestamp": parsed_ts.isoformat(),
+                "level": level,
+                "message": message,
+            })
+
+        if log_instances:
+            FaultInjectionLog.objects.bulk_create(log_instances)
+            broadcast_fault_event(project, {
+                "type": "injection.log_batch",
+                "injection_id": fault.id,
+                "logs": broadcast_items,
+            })
+
+        return Response({
+            "status": "success",
+            "count": len(log_instances),
+        }, status=status.HTTP_201_CREATED)
+
+
 class ProjectFaultStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -819,6 +967,8 @@ class ProjectFaultStatusAPIView(APIView):
         project, err_resp = get_project_with_permission(identifier, request.user)
         if err_resp:
             return err_resp
+
+        mark_daemon_active(project, timeout=60)
 
         fault = get_object_or_404(FaultInjection, pk=fault_id, project=project)
         return Response({

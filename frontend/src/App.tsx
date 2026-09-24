@@ -18,6 +18,8 @@ import UserProjects from './pages/UserProjects';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectAnalyticsPage from './pages/ProjectAnalyticsPage';
 import ChaosReportPage from './pages/ChaosReportPage';
+import ChaosExperimentReportPage from './pages/ChaosExperimentReportPage';
+import ChaosCollectiveReportPage from './pages/ChaosCollectiveReportPage';
 import OrganizationProfile from './pages/OrganizationProfile';
 import UserProfile from './pages/UserProfile';
 import QuickstartPage from './pages/QuickstartPage';
@@ -188,6 +190,36 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <ChaosReportPage isCompanyView />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/projects/:projectId/chaos/reports/:experimentId" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ChaosExperimentReportPage isCompanyView />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/projects/:projectId/chaos/reports" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ChaosCollectiveReportPage isCompanyView />
               </motion.div>
             </ProtectedRoute>
           } 
@@ -426,6 +458,36 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <ChaosReportPage />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/chaos/reports/:experimentId" 
+          element={
+            <ProtectedRoute developerOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ChaosExperimentReportPage />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/chaos/reports" 
+          element={
+            <ProtectedRoute developerOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ChaosCollectiveReportPage />
               </motion.div>
             </ProtectedRoute>
           } 

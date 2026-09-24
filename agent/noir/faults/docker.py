@@ -282,7 +282,10 @@ class DockerManager:
                 return
             container.exec_run("pkill -9 -f stress-ng", privileged=True)
             container.exec_run("pkill -9 -f stress", privileged=True)
+            container.exec_run("pkill -9 -f noir_cpu_burn", privileged=True)
+            container.exec_run("pkill -9 -f noir_mem", privileged=True)
             container.exec_run("pkill -9 -f multiprocessing", privileged=True)
+            container.exec_run("rm -f /dev/shm/noir_mem.tmp /tmp/noir_mem.tmp", privileged=True)
         except Exception:
             pass
 
@@ -454,16 +457,31 @@ class DockerManager:
             if check_stress2 == 0:
                 cmd = f"stress --cpu {workers} --timeout {duration_sec}s"
             else:
-                # Built-in lightweight fallback: spawn python worker processes with timeout
-                cmd = (
-                    f"python3 -c \""
-                    f"import time, multiprocessing as mp; "
-                    f"def burn(): "
-                    f"  t=time.time()+{duration_sec}; "
-                    f"  while time.time()<t: pass; "
-                    f"ps = [mp.Process(target=burn) for _ in range({workers})]; "
-                    f"[p.start() for p in ps]; [p.join() for p in ps]\""
-                )
+                check_py3, _ = self.exec_run(target, "which python3")
+                check_py, _ = self.exec_run(target, "which python")
+                py_bin = "python3" if check_py3 == 0 else ("python" if check_py == 0 else None)
+                if py_bin:
+                    py_script = (
+                        "import time, multiprocessing as mp\n"
+                        "def noir_cpu_burn():\n"
+                        f"    end = time.time() + {duration_sec}\n"
+                        "    while time.time() < end:\n"
+                        "        _ = 99999 * 99999\n"
+                        "if __name__ == '__main__':\n"
+                        f"    procs = [mp.Process(target=noir_cpu_burn) for _ in range({workers})]\n"
+                        "    for p in procs: p.start()\n"
+                        "    for p in procs: p.join()\n"
+                    )
+                    cmd = [py_bin, "-c", py_script]
+                else:
+                    cmd = [
+                        "sh", "-c",
+                        f"end=$(( $(date +%s) + {duration_sec} )); "
+                        f"for i in $(seq 1 {workers}); do "
+                        f"  ( while [ $(date +%s) -lt $end ]; do :; done ) & "
+                        f"done; "
+                        f"wait"
+                    ]
 
         code, out = self.exec_run(target, cmd)
         return {
@@ -487,15 +505,25 @@ class DockerManager:
             if check_stress2 == 0:
                 cmd = f"stress --vm 1 --vm-bytes {memory_mb}M --timeout {duration_sec}s"
             else:
-                # Built-in python fallback: allocate bytearray and hold for duration
-                bytes_to_alloc = memory_mb * 1024 * 1024
-                cmd = (
-                    f"python3 -c \""
-                    f"import time; "
-                    f"b = bytearray({bytes_to_alloc}); "
-                    f"time.sleep({duration_sec}); "
-                    f"del b\""
-                )
+                check_py3, _ = self.exec_run(target, "which python3")
+                check_py, _ = self.exec_run(target, "which python")
+                py_bin = "python3" if check_py3 == 0 else ("python" if check_py == 0 else None)
+                if py_bin:
+                    bytes_to_alloc = memory_mb * 1024 * 1024
+                    py_script = (
+                        "import time\n"
+                        f"b = bytearray({bytes_to_alloc})\n"
+                        f"time.sleep({duration_sec})\n"
+                        "del b\n"
+                    )
+                    cmd = [py_bin, "-c", py_script]
+                else:
+                    cmd = [
+                        "sh", "-c",
+                        f"head -c {memory_mb}M </dev/zero >/dev/shm/noir_mem.tmp 2>/dev/null || head -c {memory_mb}M </dev/zero >/tmp/noir_mem.tmp; "
+                        f"sleep {duration_sec}; "
+                        f"rm -f /dev/shm/noir_mem.tmp /tmp/noir_mem.tmp"
+                    ]
 
         code, out = self.exec_run(target, cmd)
         return {
@@ -515,3 +543,26 @@ class DockerManager:
             return [line for line in raw.split("\n") if line.strip()]
         except Exception:
             return []
+
+    def get_container_endpoint(self, target: str) -> Optional[str]:
+        """Auto-discovers the primary exposed HTTP endpoint for a container."""
+        container = self.find_container(target)
+        if not container:
+            return None
+        ports = (container.attrs or {}).get("NetworkSettings", {}).get("Ports") or {}
+        # Prioritize standard web ports if mapped
+        preferred = ["80/tcp", "8080/tcp", "3000/tcp", "5000/tcp", "8000/tcp"]
+        for pref in preferred:
+            bindings = ports.get(pref)
+            if bindings and isinstance(bindings, list) and len(bindings) > 0:
+                host_port = bindings[0].get("HostPort")
+                if host_port:
+                    return f"http://localhost:{host_port}/"
+
+        # Fallback to any mapped port
+        for port_key, bindings in ports.items():
+            if bindings and isinstance(bindings, list) and len(bindings) > 0:
+                host_port = bindings[0].get("HostPort")
+                if host_port:
+                    return f"http://localhost:{host_port}/"
+        return None

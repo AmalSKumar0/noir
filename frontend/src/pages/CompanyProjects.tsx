@@ -70,7 +70,26 @@ export default function CompanyProjects() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectTitle.trim()) return;
+    if (!newProjectTitle.trim()) {
+      setError("Project title is required.");
+      return;
+    }
+    if (!newProjectDesc.trim()) {
+      setError("Project description is required.");
+      return;
+    }
+    if (!newProjectArch.trim()) {
+      setError("Architecture is required.");
+      return;
+    }
+    if (!newProjectVis.trim()) {
+      setError("Visibility is required.");
+      return;
+    }
+    if (!newProjectAnalysisMode.trim()) {
+      setError("Analysis mode is required.");
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
@@ -79,8 +98,8 @@ export default function CompanyProjects() {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
       
       const payload = {
-        title: newProjectTitle,
-        description: newProjectDesc,
+        title: newProjectTitle.trim(),
+        description: newProjectDesc.trim(),
         architecture: newProjectArch,
         visibility: newProjectVis,
         analysis_mode: newProjectAnalysisMode
@@ -119,7 +138,16 @@ export default function CompanyProjects() {
         setIsCreateModalOpen(false);
       } else {
         const errData = await response.json().catch(() => ({}));
-        setError(errData.detail || 'Failed to register company project.');
+        let errorMsg = errData.detail;
+        if (!errorMsg && typeof errData === 'object' && errData !== null) {
+          const firstKey = Object.keys(errData)[0];
+          if (firstKey && Array.isArray(errData[firstKey])) {
+            errorMsg = `${firstKey}: ${errData[firstKey][0]}`;
+          } else if (firstKey && typeof errData[firstKey] === 'string') {
+            errorMsg = `${firstKey}: ${errData[firstKey]}`;
+          }
+        }
+        setError(errorMsg || 'Failed to register company project.');
       }
     } catch (err: any) {
       console.error(err);
@@ -418,7 +446,9 @@ export default function CompanyProjects() {
           )}
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Project Title</label>
+            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">
+              Project Title <span className="text-rose-400">*</span>
+            </label>
             <input
               type="text"
               placeholder="e.g. Noir Enterprise Service"
@@ -431,23 +461,29 @@ export default function CompanyProjects() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Description</label>
+            <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">
+              Description <span className="text-rose-400">*</span>
+            </label>
             <textarea
               placeholder="e.g. Core organization microservice node"
               value={newProjectDesc}
               onChange={(e) => setNewProjectDesc(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 transition-colors h-16 resize-none"
+              required
               disabled={isCreating}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Architecture</label>
+              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">
+                Architecture <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectArch}
                 onChange={(e) => setNewProjectArch(e.target.value)}
                 className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="monolith">Monolith</option>
@@ -456,11 +492,14 @@ export default function CompanyProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Visibility</label>
+              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">
+                Visibility <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectVis}
                 onChange={(e) => setNewProjectVis(e.target.value)}
                 className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="private">Private</option>
@@ -469,11 +508,14 @@ export default function CompanyProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">Analysis Mode</label>
+              <label className="text-[9px] font-mono uppercase tracking-widest text-stone-400 block">
+                Analysis Mode <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectAnalysisMode}
                 onChange={(e) => setNewProjectAnalysisMode(e.target.value)}
                 className="w-full bg-[#100C1F] border border-white/10 rounded-xl py-2.5 px-3 text-xs font-mono text-white focus:outline-none focus:border-violet-500/50 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="manual">Manual</option>

@@ -28,7 +28,8 @@ import {
   Play,
   ArrowRight,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  Activity
 } from 'lucide-react';
 import Modal from './Modal';
 import FaultDetailModal from './FaultDetailModal';
@@ -60,6 +61,10 @@ export interface FaultRecord {
   logs_count?: number;
   result: Record<string, any> | null;
   error_message: string;
+  resilience_score?: number | null;
+  resilience_grade?: string | null;
+  classification?: string | null;
+  recommendations?: string[];
 }
 
 export interface FaultLogItem {
@@ -159,6 +164,11 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
   // Form & Dispatch Modal State
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [targetContainer, setTargetContainer] = useState('');
+  const [probeUrl, setProbeUrl] = useState('');
+  const [hypothesis, setHypothesis] = useState('');
+  const [expectedBehavior, setExpectedBehavior] = useState('');
+  const [showAdvancedProbe, setShowAdvancedProbe] = useState(false);
+  const [rtoTargetSec, setRtoTargetSec] = useState<number>(5.0);
   const [selectedFaultType, setSelectedFaultType] = useState<FaultTypeKey>('cpu_stress');
   const [durationSec, setDurationSec] = useState<number>(15);
   const [timeoutSec, setTimeoutSec] = useState<number>(10);
@@ -232,7 +242,7 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
     const key = `${item.id || ''}_${item.timestamp}_${item.message}`;
     if (logDedupeSetRef.current.has(key)) return;
     logDedupeSetRef.current.add(key);
-    setLiveLogs(prev => [...prev.slice(-400), item]);
+    setLiveLogs(prev => [...prev.slice(-300), item]);
   }, []);
 
   // Fetch Fault History
@@ -269,12 +279,11 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
 
   useEffect(() => {
     checkDaemonStatus();
-    const interval = setInterval(checkDaemonStatus, 4000);
-    return () => clearInterval(interval);
   }, [checkDaemonStatus]);
 
-  // Fetch Containers
-  const fetchContainers = useCallback(async () => {
+  // Fetch Containers (reused from cache/prop if available)
+  const fetchContainers = useCallback(async (force = false) => {
+    if (!force && containers.length > 0) return;
     setIsLoadingContainers(true);
     try {
       const resp = await apiFetch(`/api/projects/${projectIdentifier}/containers/`);
@@ -293,7 +302,7 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
     } finally {
       setIsLoadingContainers(false);
     }
-  }, [projectIdentifier, targetContainer]);
+  }, [projectIdentifier, targetContainer, containers.length]);
 
   // Fetch Historical Logs for a Fault
   const fetchLogsForFault = useCallback(async (faultId: number) => {
@@ -362,33 +371,71 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
               });
             }
 
-            // 2. Structured status event
+            // 1b. Structured log batch event
+            if (data.type === 'injection.log_batch' && Array.isArray(data.logs)) {
+              const itemsToAdd: FaultLogItem[] = [];
+              data.logs.forEach((l: any) => {
+                const item: FaultLogItem = {
+                  fault_id: data.injection_id,
+                  injection_id: data.injection_id,
+                  timestamp: l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(),
+                  level: l.level || 'INFO',
+                  message: l.message || '',
+                };
+                const key = `${item.id || ''}_${item.timestamp}_${item.message}`;
+                if (!logDedupeSetRef.current.has(key)) {
+                  logDedupeSetRef.current.add(key);
+                  itemsToAdd.push(item);
+                }
+              });
+              if (itemsToAdd.length > 0) {
+                setLiveLogs(prev => [...prev.slice(-300), ...itemsToAdd].slice(-300));
+              }
+            }
+
+            // 2. Structured creation event
+            if (data.type === 'injection.created' && data.fault) {
+              setHistory(prev => {
+                const exists = prev.some(f => f.id === data.fault.id);
+                if (exists) {
+                  return prev.map(f => f.id === data.fault.id ? { ...f, ...data.fault } : f);
+                }
+                return [data.fault, ...prev];
+              });
+            }
+
+            // 3. Structured status event (event-driven: NO REST refetch needed)
             if (data.type === 'injection.status') {
               const faultId = Number(data.injection_id);
               setHistory(prev => prev.map(f => f.id === faultId ? { ...f, status: data.status, ...(data.fault || {}) } : f));
-              fetchFaults(true);
             }
 
-            // 3. Structured completion event
+            // 4. Structured completion event (event-driven: NO REST refetch needed)
             if (data.type === 'injection.completed') {
               const faultId = Number(data.injection_id);
               setHistory(prev => prev.map(f => f.id === faultId ? { 
                 ...f, 
                 status: 'completed', 
                 completed_at: data.completed_at || new Date().toISOString(), 
-                result: data.result || f.result 
+                result: data.result || f.result,
+                resilience_score: data.resilience_score ?? f.resilience_score,
+                resilience_grade: data.resilience_grade ?? f.resilience_grade,
+                ...(data.fault || {}) 
               } : f));
               setStoppingFaultIds(prev => { const s = new Set(prev); s.delete(faultId); return s; });
-              fetchFaults(true);
             }
 
-            // 4. Structured cancellation event
+            // 5. Structured cancellation event (event-driven: NO REST refetch needed)
             if (data.type === 'injection.cancelled') {
               const faultId = Number(data.injection_id);
-              setHistory(prev => prev.map(f => f.id === faultId ? { ...f, status: 'cancelled' } : f));
+              setHistory(prev => prev.map(f => f.id === faultId ? { ...f, status: 'cancelled', ...(data.fault || {}) } : f));
               setStoppingFaultIds(prev => { const s = new Set(prev); s.delete(faultId); return s; });
               setCancellingFaultIds(prev => { const s = new Set(prev); s.delete(faultId); return s; });
-              fetchFaults(true);
+            }
+
+            // 6. Live daemon status push from backend
+            if (data.type === 'daemon.status') {
+              setIsDaemonActive(!!data.is_daemon_active);
             }
 
             // Legacy log fallback
@@ -439,40 +486,63 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
     fetchContainers();
   }, [fetchFaults, fetchContainers]);
 
-  // Fetch logs when running fault changes
+  // Fetch logs once when running fault changes (deduplicated)
+  const fetchedLogsFaultIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (runningFault) {
+    if (runningFault && fetchedLogsFaultIdRef.current !== runningFault.id) {
+      fetchedLogsFaultIdRef.current = runningFault.id;
       fetchLogsForFault(runningFault.id);
     }
   }, [runningFault?.id, fetchLogsForFault]);
 
-  // Fallback Polling (quiet) when jobs are running or queued
+  // Fallback Polling (quiet) ONLY when disconnected from WebSocket
   useEffect(() => {
+    if (wsStatus === 'connected') return;
     if (!runningFault && queuedFaults.length === 0) return;
     const interval = setInterval(() => {
       fetchFaults(true);
-    }, 3000);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [runningFault, queuedFaults.length, fetchFaults]);
+  }, [wsStatus, runningFault, queuedFaults.length, fetchFaults]);
 
   // Build parameters object
   const buildPayloadParameters = () => {
+    let params: Record<string, any> = {};
     switch (selectedFaultType) {
       case 'container_restart':
-        return { timeout: timeoutSec };
+        params = { timeout: timeoutSec };
+        break;
       case 'container_stop':
-        return { duration: durationSec, timeout: timeoutSec };
+        params = { duration: durationSec, timeout: timeoutSec };
+        break;
       case 'network_delay':
-        return { latency_ms: latencyMs, jitter_ms: jitterMs, duration: durationSec };
+        params = { latency_ms: latencyMs, jitter_ms: jitterMs, duration: durationSec };
+        break;
       case 'network_loss':
-        return { loss_percent: lossPercent, duration: durationSec };
+        params = { loss_percent: lossPercent, duration: durationSec };
+        break;
       case 'cpu_stress':
-        return { workers: cpuWorkers, duration: durationSec };
+        params = { workers: cpuWorkers, duration: durationSec };
+        break;
       case 'memory_stress':
-        return { memory_mb: memoryMb, duration: durationSec };
+        params = { memory_mb: memoryMb, duration: durationSec };
+        break;
       default:
-        return {};
+        params = {};
     }
+    if (probeUrl.trim()) {
+      params.probe_url = probeUrl.trim();
+    }
+    if (hypothesis.trim()) {
+      params.hypothesis = hypothesis.trim();
+    }
+    if (expectedBehavior.trim()) {
+      params.expected_behavior = expectedBehavior.trim();
+    }
+    if (rtoTargetSec && rtoTargetSec > 0) {
+      params.rto_target_seconds = rtoTargetSec;
+    }
+    return params;
   };
 
   // Dispatch Fault Injection Job (NON-BLOCKING)
@@ -487,18 +557,44 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
       return;
     }
 
-    if (!isDaemonActive) {
+    let active = isDaemonActive;
+    if (!active) {
+      // Immediate fresh check in case the daemon was just started or poll interval hasn't ticked
+      try {
+        const checkResp = await apiFetch(`/api/project/${projectIdentifier}/stream-status/`);
+        if (checkResp.ok) {
+          const checkData = await checkResp.json();
+          if (checkData.is_daemon_active) {
+            setIsDaemonActive(true);
+            active = true;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    if (!active) {
       setFormError("Cannot queue fault: The Noir daemon ('noir fault listen') is not running. Please start the listener in your terminal before queuing a fault.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         fault_type: selectedFaultType,
         target,
         parameters: buildPayloadParameters(),
       };
+      if (hypothesis.trim()) {
+        payload.hypothesis = hypothesis.trim();
+      }
+      if (expectedBehavior.trim()) {
+        payload.expected_behavior = expectedBehavior.trim();
+      }
+      if (rtoTargetSec && rtoTargetSec > 0) {
+        payload.rto_target_seconds = rtoTargetSec;
+      }
 
       const resp = await apiFetch(`/api/projects/${projectIdentifier}/faults/`, {
         method: 'POST',
@@ -516,9 +612,8 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
       setShowDispatchModal(false);
       setSubmitSuccessMsg(`Successfully queued #${created.id} (${created.fault_type}).`);
       
-      // Instantly insert into local state as QUEUED
+      // Instantly insert into local state as QUEUED (no need to refetch entire list)
       setHistory(prev => [created, ...prev.filter(f => f.id !== created.id)]);
-      fetchFaults(true);
     } catch (err: any) {
       setFormError(err.message || 'An unexpected error occurred while queuing injection.');
     } finally {
@@ -646,16 +741,19 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
               </button>
             </div>
 
-            {/* Print Collective Audit Report */}
+            {/* Collective Chaos Audit Report */}
             {history.length > 0 && (
               <button
                 type="button"
-                onClick={() => setReportModalConfig({ isOpen: true, mode: 'collective' })}
-                className="px-2.5 py-1.5 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-mono font-medium border border-zinc-700/60 transition-colors flex items-center gap-1.5 cursor-pointer"
-                title="Print full project resilience audit report"
+                onClick={() => {
+                  const isCo = window.location.pathname.startsWith('/company');
+                  navigate(isCo ? `/company/projects/${projectIdentifier}/chaos/reports` : `/dashboard/projects/${projectIdentifier}/chaos/reports`);
+                }}
+                className="px-2.5 py-1.5 rounded bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 hover:text-purple-100 text-xs font-mono font-medium border border-purple-700/50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Open full project Chaos Engineering Audit Report"
               >
-                <Printer className="w-3.5 h-3.5 text-zinc-400" />
-                <span className="hidden sm:inline">Audit Report</span>
+                <Activity className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden sm:inline">Chaos Report</span>
               </button>
             )}
 
@@ -926,6 +1024,7 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2">Strategy</th>
                   <th className="px-3 py-2">Target</th>
+                  <th className="px-3 py-2">Resilience</th>
                   <th className="px-3 py-2">Duration</th>
                   <th className="px-3 py-2">Executed At</th>
                   <th className="px-3 py-2 text-right">Actions</th>
@@ -954,6 +1053,26 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
                     <td className="px-3 py-2 text-cyan-400 whitespace-nowrap">
                       {record.target}
                     </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {(() => {
+                        const score = record.resilience_score ?? record.result?.resilience?.score ?? record.result?.resilience_score;
+                        const grade = record.resilience_grade ?? record.result?.resilience?.grade ?? record.result?.resilience_grade;
+                        if (grade && score !== undefined && score !== null) {
+                          const colorClass =
+                            grade === 'A' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                            grade === 'B' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                            grade === 'C' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                            'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${colorClass}`}>
+                              <span>Grade {grade}</span>
+                              <span className="text-[9px] opacity-75 font-mono">({Math.round(score)}%)</span>
+                            </span>
+                          );
+                        }
+                        return <span className="text-zinc-600 text-[10px]">—</span>;
+                      })()}
+                    </td>
                     <td className="px-3 py-2 text-zinc-400 whitespace-nowrap">
                       {formatCompletedDuration(record)}
                     </td>
@@ -971,10 +1090,15 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
                         </button>
                         <button
                           type="button"
-                          onClick={() => setReportModalConfig({ isOpen: true, mode: 'single', singleRecord: record })}
-                          className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[11px] transition-colors cursor-pointer"
+                          onClick={() => {
+                            const isCo = window.location.pathname.startsWith('/company');
+                            navigate(isCo ? `/company/projects/${projectIdentifier}/chaos/reports/${record.id}` : `/dashboard/projects/${projectIdentifier}/chaos/reports/${record.id}`);
+                          }}
+                          className="px-2 py-0.5 rounded bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 hover:text-purple-100 border border-purple-700/50 text-[11px] transition-colors cursor-pointer flex items-center gap-1 font-mono"
+                          title="View full SRE Chaos Audit Report"
                         >
-                          Report
+                          <FileText className="w-3 h-3" />
+                          <span>Report</span>
                         </button>
                       </div>
                     </td>
@@ -991,272 +1115,391 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
         isOpen={showDispatchModal}
         onClose={() => setShowDispatchModal(false)}
         title="Queue Fault Injection"
-        maxWidthClass="max-w-xl"
+        maxWidthClass="max-w-4xl"
       >
-        <form onSubmit={handleDispatchInjection} className="space-y-4 font-mono">
+        <form onSubmit={handleDispatchInjection} className="space-y-3 font-mono">
           {formError && (
-            <div className="p-3 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{formError}</span>
             </div>
           )}
 
-          {/* Real-time Daemon Status Banner */}
+          {/* Compact 1-Line Daemon Status Strip */}
           {isDaemonActive ? (
-            <div className="flex items-center justify-between p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold">Daemon Active: 'noir fault listen' is running</span>
+                <span className="font-medium">Daemon Active: 'noir fault listen' is connected</span>
               </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase font-bold">Ready</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 uppercase font-bold tracking-wider">
+                Ready
+              </span>
             </div>
           ) : (
-            <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="font-semibold text-amber-200">Listener Required: 'noir fault listen' is not running</span>
-                </div>
-                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase font-bold">Action Needed</span>
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Daemon offline: start <code className="text-white font-bold bg-black/40 px-1 py-0.5 rounded">noir fault listen</code> in your terminal</span>
               </div>
-              <p className="text-[11px] text-zinc-400">
-                Noir requires the agent listener daemon to be actively running in your workspace to execute queued faults. Run this command in your project directory:
-              </p>
-              <div className="flex items-center justify-between bg-black/60 border border-zinc-800 rounded px-2.5 py-1.5 font-mono text-[11px]">
-                <span className="text-zinc-300">$ <span className="text-emerald-400 font-bold">noir fault listen</span></span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy('noir fault listen', 'modal-listen')}
-                  className="text-zinc-400 hover:text-white flex items-center gap-1 text-[10px] cursor-pointer"
-                >
-                  {copiedCmd === 'modal-listen' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedCmd === 'modal-listen' ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleCopy('noir fault listen', 'modal-listen')}
+                className="text-amber-200 hover:text-white flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 transition-colors cursor-pointer"
+              >
+                {copiedCmd === 'modal-listen' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedCmd === 'modal-listen' ? 'Copied' : 'Copy Command'}</span>
+              </button>
             </div>
           )}
 
-          {/* Fault Strategy Selector */}
-          <div>
-            <label className="text-xs text-zinc-400 block mb-1.5 uppercase tracking-wider font-bold">
-              1. Injection Strategy
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {FAULT_DEFINITIONS.map(f => {
-                const Icon = f.icon;
-                const isSelected = selectedFaultType === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setSelectedFaultType(f.key)}
-                    className={`p-2.5 rounded border text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-500/15 border-amber-500 text-white'
-                        : 'bg-[#090A0F] border-zinc-800 text-zinc-400 hover:border-zinc-700'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 mb-1 ${isSelected ? 'text-amber-400' : 'text-zinc-500'}`} />
-                    <div className="text-xs font-semibold">{f.label}</div>
-                    <div className="text-[10px] text-zinc-500 uppercase mt-0.5">{f.badge}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Two-Column Horizontal Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-1">
+            {/* Left Column: Strategy Selection & Target Container */}
+            <div className="md:col-span-5 space-y-3">
+              {/* Fault Strategy Selector (Compact Grid) */}
+              <div>
+                <label className="text-[11px] text-zinc-400 block mb-1.5 uppercase tracking-wider font-bold">
+                  1. Injection Strategy
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {FAULT_DEFINITIONS.map(f => {
+                    const Icon = f.icon;
+                    const isSelected = selectedFaultType === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => setSelectedFaultType(f.key)}
+                        className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-500 text-white shadow-sm ring-1 ring-amber-500/30'
+                            : 'bg-[#090A0F] border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-400' : 'text-zinc-500'}`} />
+                          <span className="text-[9px] text-zinc-500 uppercase font-mono">{f.badge}</span>
+                        </div>
+                        <div className="text-xs font-semibold leading-tight line-clamp-1">{f.label.split(' / ')[0]}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Target Container */}
-          <div>
-            <label className="text-xs text-zinc-400 block mb-1 uppercase tracking-wider font-bold">
-              2. Target Docker Container
-            </label>
-            {containers.length > 0 ? (
-              <div className="flex gap-2">
-                <select
-                  value={targetContainer}
-                  onChange={e => setTargetContainer(e.target.value)}
-                  className="w-full bg-[#090A0F] border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">-- Select running container --</option>
-                  {containers.map((c, i) => (
-                    <option key={i} value={c.name || c.service}>
-                      {c.name || c.service} ({c.status || 'running'})
-                    </option>
-                  ))}
-                </select>
+              {/* Target Docker Container */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-zinc-400 uppercase tracking-wider font-bold">
+                    2. Target Container
+                  </label>
+                  {containers.length > 0 && (
+                    <span className="text-[10px] text-emerald-400/90 font-mono">
+                      {containers.length} active on host
+                    </span>
+                  )}
+                </div>
+                {containers.length > 0 ? (
+                  <div className="flex gap-2">
+                    <select
+                      value={targetContainer}
+                      onChange={e => setTargetContainer(e.target.value)}
+                      className="w-full bg-[#090A0F] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
+                    >
+                      <option value="">-- Select running container --</option>
+                      {containers.map((c, i) => (
+                        <option key={i} value={c.name || c.service}>
+                          {c.name || c.service} ({c.status || 'running'})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Or custom"
+                      value={targetContainer}
+                      onChange={e => setTargetContainer(e.target.value)}
+                      className="w-1/3 bg-[#090A0F] border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="e.g. dormcare-app, api-server, redis"
+                    value={targetContainer}
+                    onChange={e => setTargetContainer(e.target.value)}
+                    className="w-full bg-[#090A0F] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Execution Parameters & Hypothesis */}
+            <div className="md:col-span-7 bg-[#0b0c13] border border-zinc-800/80 rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
+              {/* Parameters Header */}
+              <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                <span>3. Parameters & Resilience SLA</span>
+                <span className="text-[10px] text-amber-400/90 font-mono font-normal">
+                  {selectedFaultType}
+                </span>
+              </div>
+
+              {/* Duration & Target RTO Side-by-Side */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedFaultType !== 'container_restart' ? (
+                  <div>
+                    <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                      <span className="text-[11px] uppercase font-semibold">Duration</span>
+                      <span className="text-amber-400 font-bold font-mono">{durationSec}s</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min={2} 
+                      max={60} 
+                      value={durationSec}
+                      onChange={e => setDurationSec(Number(e.target.value))}
+                      className="w-full accent-amber-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer" 
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-[11px] text-zinc-400 uppercase font-semibold block mb-1">Timeout</label>
+                    <div className="flex items-center gap-1.5 bg-black/50 border border-zinc-800 rounded-lg px-2 py-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={timeoutSec}
+                        onChange={e => setTimeoutSec(Number(e.target.value))}
+                        className="w-full bg-transparent text-xs text-zinc-200 focus:outline-none font-mono"
+                      />
+                      <span className="text-[10px] text-zinc-500 font-mono">sec</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span className="text-[11px] uppercase font-semibold">RTO Target</span>
+                    <span className="text-purple-400 font-bold font-mono">{rtoTargetSec}s</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-black/50 border border-zinc-800 rounded-lg px-2 py-1">
+                    <input
+                      type="number"
+                      min={0.5}
+                      max={60}
+                      step={0.5}
+                      value={rtoTargetSec}
+                      onChange={e => setRtoTargetSec(Number(e.target.value))}
+                      className="w-full bg-transparent text-xs text-zinc-200 focus:outline-none font-mono"
+                    />
+                    <span className="text-[10px] text-zinc-500 font-mono">max</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fault-Specific Intensity Parameter */}
+              {selectedFaultType === 'cpu_stress' && (
+                <div className="bg-black/40 border border-zinc-800/60 rounded-lg p-2.5">
+                  <div className="flex justify-between text-xs text-zinc-300 mb-1">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold">CPU Workers</span>
+                    <span className="text-amber-400 font-bold font-mono">{cpuWorkers} Core{cpuWorkers > 1 ? 's' : ''}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={1} 
+                    max={8} 
+                    value={cpuWorkers}
+                    onChange={e => setCpuWorkers(Number(e.target.value))}
+                    className="w-full accent-amber-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer" 
+                  />
+                </div>
+              )}
+
+              {selectedFaultType === 'memory_stress' && (
+                <div className="bg-black/40 border border-zinc-800/60 rounded-lg p-2.5">
+                  <div className="flex justify-between text-xs text-zinc-300 mb-1">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold">Memory Pressure</span>
+                    <span className="text-amber-400 font-bold font-mono">{memoryMb} MB</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={32} 
+                    max={1024} 
+                    step={32}
+                    value={memoryMb}
+                    onChange={e => setMemoryMb(Number(e.target.value))}
+                    className="w-full accent-amber-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer" 
+                  />
+                </div>
+              )}
+
+              {selectedFaultType === 'network_loss' && (
+                <div className="bg-black/40 border border-zinc-800/60 rounded-lg p-2.5">
+                  <div className="flex justify-between text-xs text-zinc-300 mb-1">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold">Packet Loss</span>
+                    <span className="text-amber-400 font-bold font-mono">{lossPercent}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={1} 
+                    max={80} 
+                    value={lossPercent}
+                    onChange={e => setLossPercent(Number(e.target.value))}
+                    className="w-full accent-amber-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer" 
+                  />
+                </div>
+              )}
+
+              {selectedFaultType === 'network_delay' && (
+                <div className="grid grid-cols-2 gap-2 bg-black/40 border border-zinc-800/60 rounded-lg p-2.5">
+                  <div>
+                    <label className="text-[10px] text-zinc-400 uppercase font-semibold block mb-1">Latency Delay</label>
+                    <div className="flex items-center gap-1 bg-black/50 border border-zinc-800 rounded px-2 py-1">
+                      <input
+                        type="number"
+                        min={10}
+                        max={2000}
+                        value={latencyMs}
+                        onChange={e => setLatencyMs(Number(e.target.value))}
+                        className="w-full bg-transparent text-xs text-zinc-200 focus:outline-none font-mono"
+                      />
+                      <span className="text-[10px] text-zinc-500">ms</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-400 uppercase font-semibold block mb-1">Jitter</label>
+                    <div className="flex items-center gap-1 bg-black/50 border border-zinc-800 rounded px-2 py-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={500}
+                        value={jitterMs}
+                        onChange={e => setJitterMs(Number(e.target.value))}
+                        className="w-full bg-transparent text-xs text-zinc-200 focus:outline-none font-mono"
+                      />
+                      <span className="text-[10px] text-zinc-500">±ms</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedFaultType === 'container_stop' && (
+                <div className="bg-black/40 border border-zinc-800/60 rounded-lg p-2.5 flex items-center justify-between">
+                  <span className="text-[11px] text-zinc-400 uppercase font-semibold">SIGTERM Graceful Timeout</span>
+                  <div className="flex items-center gap-1 bg-black/50 border border-zinc-800 rounded px-2 py-1 w-24">
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={timeoutSec}
+                      onChange={e => setTimeoutSec(Number(e.target.value))}
+                      className="w-full bg-transparent text-xs text-zinc-200 focus:outline-none font-mono text-right"
+                    />
+                    <span className="text-[10px] text-zinc-500">sec</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Single Resilience Hypothesis Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-zinc-400 uppercase tracking-wider font-bold">
+                    Resilience Hypothesis
+                  </label>
+                  <span className="text-[10px] text-zinc-500 font-mono">Audit Objective</span>
+                </div>
                 <input
                   type="text"
-                  placeholder="Or custom target"
-                  value={targetContainer}
-                  onChange={e => setTargetContainer(e.target.value)}
-                  className="w-1/2 bg-[#090A0F] border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
+                  placeholder={
+                    selectedFaultType === 'cpu_stress'
+                      ? 'e.g. Service maintains >=95% availability under CPU saturation'
+                      : selectedFaultType === 'memory_stress'
+                      ? 'e.g. Application avoids OOM kill and recovers baseline latency'
+                      : selectedFaultType === 'network_delay'
+                      ? 'e.g. Application tolerates latency without connection drops'
+                      : selectedFaultType === 'network_loss'
+                      ? 'e.g. Service handles packet loss with automatic retries'
+                      : selectedFaultType === 'container_restart'
+                      ? 'e.g. Container restarts cleanly and restores traffic within SLA'
+                      : 'e.g. Standby replica assumes traffic or recovers within target RTO'
+                  }
+                  value={hypothesis}
+                  onChange={e => setHypothesis(e.target.value)}
+                  className="w-full bg-black/50 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 font-mono"
                 />
               </div>
-            ) : (
-              <input
-                type="text"
-                placeholder="e.g. api-server, worker, redis"
-                value={targetContainer}
-                onChange={e => setTargetContainer(e.target.value)}
-                className="w-full bg-[#090A0F] border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
-              />
-            )}
+
+              {/* Collapsible Custom Probe URL */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedProbe(prev => !prev)}
+                  className="text-[10px] text-zinc-500 hover:text-cyan-400 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span>{showAdvancedProbe ? '▾' : '▸'} Custom Probe URL (Optional)</span>
+                  <span className="text-[9px] text-zinc-600 font-mono">• auto-detected from Docker port</span>
+                </button>
+                {showAdvancedProbe && (
+                  <input
+                    type="text"
+                    placeholder="e.g. http://localhost:8001/api/health/"
+                    value={probeUrl}
+                    onChange={e => setProbeUrl(e.target.value)}
+                    className="w-full mt-1.5 bg-black/50 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Parameters */}
-          <div className="p-3 bg-[#090A0F] border border-zinc-800/80 rounded space-y-3">
-            <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">
-              3. Configure Parameters
+          {/* Action Buttons & Summary Footer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-zinc-800/80">
+            <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-[10px]">
+                {selectedFaultType}
+              </span>
+              <span>→</span>
+              <span className="font-semibold text-white font-mono">
+                {targetContainer.trim() || 'No target selected'}
+              </span>
+              <span>•</span>
+              <span className="text-amber-400 font-mono">{durationSec}s</span>
+              <span>•</span>
+              <span className="text-purple-400 font-mono">RTO ≤ {rtoTargetSec}s</span>
             </div>
 
-            {/* Duration (common to stress/delay/loss/stop) */}
-            {selectedFaultType !== 'container_restart' && (
-              <div>
-                <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                  <span>Duration (seconds)</span>
-                  <span className="text-amber-400 font-bold">{durationSec}s</span>
-                </div>
-                <input 
-                  type="range" 
-                  min={2} 
-                  max={60} 
-                  value={durationSec}
-                  onChange={e => setDurationSec(Number(e.target.value))}
-                  className="w-full accent-amber-500" 
-                />
-              </div>
-            )}
-
-            {/* CPU Stress */}
-            {selectedFaultType === 'cpu_stress' && (
-              <div>
-                <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                  <span>CPU Workers</span>
-                  <span className="text-amber-400 font-bold">{cpuWorkers}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min={1} 
-                  max={8} 
-                  value={cpuWorkers}
-                  onChange={e => setCpuWorkers(Number(e.target.value))}
-                  className="w-full accent-amber-500" 
-                />
-              </div>
-            )}
-
-            {/* Network Latency */}
-            {selectedFaultType === 'network_delay' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Latency (ms)</label>
-                  <input
-                    type="number"
-                    min={10}
-                    max={2000}
-                    value={latencyMs}
-                    onChange={e => setLatencyMs(Number(e.target.value))}
-                    className="w-full bg-black/40 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Jitter (±ms)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={500}
-                    value={jitterMs}
-                    onChange={e => setJitterMs(Number(e.target.value))}
-                    className="w-full bg-black/40 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Network Loss */}
-            {selectedFaultType === 'network_loss' && (
-              <div>
-                <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                  <span>Packet Loss (%)</span>
-                  <span className="text-amber-400 font-bold">{lossPercent}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min={1} 
-                  max={80} 
-                  value={lossPercent}
-                  onChange={e => setLossPercent(Number(e.target.value))}
-                  className="w-full accent-amber-500" 
-                />
-              </div>
-            )}
-
-            {/* Memory Stress */}
-            {selectedFaultType === 'memory_stress' && (
-              <div>
-                <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                  <span>Memory Buffer (MB)</span>
-                  <span className="text-amber-400 font-bold">{memoryMb} MB</span>
-                </div>
-                <input 
-                  type="range" 
-                  min={32} 
-                  max={1024} 
-                  step={32}
-                  value={memoryMb}
-                  onChange={e => setMemoryMb(Number(e.target.value))}
-                  className="w-full accent-amber-500" 
-                />
-              </div>
-            )}
-
-            {/* Stop/Restart Timeout */}
-            {(selectedFaultType === 'container_restart' || selectedFaultType === 'container_stop') && (
-              <div>
-                <label className="text-xs text-zinc-400 block mb-1">Graceful Timeout (seconds)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={timeoutSec}
-                  onChange={e => setTimeoutSec(Number(e.target.value))}
-                  className="w-full bg-black/40 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
-            <button
-              type="button"
-              onClick={() => setShowDispatchModal(false)}
-              className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !isDaemonActive || !targetContainer.trim()}
-              className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Queueing...</span>
-                </>
-              ) : !isDaemonActive ? (
-                <>
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Start 'noir fault listen' to Queue</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-3.5 h-3.5 fill-black" />
-                  <span>Queue Injection Job</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDispatchModal(false)}
+                className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !isDaemonActive || !targetContainer.trim()}
+                className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Queueing...</span>
+                  </>
+                ) : !isDaemonActive ? (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Start Listener to Queue</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-black" />
+                    <span>Queue Injection Job</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>

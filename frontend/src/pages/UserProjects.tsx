@@ -59,7 +59,26 @@ export default function UserProjects() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectTitle.trim()) return;
+    if (!newProjectTitle.trim()) {
+      setError("Workspace title is required.");
+      return;
+    }
+    if (!newProjectDesc.trim()) {
+      setError("Project description is required.");
+      return;
+    }
+    if (!newProjectArch.trim()) {
+      setError("Architecture is required.");
+      return;
+    }
+    if (!newProjectVis.trim()) {
+      setError("Visibility is required.");
+      return;
+    }
+    if (!newProjectAnalysisMode.trim()) {
+      setError("Analysis mode is required.");
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
@@ -68,8 +87,8 @@ export default function UserProjects() {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
       
       const payload = {
-        title: newProjectTitle,
-        description: newProjectDesc,
+        title: newProjectTitle.trim(),
+        description: newProjectDesc.trim(),
         architecture: newProjectArch,
         visibility: newProjectVis,
         analysis_mode: newProjectAnalysisMode
@@ -110,7 +129,16 @@ export default function UserProjects() {
         setIsCreateModalOpen(false);
       } else {
         const errData = await response.json().catch(() => ({}));
-        setError(errData.detail || 'Failed to register project on the server.');
+        let errorMsg = errData.detail;
+        if (!errorMsg && typeof errData === 'object' && errData !== null) {
+          const firstKey = Object.keys(errData)[0];
+          if (firstKey && Array.isArray(errData[firstKey])) {
+            errorMsg = `${firstKey}: ${errData[firstKey][0]}`;
+          } else if (firstKey && typeof errData[firstKey] === 'string') {
+            errorMsg = `${firstKey}: ${errData[firstKey]}`;
+          }
+        }
+        setError(errorMsg || 'Failed to register project on the server.');
       }
     } catch (err: any) {
       console.error(err);
@@ -336,7 +364,9 @@ export default function UserProjects() {
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Workspace Title</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Workspace Title <span className="text-rose-400">*</span>
+            </label>
             <input
               type="text"
               placeholder="e.g. DormCare Microservices"
@@ -349,23 +379,29 @@ export default function UserProjects() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Description</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Description <span className="text-rose-400">*</span>
+            </label>
             <textarea
               placeholder="e.g. Core microservices cluster fault injection monitoring"
               value={newProjectDesc}
               onChange={(e) => setNewProjectDesc(e.target.value)}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-xs font-mono text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors h-14 resize-none"
+              required
               disabled={isCreating}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
             <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Architecture</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+                Architecture <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectArch}
                 onChange={(e) => setNewProjectArch(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="monolith">Monolith</option>
@@ -374,11 +410,14 @@ export default function UserProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Visibility</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+                Visibility <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectVis}
                 onChange={(e) => setNewProjectVis(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="private">Private</option>
@@ -387,11 +426,14 @@ export default function UserProjects() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Analysis</label>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+                Analysis <span className="text-rose-400">*</span>
+              </label>
               <select
                 value={newProjectAnalysisMode}
                 onChange={(e) => setNewProjectAnalysisMode(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-1.5 px-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors"
+                required
                 disabled={isCreating}
               >
                 <option value="manual">Manual</option>

@@ -91,11 +91,15 @@ export default function LiveStreamTerminal({
     setIsWsConnected(false);
   };
 
-  // Poll backend stream status every 3 seconds to auto-connect when CLI agent runs or analyzes
+  // Poll backend stream status only when disconnected to auto-connect when CLI agent runs or analyzes
   useEffect(() => {
     if (!connectionCode) return;
+    if (isWsConnected) return;
 
     const checkStreamStatus = async () => {
+      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
       try {
         const res = await apiFetch(`/project/${connectionCode}/stream-status/`);
         if (res.ok) {
@@ -114,12 +118,12 @@ export default function LiveStreamTerminal({
     };
 
     checkStreamStatus();
-    const statusInterval = setInterval(checkStreamStatus, 1500);
+    const statusInterval = setInterval(checkStreamStatus, 5000);
 
     return () => {
       clearInterval(statusInterval);
     };
-  }, [connectionCode]);
+  }, [connectionCode, isWsConnected]);
 
   // Timeout auto-disconnect if no log received for 30s while CLI is inactive
   useEffect(() => {

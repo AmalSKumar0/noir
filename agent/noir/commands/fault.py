@@ -1,6 +1,7 @@
 import json
 import time
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -13,6 +14,7 @@ from rich.prompt import Confirm, Prompt
 
 from noir.faults import registry, DockerManager
 from noir.faults.base import FaultResult
+from noir.faults.experiment import SteadyStateEvaluator, ResilienceScorer
 from noir.api.client import ApiClient
 from noir.auth.storage import has_tokens
 from noir.utils.CommandDisplay import CommandDisplay
@@ -131,10 +133,11 @@ def inject_fault(
     workers: int = typer.Option(2, "--workers", "-w", help="Number of CPU workers (for cpu_stress, 1-16)."),
     memory: int = typer.Option(256, "--memory", "-m", help="Memory to allocate in MB (for memory_stress, 16-4096)."),
     timeout: int = typer.Option(10, "--timeout", help="Graceful stop/restart timeout in seconds (1-60)."),
+    probe_url: Optional[str] = typer.Option(None, "--probe-url", "-p", help="HTTP health probe URL for steady-state resilience evaluation (auto-detected if omitted)."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
 ):
     """
-    Manually inject an allowlisted, safe fault into a local Docker container.
+    Manually inject an allowlisted, safe fault into a local Docker container with automated resilience evaluation.
     """
     executor = registry.get(fault_type)
     if not executor:
@@ -167,8 +170,13 @@ def inject_fault(
         console.print(f"[bold red]Target container '{target}' was not found.[/bold red]")
         raise typer.Exit(1)
 
+    # Auto-detect probe URL if not explicitly supplied
+    resolved_probe_url = probe_url or docker_mgr.get_container_endpoint(container.name)
+
     # Construct parameters
     params: Dict[str, Any] = {"duration": duration}
+    if resolved_probe_url:
+        params["probe_url"] = resolved_probe_url
     if fault_type == "network_delay":
         params["latency_ms"] = latency
         params["jitter_ms"] = jitter
@@ -189,12 +197,14 @@ def inject_fault(
 
     # Rich Confirmation Panel
     param_summary = "\n".join(f"  • [cyan]{k}[/cyan]: [white]{v}[/white]" for k, v in validated_params.items())
+    if resolved_probe_url:
+        param_summary += f"\n  • [bold green]probe_url[/bold green]: [white]{resolved_probe_url}[/white] [dim](auto-evaluated)[/dim]"
     warning_text = (
         f"[bold red]⚠ MANUAL FAULT INJECTION WARNING ⚠[/bold red]\n\n"
         f"You are about to inject [bold yellow]{executor.display_name}[/bold yellow] into container [bold cyan]{container.name}[/bold cyan].\n\n"
         f"[bold]Parameters:[/bold]\n{param_summary}\n\n"
         f"[dim]{executor.description}[/dim]\n"
-        f"[green]Automatic rollback/cleanup will occur upon completion or failure.[/green]"
+        f"[green]Automatic rollback/cleanup and resilience scoring will execute.[/green]"
     )
     console.print(Panel(warning_text, title="[bold yellow]Execution Confirmation[/bold yellow]", border_style="red"))
 
@@ -232,45 +242,145 @@ def inject_fault(
         except Exception as e:
             console.print(f"[dim yellow]Note: Could not sync fault audit with backend: {e}[/dim yellow]")
 
-    # Execute
+    # Steady State Baseline Check
+    evaluator = SteadyStateEvaluator(probe_url=resolved_probe_url)
+    if resolved_probe_url:
+        console.print(f"[dim cyan]Measuring baseline health on '{resolved_probe_url}'...[/dim cyan]")
+        baseline = evaluator.measure_baseline(count=3, interval=0.3)
+        if baseline.get("healthy"):
+            console.print(f"  [green]✔ Baseline steady state healthy ({baseline.get('avg_latency_ms', 0)}ms avg)[/green]")
+        else:
+            console.print(f"  [yellow]⚠ Warning: Target endpoint did not respond with expected status[/yellow]")
+
+    # Start Active Probing & Execute Fault
+    evaluator.start_in_fault_probing(interval_sec=1.0)
     console.print(f"\n[bold yellow]⚡ Injecting fault: {executor.display_name}...[/bold yellow]")
     with console.status(f"[bold cyan]Applying fault on '{container.name}'...[/bold cyan]"):
         result: FaultResult = executor.execute(docker_mgr, container.name, validated_params)
 
-    # Print results
-    if result.success:
-        result_panel = (
-            f"[bold green]✔ Fault Injection Succeeded![/bold green]\n\n"
-            f"[white]{result.message}[/white]\n"
-            f"Duration: [bold cyan]{result.duration_seconds}s[/bold cyan]\n"
-            f"State Recovered: [bold green]{'Yes' if result.recovered else 'No'}[/bold green]\n"
-        )
-        console.print(Panel(result_panel, title="[bold green]Execution Result[/bold green]", border_style="green"))
-    else:
-        result_panel = (
-            f"[bold red]✖ Fault Injection Failed![/bold red]\n\n"
-            f"[white]{result.message}[/white]\n"
-            f"Error: [bold red]{result.error}[/bold red]\n"
-            f"State Recovered: [bold yellow]{'Yes' if result.recovered else 'No'}[/bold yellow]\n"
-        )
-        console.print(Panel(result_panel, title="[bold red]Execution Failure[/bold red]", border_style="red"))
+    in_fault_metrics = evaluator.stop_in_fault_probing()
+
+    # Recovery Verification (RTO)
+    rto_target_sec = float(validated_params.get("rto_target_seconds", 5.0))
+    console.print(f"[dim cyan]Verifying post-fault recovery (target RTO: {rto_target_sec}s)...[/dim cyan]")
+    recovery_metrics = evaluator.measure_recovery(max_wait_sec=12.0, rto_target_sec=rto_target_sec)
+
+    # Compute Resilience Score & Report
+    resilience_report = ResilienceScorer.calculate_score(
+        fault_type=fault_type,
+        baseline=evaluator.baseline,
+        experiment_metrics=in_fault_metrics,
+        recovery_metrics=recovery_metrics,
+        rollback_success=result.recovered,
+    )
+
+    # Display Rich Resilience Report Panel
+    grade_color = "green" if resilience_report["grade"] == "A" else ("yellow" if resilience_report["grade"] == "B" else "red")
+    recs_text = "\n".join(f"  • {r}" for r in resilience_report["recommendations"])
+
+    resilience_panel_body = (
+        f"[bold {grade_color}]Grade {resilience_report['grade']}[/bold {grade_color}] — "
+        f"[bold white]{resilience_report['score']}/100[/bold white] "
+        f"([dim]{resilience_report['classification']}[/dim])\n\n"
+        f"[bold]Steady-State Probe:[/bold] {resolved_probe_url or 'None'}\n"
+        f"[bold]In-Fault Availability:[/bold] {in_fault_metrics.get('availability_percent', 100)}%\n"
+        f"[bold]In-Fault Latency P95:[/bold] {in_fault_metrics.get('p95_latency_ms', 0)}ms\n"
+        f"[bold]Recovery Time (RTO):[/bold] {recovery_metrics.get('rto_seconds', 0)}s\n"
+        f"[bold]Rollback Cleaned Up:[/bold] {'Yes' if result.recovered else 'No'}\n\n"
+        f"[bold cyan]Architectural Recommendations:[/bold cyan]\n{recs_text}"
+    )
+    console.print(Panel(
+        resilience_panel_body,
+        title=f"[bold {grade_color}]Chaos Resilience Assessment — Score {resilience_report['score']}/100[/bold {grade_color}]",
+        border_style=grade_color,
+    ))
 
     # Report to backend if tracked
     if client and fault_record_id and project_id:
         try:
             status_str = "completed" if result.success else "failed"
+            payload = result.to_dict()
+            payload["resilience"] = resilience_report
+            payload["resilience_score"] = resilience_report["score"]
+            payload["resilience_grade"] = resilience_report["grade"]
+            payload["classification"] = resilience_report["classification"]
+            payload["steady_state_baseline"] = evaluator.baseline
+            payload["experiment_metrics"] = in_fault_metrics
+            payload["recovery_metrics"] = recovery_metrics
+            payload["recommendations"] = resilience_report["recommendations"]
+
             client.send_request_to_backend(
                 f"/projects/{project_id}/faults/{fault_record_id}/report/",
                 "POST",
                 data={
                     "status": status_str,
-                    "result": result.to_dict(),
+                    "result": payload,
                     "error_message": result.error or "",
                 },
             )
-            console.print(f"[dim]Reported final result for fault #{fault_record_id} to Noir backend.[/dim]\n")
+            console.print(f"[dim]Reported final resilience audit for fault #{fault_record_id} to Noir backend.[/dim]\n")
         except Exception as e:
             console.print(f"[dim yellow]Warning: Failed to report execution result to backend: {e}[/dim yellow]")
+
+
+class LogBatcher:
+    """
+    Batches logs over a short interval (e.g. 250ms) or when buffer reaches threshold (10 items),
+    flushing them via POST /projects/{project_id}/faults/{fault_id}/logs/batch/.
+    Falls back to single-item /log/ if batch endpoint is unavailable.
+    """
+    def __init__(self, client: ApiClient, project_id: str, fault_id: int, max_batch_size: int = 10, flush_interval: float = 0.25):
+        self.client = client
+        self.project_id = project_id
+        self.fault_id = fault_id
+        self.max_batch_size = max_batch_size
+        self.flush_interval = flush_interval
+        self.buffer = []
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._run_flush_loop, daemon=True)
+        self.thread.start()
+
+    def add(self, level: str, msg: str):
+        now_iso = datetime.now(timezone.utc).isoformat()
+        with self.lock:
+            self.buffer.append({"level": level, "message": msg, "timestamp": now_iso})
+            should_flush = len(self.buffer) >= self.max_batch_size
+        if should_flush:
+            self.flush()
+
+    def flush(self):
+        with self.lock:
+            if not self.buffer:
+                return
+            items_to_send = self.buffer[:]
+            self.buffer = []
+
+        try:
+            self.client.send_request_to_backend(
+                f"/projects/{self.project_id}/faults/{self.fault_id}/logs/batch/",
+                "POST",
+                data={"logs": items_to_send},
+            )
+        except Exception:
+            for item in items_to_send:
+                try:
+                    self.client.send_request_to_backend(
+                        f"/projects/{self.project_id}/faults/{self.fault_id}/log/",
+                        "POST",
+                        data={"level": item["level"], "message": item["message"]},
+                    )
+                except Exception:
+                    pass
+
+    def _run_flush_loop(self):
+        while not self.stop_event.wait(timeout=self.flush_interval):
+            self.flush()
+
+    def close(self):
+        self.stop_event.set()
+        self.thread.join(timeout=1.0)
+        self.flush()
 
 
 def _execute_single_fault(
@@ -285,17 +395,12 @@ def _execute_single_fault(
     target = fault["target"]
     params = fault.get("parameters") or {}
 
+    batcher = LogBatcher(client, project_id, fault_id, max_batch_size=10, flush_interval=0.25)
+
     def emit_log(msg: str, level: str = "INFO"):
         level_style = "green" if level == "INFO" else ("yellow" if level == "WARN" else "red")
         console.print(f"  [dim cyan]#{fault_id}[/dim cyan] [{level_style}]{msg}[/{level_style}]")
-        try:
-            client.send_request_to_backend(
-                f"/projects/{project_id}/faults/{fault_id}/log/",
-                "POST",
-                data={"level": level, "message": msg},
-            )
-        except Exception:
-            pass
+        batcher.add(level, msg)
 
     # 1. Claim
     try:
@@ -306,6 +411,7 @@ def _execute_single_fault(
         emit_log(f"Claimed by worker daemon. Preparing {fault_type} on target '{target}'...")
     except Exception as claim_err:
         console.print(f"  [red]Failed to claim fault #{fault_id}: {claim_err}[/red]")
+        batcher.close()
         return
 
     # Check for early cancellation
@@ -319,6 +425,7 @@ def _execute_single_fault(
             )
         except Exception:
             pass
+        batcher.close()
         return
 
     # 2. Get executor
@@ -338,33 +445,38 @@ def _execute_single_fault(
             )
         except Exception:
             pass
+        batcher.close()
         return
 
-    # Cancellation check function passed into executor context
-    last_status_poll = [0.0]
+    # Fast cancellation check: event-driven via thread Event (zero HTTP overhead)
     def is_cancelled_fn() -> bool:
-        if cancel_event.is_set():
-            return True
-        now = time.time()
-        # Poll backend status every 1.0s to detect cancel_requested from UI
-        if now - last_status_poll[0] >= 1.0:
-            last_status_poll[0] = now
-            try:
-                st = client.send_request_to_backend(
-                    f"/projects/{project_id}/faults/{fault_id}/status/",
-                    "GET",
-                )
-                if st.get("cancel_requested") or st.get("status") in ("cancel_requested", "cancelled"):
-                    cancel_event.set()
-                    return True
-            except Exception:
-                pass
-        return False
+        return cancel_event.is_set()
 
     context = {
         "is_cancelled": is_cancelled_fn,
         "log": emit_log,
     }
+
+    # 3. Steady-State Baseline Evaluation (Principles of Chaos Engineering)
+    probe_url = params.get("probe_url")
+    if not probe_url:
+        probe_url = docker_mgr.get_container_endpoint(target)
+
+    expected_status = int(params.get("expected_status", 200))
+    evaluator = SteadyStateEvaluator(probe_url=probe_url, expected_status=expected_status)
+
+    if probe_url:
+        emit_log(f"[STEADY STATE] Measuring baseline health on target endpoint '{probe_url}'...")
+        baseline = evaluator.measure_baseline(count=3, interval=0.3)
+        if baseline.get("healthy"):
+            emit_log(f"[STEADY STATE] Baseline healthy: HTTP {expected_status} (~{baseline.get('avg_latency_ms', 0)}ms avg latency).")
+        else:
+            sample_err = baseline.get("sample_errors", [])
+            err_desc = f" ({sample_err[0]})" if sample_err else ""
+            emit_log(f"[STEADY STATE] Target endpoint was UNREACHABLE or returned unexpected status before fault{err_desc}. Note: In-fault metrics will reflect pre-existing application outages rather than chaos impact.", level="WARN")
+
+    # Start active in-fault synthetic probing
+    evaluator.start_in_fault_probing(interval_sec=1.0)
 
     emit_log(f"Executing {executor.display_name} on target '{target}'...")
     try:
@@ -377,10 +489,55 @@ def _execute_single_fault(
             error=str(e),
         )
 
+    # Stop in-fault probing and gather impact metrics
+    in_fault_metrics = evaluator.stop_in_fault_probing()
+    if in_fault_metrics.get("probes_count", 0) > 0:
+        emit_log(
+            f"[CHAOS IMPACT] In-fault availability: {in_fault_metrics['availability_percent']}% | "
+            f"Avg Latency: {in_fault_metrics['avg_latency_ms']}ms (P95: {in_fault_metrics['p95_latency_ms']}ms)."
+        )
+
+    is_cancelled = (
+        cancel_event.is_set()
+        or (result.details and result.details.get("cancelled"))
+        or (result.error and "cancelled" in result.error.lower())
+    )
+
+    rto_target_sec = float(params.get("rto_target_seconds", 5.0))
+    if is_cancelled:
+        # Immediate clean exit: skip 12.0s recovery polling when user explicitly stopped the job
+        recovery_metrics = {
+            "recovered": True,
+            "recovery_time_seconds": 0.0,
+            "rto_target_seconds": rto_target_sec,
+            "rto_target_met": True,
+            "aborted_by_user": True,
+        }
+        emit_log(f"Fault #{fault_id} stopped and cleaned up safely.", level="WARN")
+    else:
+        # Post-fault RTO recovery verification
+        emit_log(f"[RECOVERY] Fault completed. Verifying recovery to steady state (RTO target: {rto_target_sec}s)...")
+        recovery_metrics = evaluator.measure_recovery(max_wait_sec=12.0, rto_target_sec=rto_target_sec)
+        rec_time = recovery_metrics.get("recovery_time_seconds", 0)
+        if recovery_metrics.get("recovered"):
+            emit_log(f"[RECOVERY] Steady-state restored in {rec_time}s (RTO target: {rto_target_sec}s, target {'met' if recovery_metrics.get('rto_target_met') else 'exceeded'}).")
+        else:
+            emit_log(f"[RECOVERY] Service did not restore within {rec_time}s timeout.", level="WARN")
+
+    # Compute comprehensive Resilience Score & Grade
+    resilience_report = ResilienceScorer.calculate_score(
+        fault_type=fault_type,
+        baseline=evaluator.baseline,
+        experiment_metrics=in_fault_metrics,
+        recovery_metrics=recovery_metrics,
+        rollback_success=result.recovered,
+    )
+    if not is_cancelled:
+        emit_log(f"[RESILIENCE AUDIT] Score: {resilience_report['score']}/100 | Grade: {resilience_report['grade']} ({resilience_report['classification']})")
+
     # 4. Report final result
-    if cancel_event.is_set() or (result.details and result.details.get("cancelled")):
+    if is_cancelled:
         status_str = "cancelled"
-        emit_log(f"Fault #{fault_id} cancelled safely and cleaned up.", level="WARN")
     elif result.success:
         status_str = "completed"
         emit_log(f"Fault #{fault_id} completed successfully in {result.duration_seconds}s.", level="INFO")
@@ -388,21 +545,33 @@ def _execute_single_fault(
         status_str = "failed"
         emit_log(f"Fault #{fault_id} failed: {result.error}", level="ERROR")
 
+    result_payload = result.to_dict()
+    result_payload["resilience"] = resilience_report
+    result_payload["resilience_score"] = resilience_report["score"]
+    result_payload["resilience_grade"] = resilience_report["grade"]
+    result_payload["classification"] = resilience_report["classification"]
+    result_payload["steady_state_baseline"] = evaluator.baseline
+    result_payload["experiment_metrics"] = in_fault_metrics
+    result_payload["recovery_metrics"] = recovery_metrics
+    result_payload["recommendations"] = resilience_report["recommendations"]
+
     try:
         client.send_request_to_backend(
             f"/projects/{project_id}/faults/{fault_id}/report/",
             "POST",
             data={
                 "status": status_str,
-                "result": result.to_dict(),
+                "result": result_payload,
                 "error_message": result.error or "",
             },
         )
     except Exception as rep_err:
         console.print(f"[dim yellow]Warning: Failed to report execution result: {rep_err}[/dim yellow]")
 
+    batcher.close()
+
     if status_str == "completed":
-        console.print(f"  [bold green]✔ Fault #{fault_id} Completed ({result.duration_seconds}s)[/bold green]")
+        console.print(f"  [bold green]✔ Fault #{fault_id} Completed ({result.duration_seconds}s) - Resilience: {resilience_report['grade']} ({resilience_report['score']}/100)[/bold green]")
     elif status_str == "cancelled":
         console.print(f"  [bold yellow]■ Fault #{fault_id} Cancelled & Cleaned Up[/bold yellow]")
     else:

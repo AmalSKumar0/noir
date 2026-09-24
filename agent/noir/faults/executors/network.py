@@ -71,7 +71,7 @@ class NetworkDelayExecutor(FaultExecutor):
             )
 
             # 2. Hold for duration with cancellation checking and periodic logging
-            step = 0.5
+            step = 0.25
             loops = int(duration / step)
             for i in range(loops):
                 if context and context.get("is_cancelled") and context["is_cancelled"]():
@@ -80,7 +80,7 @@ class NetworkDelayExecutor(FaultExecutor):
                         context["log"](f"Execution cancelled by user. Removed network delay on '{container_name}'.", level="WARN")
                     raise InterruptedError(f"Network delay on '{container_name}' cancelled by user.")
                 time.sleep(step)
-                if context and context.get("log") and (i + 1) % 4 == 0:
+                if context and context.get("log") and (i + 1) % 8 == 0:
                     elapsed_sec = int((i + 1) * step)
                     context["log"](f"Network latency active: +{latency_ms}ms on {container_name} ({elapsed_sec}s / {duration}s)")
 
@@ -193,7 +193,7 @@ class NetworkLossExecutor(FaultExecutor):
             docker_mgr.apply_network_loss(container_name, loss_percent=loss_percent, interface=interface)
 
             # 2. Hold for duration with cancellation checking and periodic logging
-            step = 0.5
+            step = 0.25
             loops = int(duration / step)
             for i in range(loops):
                 if context and context.get("is_cancelled") and context["is_cancelled"]():
@@ -202,7 +202,7 @@ class NetworkLossExecutor(FaultExecutor):
                         context["log"](f"Execution cancelled by user. Restored packet delivery on '{container_name}'.", level="WARN")
                     raise InterruptedError(f"Packet loss on '{container_name}' cancelled by user.")
                 time.sleep(step)
-                if context and context.get("log") and (i + 1) % 4 == 0:
+                if context and context.get("log") and (i + 1) % 8 == 0:
                     elapsed_sec = int((i + 1) * step)
                     context["log"](f"Packet loss active: {loss_percent}% on {container_name} ({elapsed_sec}s / {duration}s)")
 

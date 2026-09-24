@@ -53,7 +53,7 @@ class ContainerStopExecutor(FaultExecutor):
                 context["log"](f"Container '{container_name}' stopped. Holding offline state for {duration}s...")
 
             # 2. Hold stopped state for duration with cancellation checking
-            step = 0.5
+            step = 0.25
             loops = int(duration / step)
             for i in range(loops):
                 if context and context.get("is_cancelled") and context["is_cancelled"]():
@@ -62,7 +62,7 @@ class ContainerStopExecutor(FaultExecutor):
                         context["log"](f"Execution cancelled by user. Restarted container '{container_name}'.", level="WARN")
                     raise InterruptedError(f"Container stop on '{container_name}' cancelled by user.")
                 time.sleep(step)
-                if context and context.get("log") and (i + 1) % 4 == 0:
+                if context and context.get("log") and (i + 1) % 8 == 0:
                     elapsed_sec = int((i + 1) * step)
                     context["log"](f"Container offline: '{container_name}' ({elapsed_sec}s / {duration}s)")
 

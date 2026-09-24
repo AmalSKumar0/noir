@@ -288,6 +288,123 @@ export default function FaultDetailModal({ record, isOpen, onClose, onPrint }: F
               <p className="leading-relaxed text-[11px] text-white/80">{resultMessage}</p>
             </div>
 
+            {/* RESILIENCE AUDIT ASSESSMENT */}
+            {(() => {
+              const sc = record.resilience_score ?? record.result?.resilience?.score ?? record.result?.resilience_score;
+              const gr = record.resilience_grade ?? record.result?.resilience?.grade ?? record.result?.resilience_grade;
+              const cls = record.classification ?? record.result?.resilience?.classification ?? record.result?.classification;
+              const base = record.result?.steady_state_baseline ?? record.result?.resilience?.steady_state_baseline;
+              const expM = record.result?.experiment_metrics ?? record.result?.resilience?.experiment_metrics;
+              const recM = record.result?.recovery_metrics ?? record.result?.resilience?.recovery_metrics;
+              const recs: string[] = record.recommendations ?? record.result?.recommendations ?? record.result?.resilience?.recommendations ?? [];
+
+              if (sc === undefined || sc === null || !gr) return null;
+
+              return (
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="p-4 rounded-xl bg-black/50 border border-white/10 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black border ${
+                          gr === 'A' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                          gr === 'B' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                          gr === 'C' ? 'bg-orange-500/20 text-orange-300 border-orange-500/40' :
+                          'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                        }`}>
+                          {gr}
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase text-white/40">Resilience Engineering Score</div>
+                          <div className="text-base font-bold text-white flex items-center gap-2">
+                            <span>{Math.round(sc)} / 100</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                              gr === 'A' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                              gr === 'B' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                              gr === 'C' ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                              'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            }`}>
+                              Grade {gr}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {cls && (
+                        <div className="text-right">
+                          <div className="text-[10px] uppercase text-white/40">Classification</div>
+                          <div className="text-xs font-bold text-violet-300 uppercase tracking-wide">
+                            {cls}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3-STAGE LIFECYCLE */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-white/40 uppercase font-bold">1. Baseline</span>
+                          <span className={`w-2 h-2 rounded-full ${base?.status ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                        </div>
+                        <div className="text-xs font-bold text-white">
+                          {base?.mean_latency_ms !== undefined ? `${base.mean_latency_ms.toFixed(1)} ms` : 'Active'}
+                        </div>
+                        <div className="text-[10px] text-white/40">
+                          HTTP {base?.status_code || 200} | {base?.sample_count || 1} probes
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-white/40 uppercase font-bold">2. In-Fault</span>
+                          <span className={`w-2 h-2 rounded-full ${
+                            (expM?.availability_pct ?? 100) >= 90 ? 'bg-emerald-400' :
+                            (expM?.availability_pct ?? 100) >= 50 ? 'bg-amber-400' : 'bg-rose-400'
+                          }`} />
+                        </div>
+                        <div className="text-xs font-bold text-white">
+                          {expM?.availability_pct !== undefined ? `${expM.availability_pct.toFixed(0)}% Availability` : 'Monitored'}
+                        </div>
+                        <div className="text-[10px] text-white/40">
+                          P95: {expM?.p95_latency_ms ? `${expM.p95_latency_ms.toFixed(1)}ms` : '-'} | {expM?.latency_degradation_factor ? `${expM.latency_degradation_factor.toFixed(1)}x lag` : 'Normal'}
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-white/40 uppercase font-bold">3. Rollback RTO</span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        </div>
+                        <div className="text-xs font-bold text-emerald-400">
+                          {recM?.rto_seconds !== undefined ? `${recM.rto_seconds.toFixed(2)}s RTO` : 'Clean Rollback'}
+                        </div>
+                        <div className="text-[10px] text-white/40">
+                          Steady-State Restored
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RECOMMENDATIONS */}
+                  {recs && recs.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider block flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
+                        Architectural Recommendations
+                      </span>
+                      <div className="p-3 rounded-xl bg-violet-950/20 border border-violet-500/20 text-[11px] font-mono space-y-1.5 text-white/80">
+                        {recs.map((rec, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-violet-400 font-bold shrink-0">→</span>
+                            <span className="leading-relaxed">{rec}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* PARAMETERS MATRIX */}
             <div className="space-y-2">
               <span className="text-[10px] text-white/40 uppercase font-mono tracking-wider block">

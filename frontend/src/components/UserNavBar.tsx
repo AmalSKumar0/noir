@@ -26,6 +26,7 @@ export default function UserNavBar() {
   };
 
   const fetchUnreadCount = async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const token = await checkAndRefreshToken();
       if (!token) return;
@@ -46,9 +47,20 @@ export default function UserNavBar() {
 
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 20000); // 20s polling
-    return () => clearInterval(interval);
-  }, [location.pathname]);
+    const interval = setInterval(fetchUnreadCount, 60000); // 60s central background polling
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchUnreadCount();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const NavButton = ({ 
     to, 

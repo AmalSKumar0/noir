@@ -60,7 +60,7 @@ class CpuStressExecutor(FaultExecutor):
             thread = threading.Thread(target=run_stress, daemon=True)
             thread.start()
 
-            step = 0.5
+            step = 0.25
             last_logged_sec = 0
             while thread.is_alive():
                 if context and context.get("is_cancelled") and context["is_cancelled"]():
@@ -79,7 +79,29 @@ class CpuStressExecutor(FaultExecutor):
                 raise exec_error[0]
 
             res = exec_result.get("res", {})
+            exit_code = res.get("exit_code", 0)
             elapsed = round(time.time() - t0, 2)
+
+            if exit_code != 0:
+                out_err = res.get("output", "").strip() or f"Process exited with non-zero status code {exit_code}."
+                err_msg = f"CPU stress process failed inside container '{container_name}': {out_err}"
+                if context and context.get("log"):
+                    context["log"](err_msg, level="ERROR")
+                return FaultResult(
+                    success=False,
+                    message=err_msg,
+                    details={
+                        "target": container_name,
+                        "workers": workers,
+                        "duration_seconds": duration,
+                        "exit_code": exit_code,
+                        "output": out_err,
+                    },
+                    duration_seconds=elapsed,
+                    recovered=True,
+                    error=err_msg,
+                )
+
             if context and context.get("log"):
                 context["log"](f"CPU stress completed successfully on '{container_name}' ({elapsed}s).")
 
@@ -90,7 +112,7 @@ class CpuStressExecutor(FaultExecutor):
                     "target": container_name,
                     "workers": workers,
                     "duration_seconds": duration,
-                    "exit_code": res.get("exit_code", 0),
+                    "exit_code": exit_code,
                 },
                 duration_seconds=elapsed,
                 recovered=True,
@@ -188,7 +210,7 @@ class MemoryStressExecutor(FaultExecutor):
             thread = threading.Thread(target=run_stress, daemon=True)
             thread.start()
 
-            step = 0.5
+            step = 0.25
             last_logged_sec = 0
             while thread.is_alive():
                 if context and context.get("is_cancelled") and context["is_cancelled"]():
@@ -207,7 +229,29 @@ class MemoryStressExecutor(FaultExecutor):
                 raise exec_error[0]
 
             res = exec_result.get("res", {})
+            exit_code = res.get("exit_code", 0)
             elapsed = round(time.time() - t0, 2)
+
+            if exit_code != 0:
+                out_err = res.get("output", "").strip() or f"Process exited with non-zero status code {exit_code}."
+                err_msg = f"Memory stress process failed inside container '{container_name}': {out_err}"
+                if context and context.get("log"):
+                    context["log"](err_msg, level="ERROR")
+                return FaultResult(
+                    success=False,
+                    message=err_msg,
+                    details={
+                        "target": container_name,
+                        "memory_mb": memory_mb,
+                        "duration_seconds": duration,
+                        "exit_code": exit_code,
+                        "output": out_err,
+                    },
+                    duration_seconds=elapsed,
+                    recovered=True,
+                    error=err_msg,
+                )
+
             if context and context.get("log"):
                 context["log"](f"Memory pressure completed and buffer released on '{container_name}' ({elapsed}s).")
 
@@ -218,7 +262,7 @@ class MemoryStressExecutor(FaultExecutor):
                     "target": container_name,
                     "memory_mb": memory_mb,
                     "duration_seconds": duration,
-                    "exit_code": res.get("exit_code", 0),
+                    "exit_code": exit_code,
                 },
                 duration_seconds=elapsed,
                 recovered=True,

@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
+from django.core.serializers.json import DjangoJSONEncoder
 from apps.projects.views import get_project_with_permission
 
 User = get_user_model()
@@ -90,10 +91,18 @@ class ProjectLogsConsumer(AsyncWebsocketConsumer):
 
     async def log_message(self, event):
         data = event['data']
-        await self.send(text_data=json.dumps(data))
+        try:
+            payload = json.dumps(data, cls=DjangoJSONEncoder)
+        except Exception:
+            payload = json.dumps(data, default=str)
+        await self.send(text_data=payload)
 
     async def injection_event(self, event):
         data = event['data']
-        await self.send(text_data=json.dumps(data))
+        try:
+            payload = json.dumps(data, cls=DjangoJSONEncoder)
+        except Exception:
+            payload = json.dumps(data, default=str)
+        await self.send(text_data=payload)
 
 
