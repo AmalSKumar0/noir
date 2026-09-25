@@ -21,12 +21,40 @@ class ProjectUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id","username"]
 
+class FrameworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Framework
+        fields = [
+            "id",
+            "name",
+            "language",
+            "supported",
+        ]
+
+class ProjectProfileSerializer(serializers.ModelSerializer):
+    framework = FrameworkSerializer(read_only=True)
+
+    class Meta:
+        model = ProjectProfile
+        fields = [
+            "framework",
+            "runtime_version",
+            "package_manager",
+            "operating_system",
+            "analysis_data",
+            "docker_containers",
+            "detected_at",
+        ]
+
 class ProjectSerializer(serializers.ModelSerializer):
     owner = ProjectUserSerializer(read_only=True)
+    profile = ProjectProfileSerializer(read_only=True)
     assigned_teams = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
     is_daemon_active = serializers.SerializerMethodField()
     is_stream_active = serializers.SerializerMethodField()
     containers_count = serializers.SerializerMethodField()
+    tests_count = serializers.SerializerMethodField()
+    experiments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -39,6 +67,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "visibility",
             "analysis_mode",
             "status",
+            "profile",
             "created_at",
             "updated_at",
             "connection_code",
@@ -46,6 +75,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_daemon_active",
             "is_stream_active",
             "containers_count",
+            "tests_count",
+            "experiments_count",
         ]
         extra_kwargs = {
             "title": {
@@ -138,33 +169,14 @@ class ProjectSerializer(serializers.ModelSerializer):
             return len(profile.docker_containers)
         return 0
 
-class FrameworkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Framework
-        fields = [
-            "id",
-            "name",
-            "language",
-            "supported",
-        ]
+    def get_tests_count(self, obj):
+        return obj.test_runs.count()
 
-class ProjectProfileSerializer(serializers.ModelSerializer):
-    framework = FrameworkSerializer(read_only=True)
-
-    class Meta:
-        model = ProjectProfile
-        fields = [
-            "framework",
-            "runtime_version",
-            "package_manager",
-            "operating_system",
-            "analysis_data",
-            "docker_containers",
-            "detected_at",
-        ]
+    def get_experiments_count(self, obj):
+        return obj.fault_injections.count()
 
 class SingleProjectSerializer(ProjectSerializer):
-    profile = ProjectProfileSerializer(read_only=True)
+    pass
 
     class Meta(ProjectSerializer.Meta):
         fields = [

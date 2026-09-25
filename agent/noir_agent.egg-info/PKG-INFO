@@ -198,7 +198,9 @@ agent/
 | `status` | `noir status` | Displays connection health, active project details, and token status. |
 | `doctor` | `noir doctor` | Diagnoses local environment (Docker, Python, Git, Backend reachability). |
 | `config` | `noir config [get/set]` | Inspects and manages `.noir/config.json` settings. |
-| `login` | `noir login` | Authenticates user credentials with Noir backend. |
+| `login` | `noir login` | Authenticates user credentials with Noir backend via email/password. |
+| `login github` | `noir login github` | Authenticates developer session via GitHub OAuth in browser. |
+| `login google` | `noir login google` | Authenticates developer session via Google OAuth in browser. |
 | `whoami` | `noir whoami` | Displays currently authenticated user session. |
 | `logout` | `noir logout` | Clears local credentials. |
 

@@ -28,6 +28,7 @@ noir/config/settings.py
 noir/faults/__init__.py
 noir/faults/base.py
 noir/faults/docker.py
+noir/faults/experiment.py
 noir/faults/registry.py
 noir/faults/executors/__init__.py
 noir/faults/executors/network.py
@@ -51,4 +52,7 @@ noir_agent.egg-info/entry_points.txt
 noir_agent.egg-info/requires.txt
 noir_agent.egg-info/top_level.txt
 tests/test_docker_detector.py
+tests/test_experiment.py
 tests/test_faults.py
+tests/test_oauth_login.py
+tests/test_report_engine.py

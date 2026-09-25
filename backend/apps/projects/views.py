@@ -191,7 +191,9 @@ class TestRunListCreateView(APIView):
         executor_id = request.GET.get("executor_id") or request.GET.get("developer_id")
         status_filter = request.GET.get("status")
 
-        if user.role == User.Role.COMPANY and hasattr(user, "company_profile"):
+        if user.is_superuser or user.is_staff or getattr(user, "role", None) == "admin":
+            queryset = TestRun.objects.all().order_by("-created_at")
+        elif user.role == User.Role.COMPANY and hasattr(user, "company_profile"):
             queryset = TestRun.objects.filter(
                 Q(project__owner=user) | Q(project__owner__company=user.company_profile) | Q(project__assigned_teams__company=user.company_profile)
             ).distinct().order_by("-created_at")

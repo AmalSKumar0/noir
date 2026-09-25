@@ -27,6 +27,7 @@ import UserProfile from './pages/UserProfile';
 import QuickstartPage from './pages/QuickstartPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManageProjects from './pages/AdminManageProjects';
+import AdminProjectDetailPage from './pages/AdminProjectDetailPage';
 import AdminManageUsers from './pages/AdminManageUsers';
 import AdminManageCompanies from './pages/AdminManageCompanies';
 
@@ -580,6 +581,23 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <AdminManageProjects />
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/projects/:projectId" 
+          element={
+            <ProtectedRoute adminOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ErrorBoundary>
+                  <AdminProjectDetailPage />
+                </ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 
