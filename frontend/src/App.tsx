@@ -21,6 +21,7 @@ import ChaosReportPage from './pages/ChaosReportPage';
 import ChaosExperimentReportPage from './pages/ChaosExperimentReportPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import ChaosCollectiveReportPage from './pages/ChaosCollectiveReportPage';
+import ProjectReportsPage from './pages/ProjectReportsPage';
 import OrganizationProfile from './pages/OrganizationProfile';
 import UserProfile from './pages/UserProfile';
 import QuickstartPage from './pages/QuickstartPage';
@@ -35,7 +36,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { checkAndRefreshToken } from './utils/auth';
 
-const pageTransition = { 
+const pageTransition: any = { 
   duration: 0.16,
   ease: [0.25, 0.1, 0.25, 1.0]
 };
@@ -45,7 +46,6 @@ function AnimatedRoutes() {
   
   return (
     <AnimatePresence mode="wait">
-      {/* @ts-expect-error react-router-dom types issue with React 19 */}
       <Routes location={location} key={location.pathname}>
         <Route 
           path="/" 
@@ -221,6 +221,21 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <ErrorBoundary><ChaosCollectiveReportPage isCompanyView /></ErrorBoundary>
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/company/projects/:projectId/reports" 
+          element={
+            <ProtectedRoute companyOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ErrorBoundary><ProjectReportsPage isCompanyView /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 
@@ -489,6 +504,21 @@ function AnimatedRoutes() {
                 transition={pageTransition}
               >
                 <ErrorBoundary><ChaosCollectiveReportPage /></ErrorBoundary>
+              </motion.div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/reports" 
+          element={
+            <ProtectedRoute developerOnly>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <ErrorBoundary><ProjectReportsPage /></ErrorBoundary>
               </motion.div>
             </ProtectedRoute>
           } 

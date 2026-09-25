@@ -23,7 +23,9 @@ import {
   Boxes,
   ArrowUpRight,
   ChevronRight,
-  Server
+  Server,
+  Shield,
+  FileText
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -241,6 +243,15 @@ export default function ProjectDetail() {
                 <span>Analytics ({testRuns.length})</span>
               </Link>
 
+              {/* Resilience Reports Page Link */}
+              <Link
+                to={`/dashboard/projects/${projectId}/reports`}
+                className="h-8 px-3 rounded-md bg-zinc-900 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+              >
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Resilience Reports</span>
+              </Link>
+
               {/* Back to Workspaces */}
               <Link
                 to="/dashboard/projects"
@@ -316,6 +327,14 @@ export default function ProjectDetail() {
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
                 <span>Chaos Injection</span>
               </button>
+
+              <Link
+                to={`/dashboard/projects/${projectId}/reports`}
+                className="h-7 px-3 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+              >
+                <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Reports</span>
+              </Link>
             </div>
 
             {/* TAB 1: LIVE MONITORING */}
