@@ -182,16 +182,25 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         email = attrs.get("email")
-        
-        try:
-            user = User.objects.get(email=email)
+        password = attrs.get("password")
 
-        except User.DoesNotExist:
+        matching_users = User.objects.filter(email__iexact=email).order_by("-is_superuser", "-date_joined")
+        if not matching_users.exists():
             raise AuthenticationFailed("No active account found with the given credentials", code="authorization")
-            
+
+        user = None
+        for candidate in matching_users:
+            if candidate.is_active and candidate.check_password(password):
+                user = candidate
+                break
+
+        if not user:
+            user = matching_users.first()
+
         attrs[self.username_field] = user.username
 
         data = super().validate(attrs)
+        user = getattr(self, "user", user)
 
         # Self-heal orphaned company role without CompanyProfile
         if user.role == User.Role.COMPANY and not hasattr(user, "company_profile"):
