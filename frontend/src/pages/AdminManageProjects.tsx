@@ -24,7 +24,9 @@ import {
   ExternalLink,
   ChevronDown,
   ArrowUpDown,
-  X
+  X,
+  Zap,
+  Boxes
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
@@ -358,53 +360,96 @@ export default function AdminManageProjects() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 pt-1">
-        
+      <div className="pt-2">
         {/* ===================================================================
-            PAGE HEADER & CONTROLS
+            PAGE HEADER & CONTROLS (MATCHING USERS & COMPANIES PAGES)
         ==================================================================== */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-800/80 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-semibold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
-                Admin Console
-              </span>
-              <span className="text-zinc-600">•</span>
-              <span className="text-xs font-mono text-zinc-400">
-                Workspace Infrastructure
-              </span>
-            </div>
-            <div className="flex items-center gap-2.5 mt-1">
-              <h1 className="text-xl font-bold tracking-tight text-white font-sans">
-                Projects
-              </h1>
-              <span className="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {projects.length}
-              </span>
-            </div>
-            <p className="text-xs text-zinc-400 font-mono mt-0.5">
-              Inspect, configure, and maintain registered project nodes across the platform
-            </p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Manage Projects</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#c4b5fd]/15 text-[#e9d5ff] border border-[#c4b5fd]/30">
+              {projects.length}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 self-stretch sm:self-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+            {/* Search Input */}
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d8b4fe]/60 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-8 py-2 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-white text-xs sm:text-sm font-medium placeholder-[#e9d5ff]/40 focus:outline-none focus:border-[#c4b5fd] focus:ring-1 focus:ring-[#c4b5fd]/30 backdrop-blur-sm transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#e9d5ff]/50 hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter */}
+            <select
+              aria-label="Filter projects by status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3.5 py-2 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-[#e9d5ff] text-xs font-medium focus:outline-none focus:border-[#c4b5fd] backdrop-blur-sm cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
+
+            {/* Runtime Filter */}
+            {availableRuntimes.length > 0 && (
+              <select
+                aria-label="Filter projects by runtime"
+                value={runtimeFilter}
+                onChange={(e) => setRuntimeFilter(e.target.value)}
+                className="px-3.5 py-2 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-[#e9d5ff] text-xs font-medium focus:outline-none focus:border-[#c4b5fd] backdrop-blur-sm cursor-pointer"
+              >
+                <option value="all">All Runtimes</option>
+                {availableRuntimes.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Sort Toggle */}
+            <button
+              type="button"
+              onClick={() => setSortAsc(!sortAsc)}
+              title={sortAsc ? 'Ascending' : 'Descending'}
+              className="p-2 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-[#e9d5ff]/70 hover:text-white hover:border-[#c4b5fd] transition-all cursor-pointer"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
+
+            {/* Refresh Action */}
             <button
               type="button"
               onClick={fetchProjects}
               disabled={isLoading}
               title="Refresh project list"
-              className="h-8 px-2.5 rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              className="p-2 rounded-full border border-[#c4b5fd]/25 bg-[#120f1e]/80 text-[#e9d5ff]/70 hover:text-white hover:border-[#c4b5fd] transition-all cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-purple-400' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#c4b5fd]' : ''}`} />
             </button>
 
+            {/* New Project Button */}
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="h-8 px-3 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-purple-900/30"
+              className="px-4 py-2 bg-[#c4b5fd] hover:bg-[#d8b4fe] text-[#0a0812] text-xs sm:text-sm font-semibold rounded-full shadow-[0_0_20px_rgba(196,181,253,0.3)] transition-all flex items-center gap-2 cursor-pointer"
             >
-              <FolderPlus className="w-3.5 h-3.5" />
+              <FolderPlus className="w-4 h-4" />
               <span>New Project</span>
             </button>
           </div>
@@ -451,143 +496,49 @@ export default function AdminManageProjects() {
           </div>
         )}
 
-        {/* ===================================================================
-            SEARCH & FILTERS TOOLBAR
-        ==================================================================== */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-zinc-950/70 border border-zinc-800/80 p-2.5 rounded-lg text-xs font-mono">
-          
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Search by name, code, owner, language..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-purple-500/70 transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
 
-          {/* Filter Dropdowns & Sorting */}
-          <div className="flex items-center flex-wrap gap-2">
-            {/* Status Filter */}
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-500 text-[11px]">Status:</span>
-              <select
-                aria-label="Filter projects by status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-7 px-2 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 focus:outline-none focus:border-purple-500 cursor-pointer text-xs"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-
-            {/* Runtime Filter */}
-            {availableRuntimes.length > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="text-zinc-500 text-[11px]">Runtime:</span>
-                <select
-                  aria-label="Filter projects by runtime"
-                  value={runtimeFilter}
-                  onChange={(e) => setRuntimeFilter(e.target.value)}
-                  className="h-7 px-2 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 focus:outline-none focus:border-purple-500 cursor-pointer text-xs"
-                >
-                  <option value="all">All Runtimes</option>
-                  {availableRuntimes.map(lang => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Sort Field */}
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-500 text-[11px]">Sort:</span>
-              <select
-                aria-label="Sort projects"
-                value={sortField}
-                onChange={(e: any) => setSortField(e.target.value)}
-                className="h-7 px-2 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 focus:outline-none focus:border-purple-500 cursor-pointer text-xs"
-              >
-                <option value="updated">Last Updated</option>
-                <option value="name">Name</option>
-                <option value="created">Created Date</option>
-                <option value="status">Status</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => setSortAsc(!sortAsc)}
-                title={sortAsc ? 'Ascending' : 'Descending'}
-                className="h-7 px-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
-              >
-                <ArrowUpDown className="w-3 h-3" />
-              </button>
-            </div>
-
-          </div>
-        </div>
 
         {/* ===================================================================
-            COMPACT PROFESSIONAL LIST / TABLE
+            PROJECTS TABLE (MATCHING OTHER ADMIN PAGES)
         ==================================================================== */}
-        <div className="overflow-x-auto rounded-lg border border-zinc-800/80 bg-[#090A0F] shadow-sm">
-          <table className="w-full text-left text-xs font-mono border-collapse">
-            <thead>
-              <tr className="border-b border-zinc-800/80 bg-zinc-950/80 text-[10px] text-zinc-400 uppercase tracking-wider">
-                <th className="py-2.5 px-3 font-semibold">Project Name & Owner</th>
-                <th className="py-2.5 px-3 font-semibold">Identifier</th>
-                <th className="py-2.5 px-3 font-semibold">Architecture / Mode</th>
-                <th className="py-2.5 px-3 font-semibold">Runtime / Stack</th>
-                <th className="py-2.5 px-3 font-semibold">Environment</th>
-                <th className="py-2.5 px-3 font-semibold">Status</th>
-                <th className="py-2.5 px-3 font-semibold text-center">Tests</th>
-                <th className="py-2.5 px-3 font-semibold text-center">Experiments</th>
-                <th className="py-2.5 px-3 font-semibold">Last Activity</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-850/60">
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={`loading-row-${i}`} className="animate-pulse">
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-36 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-24 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-28 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-20 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-24 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-16 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3 text-center"><Skeleton className="h-4 w-8 mx-auto bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3 text-center"><Skeleton className="h-4 w-8 mx-auto bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-20 bg-zinc-800/60" /></td>
-                    <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-16 ml-auto bg-zinc-800/60" /></td>
-                  </tr>
-                ))
-              ) : paginatedProjects.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-zinc-500 font-mono">
-                    <Layers className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-zinc-300">No project nodes found</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {searchQuery || statusFilter !== 'all' || runtimeFilter !== 'all'
-                        ? 'Try clearing or changing your filters.'
-                        : 'No projects registered on the platform yet.'}
-                    </p>
-                  </td>
+        <div className="bg-[#0c0a16]/90 border border-[#c4b5fd]/20 rounded-2xl p-1 backdrop-blur-md shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#c4b5fd]/15">
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Project</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Runtime & Stack</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Tests & Chaos</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider">Last Activity</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-[#d8b4fe]/60 uppercase tracking-wider text-right">Actions</th>
                 </tr>
-              ) : (
+              </thead>
+              <tbody className="divide-y divide-[#c4b5fd]/10">
+                {isLoading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <tr key={`loading-row-${i}`} className="hover:bg-white/5 transition-colors">
+                      <td className="px-5 py-3.5 whitespace-nowrap"><Skeleton className="h-6 w-44" /></td>
+                      <td className="px-5 py-3.5 whitespace-nowrap"><Skeleton className="h-6 w-32" /></td>
+                      <td className="px-5 py-3.5 whitespace-nowrap"><Skeleton className="h-6 w-24 rounded-full" /></td>
+                      <td className="px-5 py-3.5 whitespace-nowrap"><Skeleton className="h-6 w-32" /></td>
+                      <td className="px-5 py-3.5 whitespace-nowrap"><Skeleton className="h-6 w-24" /></td>
+                      <td className="px-5 py-3.5 whitespace-nowrap text-right"><Skeleton className="h-7 w-20 rounded-full ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : paginatedProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-[#e9d5ff]/40 font-mono text-sm">
+                      <Layers className="w-8 h-8 text-[#c4b5fd]/30 mx-auto mb-2" />
+                      <p className="font-semibold text-stone-200">No project workspaces found</p>
+                      <p className="text-xs text-[#e9d5ff]/50 mt-1">
+                        {searchQuery || statusFilter !== 'all' || runtimeFilter !== 'all'
+                          ? 'Try clearing or adjusting your search filters.'
+                          : 'No projects registered on the platform yet.'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
                 paginatedProjects.map((p) => {
                   const frameworkLang = p.profile?.framework?.language || 'Unknown';
                   const frameworkName = p.profile?.framework?.name || 'Generic';
@@ -597,131 +548,121 @@ export default function AdminManageProjects() {
                     <tr
                       key={p.id}
                       onClick={() => navigate(`/admin/projects/${p.id}`)}
-                      className="hover:bg-purple-950/20 hover:border-purple-500/30 transition-colors cursor-pointer group"
+                      className="hover:bg-[#c4b5fd]/5 transition-colors cursor-pointer group"
                     >
-                      {/* Name & Owner */}
-                      <td className="py-2.5 px-3">
-                        <div className="font-semibold text-zinc-100 group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
-                          <span>{p.title}</span>
-                          <span className="text-[10px] text-zinc-500 font-normal">#{p.id}</span>
+                      {/* Project Identity */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-[#c4b5fd]/15 border border-[#c4b5fd]/30 flex items-center justify-center text-[#c4b5fd] shrink-0 group-hover:bg-[#c4b5fd]/25 transition-colors">
+                            <Boxes className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white text-sm group-hover:text-[#c4b5fd] transition-colors truncate flex items-center gap-1.5">
+                              <span>{p.title}</span>
+                              <span className="text-[11px] text-[#e9d5ff]/40 font-mono font-normal">#{p.id}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyCode(e, p.connection_code, p.id)}
+                                title="Copy connection code"
+                                className="inline-flex items-center gap-1 text-[11px] font-mono text-[#c4b5fd]/80 hover:text-white bg-[#c4b5fd]/10 hover:bg-[#c4b5fd]/20 px-1.5 py-0.5 rounded border border-[#c4b5fd]/20 transition-colors"
+                              >
+                                <span>{p.connection_code}</span>
+                                {copiedCodeId === p.id ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3 opacity-60" />
+                                )}
+                              </button>
+                              <span className="text-[11px] text-[#e9d5ff]/40 font-mono">
+                                by {p.owner?.username || 'admin'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-zinc-400">
-                          Owner: <span className="text-zinc-300">{p.owner?.username || 'admin'}</span>
-                        </div>
                       </td>
 
-                      {/* Connection Code Pill */}
-                      <td className="py-2.5 px-3">
-                        <button
-                          type="button"
-                          onClick={(e) => handleCopyCode(e, p.connection_code, p.id)}
-                          title="Copy connection code"
-                          className="h-6 px-1.5 rounded bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-[11px] font-mono text-zinc-300 hover:text-white flex items-center gap-1 transition-colors"
-                        >
-                          <span className="tracking-wider">{p.connection_code}</span>
-                          {copiedCodeId === p.id ? (
-                            <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-zinc-500 hover:text-zinc-300 shrink-0" />
-                          )}
-                        </button>
-                      </td>
-
-                      {/* Architecture & Mode */}
-                      <td className="py-2.5 px-3 text-[11px] text-zinc-300">
-                        <span className="capitalize">{p.architecture}</span>
-                        <span className="text-zinc-600 block text-[10px] capitalize">
-                          {p.analysis_mode} mode • {p.visibility}
-                        </span>
-                      </td>
-
-                      {/* Runtime / Primary Language */}
-                      <td className="py-2.5 px-3">
-                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-200">
-                          <Cpu className="w-3 h-3 text-cyan-400 shrink-0" />
+                      {/* Runtime & Stack */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-xs text-stone-200 font-medium">
+                          <Cpu className="w-3.5 h-3.5 text-[#c4b5fd]" />
                           <span>{frameworkLang}</span>
                           {frameworkName !== 'Generic' && (
-                            <span className="text-zinc-500 text-[10px]">({frameworkName})</span>
+                            <span className="text-stone-400 font-mono text-[11px]">({frameworkName})</span>
                           )}
                         </div>
-                      </td>
-
-                      {/* Environment */}
-                      <td className="py-2.5 px-3 text-[11px] text-zinc-300">
-                        <div className="flex items-center gap-1.5">
-                          <Server className="w-3 h-3 text-zinc-500 shrink-0" />
-                          <span>{p.profile?.operating_system || 'Linux'}</span>
-                        </div>
-                        <div className="text-[10px] text-zinc-500">
-                          {containersCount > 0 ? `${containersCount} container(s)` : 'Host process'}
+                        <div className="text-[11px] text-[#e9d5ff]/40 font-mono capitalize mt-0.5">
+                          {p.architecture} • {containersCount > 0 ? `${containersCount} container(s)` : (p.profile?.operating_system || 'Host')}
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="py-2.5 px-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
                           p.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
                             : p.status === 'completed'
-                            ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
-                            : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/60'
+                            ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
+                            : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            p.status === 'active' ? 'bg-emerald-400' : p.status === 'completed' ? 'bg-cyan-400' : 'bg-zinc-500'
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            p.status === 'active' ? 'bg-emerald-400' : p.status === 'completed' ? 'bg-cyan-400' : 'bg-zinc-400'
                           }`} />
-                          <span>{p.status}</span>
+                          <span className="capitalize">{p.status}</span>
                         </span>
                       </td>
 
-                      {/* Tests Count */}
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-                          (p.tests_count || 0) > 0 ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30' : 'text-zinc-500'
-                        }`}>
-                          {p.tests_count || 0}
-                        </span>
-                      </td>
-
-                      {/* Experiments Count */}
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-                          (p.experiments_count || 0) > 0 ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'text-zinc-500'
-                        }`}>
-                          {p.experiments_count || 0}
-                        </span>
+                      {/* Tests & Chaos Telemetry */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-[#c4b5fd]/10 text-[#d8b4fe] border border-[#c4b5fd]/20 text-xs font-mono" title="Test Runs">
+                            <Activity className="w-3 h-3 text-[#c4b5fd]" />
+                            <span>{p.tests_count || 0} tests</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20 text-xs font-mono" title="Chaos Experiments">
+                            <Zap className="w-3 h-3 text-purple-400" />
+                            <span>{p.experiments_count || 0} chaos</span>
+                          </span>
+                        </div>
                       </td>
 
                       {/* Last Activity */}
-                      <td className="py-2.5 px-3 text-[11px] text-zinc-400 whitespace-nowrap">
-                        {p.updated_at ? formatLastUpdated(p.updated_at) : 'N/A'}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="text-xs text-stone-300 font-mono">
+                          {formatLastUpdated(p.updated_at || p.created_at)}
+                        </div>
+                        <div className="text-[11px] text-[#e9d5ff]/40 font-mono mt-0.5">
+                          Created {new Date(p.created_at).toLocaleDateString()}
+                        </div>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-2.5 px-3 text-right">
+                      <td className="px-5 py-3.5 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => navigate(`/admin/projects/${p.id}`)}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-[#c4b5fd] cursor-pointer"
                             title="View Project Details"
-                            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={(e) => handleOpenEdit(e, p)}
-                            title="Edit Project Configuration"
-                            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-purple-300 transition-colors"
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-[#c4b5fd] cursor-pointer"
+                            title="Edit Project"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={(e) => handleOpenDelete(e, p)}
-                            title="Delete Project Node"
-                            className="p-1.5 rounded hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 transition-colors"
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-rose-400 cursor-pointer"
+                            title="Delete Project"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -732,38 +673,45 @@ export default function AdminManageProjects() {
             </tbody>
           </table>
 
-          {/* Table Footer with Pagination */}
-          <div className="flex flex-col sm:flex-row items-center justify-between px-3 py-2.5 border-t border-zinc-800/80 bg-zinc-950/60 text-xs font-mono gap-2">
-            <div className="text-zinc-500 text-[11px]">
-              Showing <span className="text-zinc-200">{filteredProjects.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to <span className="text-zinc-200">{Math.min(currentPage * pageSize, filteredProjects.length)}</span> of <span className="text-zinc-200">{filteredProjects.length}</span> projects
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-                className="h-7 px-2.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              
-              <span className="px-2 text-zinc-400 text-[11px]">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="h-7 px-2.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
+            {/* PAGINATION (MATCHING OTHER ADMIN PAGES) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-[#c4b5fd]/15 gap-4">
+              <div className="text-xs text-[#e9d5ff]/50 font-mono">
+                Showing {filteredProjects.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredProjects.length)} of {filteredProjects.length} projects
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="px-3 py-1 rounded-lg border border-[#c4b5fd]/20 text-xs font-medium text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-medium transition-colors cursor-pointer ${
+                        p === currentPage
+                          ? 'bg-[#c4b5fd] text-[#0a0812] font-semibold shadow-[0_0_12px_rgba(196,181,253,0.3)]'
+                          : 'text-[#e9d5ff]/70 hover:bg-[#c4b5fd]/15 hover:text-white'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="px-3 py-1 rounded-lg border border-[#c4b5fd]/20 text-xs font-medium text-[#e9d5ff]/75 bg-[#120f1e]/80 hover:bg-[#c4b5fd]/15 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
       </div>
 
       {/* ===================================================================
