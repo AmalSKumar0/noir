@@ -52,15 +52,28 @@ class MetricsAggregator:
     @staticmethod
     def calculate_percentiles(latencies: List[float]) -> Dict[str, Any]:
         if not latencies:
-            return {"p50": 0.0, "p75": None, "p90": None, "p95": 0.0, "p99": None, "mean": 0.0, "min": 0.0, "max": 0.0, "stddev": None, "sample_count": 0}
+            return {
+                "p50": None,
+                "p75": None,
+                "p90": None,
+                "p95": None,
+                "p99": None,
+                "mean": None,
+                "min": None,
+                "max": None,
+                "stddev": None,
+                "sample_count": 0,
+                "p95_status": "INSUFFICIENT_SAMPLES",
+                "p99_status": "INSUFFICIENT_SAMPLES",
+            }
 
         sorted_lat = sorted(latencies)
         n = len(sorted_lat)
 
         def _p(p: float) -> Optional[float]:
-            if p == 99 and n < MetricsAggregator.MIN_P99:
+            if p >= 99 and n < MetricsAggregator.MIN_P99:
                 return None
-            if p == 95 and n < MetricsAggregator.MIN_P95:
+            if p >= 95 and n < MetricsAggregator.MIN_P95:
                 return None
             idx = int(math.ceil((p / 100.0) * n)) - 1
             return round(sorted_lat[max(0, min(idx, n - 1))], 2)
@@ -71,13 +84,18 @@ class MetricsAggregator:
             mean_sq = sum((x - mean_val) ** 2 for x in sorted_lat) / n
             stddev_val = round(mean_sq ** 0.5, 3)
 
+        p95_val = _p(95)
+        p99_val = _p(99)
+
         return {
             "sample_count": n,
             "p50": _p(50),
             "p75": _p(75),
             "p90": _p(90),
-            "p95": _p(95),
-            "p99": _p(99),
+            "p95": p95_val,
+            "p99": p99_val,
+            "p95_status": "AVAILABLE" if p95_val is not None else "INSUFFICIENT_SAMPLES",
+            "p99_status": "AVAILABLE" if p99_val is not None else "INSUFFICIENT_SAMPLES",
             "mean": mean_val,
             "min": round(sorted_lat[0], 2),
             "max": round(sorted_lat[-1], 2),
@@ -91,7 +109,27 @@ class MetricsAggregator:
         Enables report reproduction from stored raw data.
         """
         if not raw_obs:
-            return {"sample_count": 0}
+            return {
+                "sample_count": 0,
+                "availability_percent": None,
+                "successful_probes": 0,
+                "failed_probes": 0,
+                "timeout_count": 0,
+                "connection_error_count": 0,
+                "http_error_count": 0,
+                "error_rate_percent": None,
+                "latency_distribution": MetricsAggregator.calculate_percentiles([]),
+                "avg_latency_ms": None,
+                "p50_latency_ms": None,
+                "p75_latency_ms": None,
+                "p90_latency_ms": None,
+                "p95_latency_ms": None,
+                "p99_latency_ms": None,
+                "min_latency_ms": None,
+                "max_latency_ms": None,
+                "stddev_latency_ms": None,
+                "probes_count": 0,
+            }
         n = len(raw_obs)
         successes = [o for o in raw_obs if o.get("success")]
         failures = [o for o in raw_obs if not o.get("success")]
@@ -99,7 +137,7 @@ class MetricsAggregator:
         conn_errs = [o for o in raw_obs if o.get("error_type") == "connection_error"]
         http_errs = [o for o in raw_obs if o.get("error_type") == "http_error"]
         avail = round((len(successes) / n) * 100, 2)
-        lats = [o["latency_ms"] for o in successes if "latency_ms" in o]
+        lats = [o["latency_ms"] for o in successes if o.get("latency_ms") is not None]
         dist = MetricsAggregator.calculate_percentiles(lats)
         return {
             "sample_count": n,
@@ -111,7 +149,7 @@ class MetricsAggregator:
             "http_error_count": len(http_errs),
             "error_rate_percent": round(100 - avail, 2),
             "latency_distribution": dist,
-            "avg_latency_ms": dist.get("mean", 0.0),
+            "avg_latency_ms": dist.get("mean"),
             "p50_latency_ms": dist.get("p50"),
             "p75_latency_ms": dist.get("p75"),
             "p90_latency_ms": dist.get("p90"),
@@ -213,20 +251,43 @@ class HypothesisEvaluator:
                 ],
             }
 
-        avail = experiment_metrics.get("availability_percent", 100.0)
-        rto_met = recovery_metrics.get("rto_target_met", True)
-        recovered = recovery_metrics.get("recovered", True)
-        p95_change = experiment_metrics.get("p95_latency_ms", 0.0)
+        avail = experiment_metrics.get("availability_percent")
+        if avail is None:
+            return {
+                "hypothesis": hypothesis_text,
+                "expected_behavior": expected_behavior,
+                "observed_behavior": "Fault-phase metrics could not be evaluated due to insufficient probe observations.",
+                "verdict": "INCONCLUSIVE",
+                "verdict_reason": "No valid probe responses were collected during the fault window.",
+                "confidence": "Low",
+                "criteria_evaluated": [
+                    {
+                        "criterion": "Fault-Phase Application Probing",
+                        "expected": "Active HTTP probe samples during fault window",
+                        "actual": "0 valid samples",
+                        "passed": False,
+                    }
+                ],
+            }
+
+        rec_time = recovery_metrics.get("recovery_time_seconds")
+        rec_status = recovery_metrics.get("recovery_status") or recovery_metrics.get("status")
+        rto_met = recovery_metrics.get("rto_target_met")
+        recovered = recovery_metrics.get("recovered")
+        p95_change = experiment_metrics.get("p95_latency_ms") or 0.0
         base_p95 = baseline_metrics.get("p95_latency_ms") or baseline_metrics.get("avg_latency_ms", 1.0)
-        lat_multiplier = round(p95_change / base_p95, 2) if base_p95 > 0 else 1.0
+        lat_multiplier = round(p95_change / base_p95, 2) if (base_p95 and base_p95 > 0) else 1.0
 
         if fault_type in ("container_restart", "container_stop"):
-            if recovered and rto_met and (avail >= 50.0 or fault_type == "container_stop"):
+            if rec_status == "INCONCLUSIVE" or rec_time is None:
+                verdict = "INCONCLUSIVE"
+                observed = f"Container state changed during {fault_type}, but post-rollback recovery could not be evaluated (no valid recovery probes)."
+            elif recovered and rto_met and (avail >= 50.0 or fault_type == "container_stop"):
                 verdict = "VALIDATED" if rto_met and recovered else "PARTIALLY VALIDATED"
-                observed = f"Container recovered within {recovery_metrics.get('recovery_time_seconds', 0)}s (target: {recovery_metrics.get('rto_target_seconds', 5.0)}s). Availability during the event was {avail}%."
+                observed = f"Container recovered within {rec_time}s (target: {recovery_metrics.get('rto_target_seconds', 5.0)}s). Availability during the event was {avail}%."
             elif recovered and not rto_met:
                 verdict = "PARTIALLY VALIDATED"
-                observed = f"Container restored healthy state, but recovery took {recovery_metrics.get('recovery_time_seconds', 0)}s, exceeding the {recovery_metrics.get('rto_target_seconds', 5.0)}s RTO target."
+                observed = f"Container restored healthy state, but recovery took {rec_time}s, exceeding the {recovery_metrics.get('rto_target_seconds', 5.0)}s RTO target."
             else:
                 verdict = "VIOLATED"
                 observed = f"Container failed to restore steady-state health after fault injection completed."
@@ -251,15 +312,16 @@ class HypothesisEvaluator:
                 verdict = "VIOLATED"
                 observed = f"Network fault triggered critical availability failure ({avail}% availability) with widespread timeouts."
         else:
-            verdict = "VALIDATED" if recovered else "VIOLATED"
+            verdict = "VALIDATED" if recovered else ("INCONCLUSIVE" if recovered is None else "VIOLATED")
             observed = f"Execution completed with {avail}% availability."
 
+        rec_dur_str = f"{rec_time}s" if rec_time is not None else "Inconclusive"
         return {
             "hypothesis": hypothesis_text,
             "expected_behavior": expected_behavior,
             "observed_behavior": observed,
             "verdict": verdict,
-            "verdict_reason": f"Based on measured availability ({avail}%), recovery duration ({recovery_metrics.get('recovery_time_seconds', 0)}s), and latency response.",
+            "verdict_reason": f"Based on measured availability ({avail}%), recovery duration ({rec_dur_str}), and latency response.",
             "confidence": "High" if probes_count >= 5 else "Medium",
         }
 
@@ -275,27 +337,29 @@ class FindingDetector:
         experiment: Dict[str, Any],
         recovery: Dict[str, Any],
         rollback_success: bool,
+        parameters: Optional[Dict[str, Any]] = None,
+        telemetry: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         findings = []
 
-        avail = experiment.get("availability_percent", 100.0)
+        avail = experiment.get("availability_percent")
         probes_count = experiment.get("probes_count", 0)
         failed_probes = experiment.get("failed_probes", 0)
         conn_errors = experiment.get("connection_errors_count", 0)
         http_5xx = experiment.get("http_5xx_count", 0)
         sample_errors = experiment.get("sample_errors", [])
-        recovery_time = recovery.get("recovery_time_seconds", 0.0)
+        recovery_time = recovery.get("recovery_time_seconds")
         rto_target = recovery.get("rto_target_seconds", 5.0)
-        rto_met = recovery.get("rto_target_met", True)
-        recovered = recovery.get("recovered", True)
+        rto_met = recovery.get("rto_target_met")
+        recovered = recovery.get("recovered")
         lat_mult = experiment.get("latency_multiplier", 1.0)
-        p95 = experiment.get("p95_latency_ms", 0.0)
+        p95 = experiment.get("p95_latency_ms") or 0.0
 
         # 0. Baseline Health Finding
         base_healthy = baseline.get("healthy", True)
         base_avail = baseline.get("available", False)
-        base_succ = baseline.get("availability_percent", 100.0)
-        if base_avail and (not base_healthy or base_succ < 50.0):
+        base_succ = baseline.get("availability_percent")
+        if base_avail and (not base_healthy or (base_succ is not None and base_succ < 50.0)):
             findings.append({
                 "id": "F-BASELINE-FAIL",
                 "category": "Steady-State Baseline",
@@ -309,7 +373,18 @@ class FindingDetector:
             })
 
         # 1. Availability Findings
-        if probes_count > 0:
+        if avail is None or probes_count == 0:
+            findings.append({
+                "id": "F-PROBE-NONE",
+                "category": "Observability & Evidence",
+                "title": "No Probe Data Collected During Fault Window",
+                "severity": "Medium",
+                "observed": "Zero probe observations were recorded while the fault was active.",
+                "evidence": "Probe scheduler did not receive HTTP responses or probe URL was not configured.",
+                "impact": "Application availability, latency degradation, and failure modes could not be measured directly.",
+                "suggested_investigation": "Configure an active synthetic probe endpoint and verify container network ingress before running experiments.",
+            })
+        elif probes_count > 0 and avail is not None:
             if avail < 50.0:
                 findings.append({
                     "id": "F-AVAIL-CRIT",
@@ -344,6 +419,20 @@ class FindingDetector:
                     "suggested_investigation": "Verify that load testing concurrent traffic yields identical resilience.",
                 })
 
+        # 1b. Short-Duration Under-Sampling (Part 6)
+        obs_cov = experiment.get("observability_coverage") or (experiment.get("anomaly_summary") or {}).get("observability_coverage") or {}
+        if obs_cov.get("under_sampled"):
+            findings.append({
+                "id": "F-UNDER-SAMPLED",
+                "category": "Observability Coverage",
+                "title": "Short Fault Duration Under-Sampled",
+                "severity": "Medium",
+                "observed": f"Fault duration ({obs_cov.get('fault_duration', 'short')}s) was comparable to or shorter than the probe interval ({obs_cov.get('probe_interval', 1.0)}s).",
+                "evidence": f"Only {probes_count} probe sample(s) collected during the fault window. Transient outages may have occurred between probe samples.",
+                "impact": "Apparent 100% availability or absence of errors cannot be verified with high statistical confidence.",
+                "suggested_investigation": "Transient outage may be under-sampled. Configure high-resolution sub-second probing for transient container lifecycle or network glitch experiments.",
+            })
+
         # 2. Connection Failures
         if conn_errors > 0:
             findings.append({
@@ -369,6 +458,40 @@ class FindingDetector:
                 "impact": "Uncaught application exceptions or upstream gateway timeouts visible to callers.",
                 "suggested_investigation": "Inspect container application logs for unhandled exception stack traces or gateway 502/504 timeouts.",
             })
+
+        # 3b. Network Latency Amplification (Part 8)
+        params = parameters or {}
+        cfg_lat = params.get("latency_ms") or params.get("delay_ms") or params.get("latency")
+        if cfg_lat is not None:
+            try:
+                cfg_lat_val = float(cfg_lat)
+            except (ValueError, TypeError):
+                cfg_lat_val = 0.0
+            base_mean = baseline.get("mean_latency_ms") or baseline.get("avg_latency_ms")
+            fault_mean = experiment.get("mean_latency_ms") or experiment.get("avg_latency_ms")
+            if cfg_lat_val > 0 and base_mean is not None and fault_mean is not None and probes_count >= 3:
+                obs_delta = max(0.0, fault_mean - base_mean)
+                amp_ratio = round(obs_delta / cfg_lat_val, 2)
+                if amp_ratio >= 1.5:
+                    findings.append({
+                        "id": "CONFIGURED_IMPAIRMENT_VS_OBSERVED_IMPACT",
+                        "category": "Networking & Transport",
+                        "title": f"Latency Amplification Exceeds Configured Impairment ({amp_ratio}x)",
+                        "severity": "High" if amp_ratio >= 3.0 else "Medium",
+                        "observed": f"Observed application latency increased by {round(obs_delta, 1)}ms under a configured network impairment of {cfg_lat_val}ms (amplification ratio: {amp_ratio}x).",
+                        "evidence": f"Configured impairment: {cfg_lat_val}ms, Baseline mean: {round(base_mean, 1)}ms, Fault mean: {round(fault_mean, 1)}ms, Observed delta: {round(obs_delta, 1)}ms.",
+                        "impact": "Observed application latency increased substantially more than the configured network impairment. Downstream services and callers may experience compounding delays.",
+                        "suggested_investigation": "Observed application latency increased substantially more than the configured network impairment. Further investigation is required to determine whether retries, queueing, transport behavior, proxying, or other effects contributed.",
+                        "metrics": {
+                            "configured_latency_ms": cfg_lat_val,
+                            "baseline_mean_ms": round(base_mean, 2),
+                            "fault_mean_ms": round(fault_mean, 2),
+                            "observed_delta_ms": round(obs_delta, 2),
+                            "amplification_ratio": amp_ratio,
+                            "fault_p95_ms": experiment.get("p95_latency_ms"),
+                            "sample_count": probes_count,
+                        }
+                    })
 
         # 4. Latency Degradation
         if lat_mult >= 3.0 and p95 > 50.0:
@@ -410,10 +533,23 @@ class FindingDetector:
                 "suggested_investigation": "Investigate head-of-line blocking, garbage collection pauses, or synchronous locks under concurrent load.",
             })
 
-        # 4c. Transient latency spikes from anomaly data
+        # 4c. Sustained Latency Degradation vs Transient Spikes (Part 9)
         anoms = experiment.get("anomaly_summary") or {}
+        sustained = anoms.get("sustained_degradation_detected", False)
+        if sustained:
+            findings.append({
+                "id": "F-LAT-SUSTAINED",
+                "category": "Performance & Capacity",
+                "title": "Sustained Latency Distribution Shift",
+                "severity": "High",
+                "observed": f"Latency distribution sustained an elevated shift across {anoms.get('sustained_sample_count', probes_count)} of {probes_count} probes ({int(anoms.get('sustained_ratio', 1.0) * 100)}% of window).",
+                "evidence": "Rather than isolated transient spikes, the baseline mean shifted upward consistently throughout fault injection.",
+                "impact": "End-to-end request processing was persistently slowed throughout the entire fault duration.",
+                "suggested_investigation": "Examine resource contention, queuing delays, or network rate-limiting across the service path.",
+            })
+
         spike_count = anoms.get("spike_count", 0)
-        if spike_count > 0:
+        if spike_count > 0 and not sustained:
             peak = anoms.get("peak_impact") or {}
             peak_ms = peak.get("peak_latency_ms", 0.0)
             peak_pct = peak.get("percentage_delta", 0.0)
@@ -444,8 +580,50 @@ class FindingDetector:
                 "suggested_investigation": "Implement retry-with-backoff at the client and ensure health-check routing prevents sending requests to an unhealthy backend.",
             })
 
-        # 5. Recovery & RTO Findings
-        if not recovered:
+        # 4e. Resource Telemetry Findings (Part 11 & 12)
+        telem = telemetry or experiment.get("resource_telemetry") or {}
+        if fault_type == "cpu_stress":
+            cpu_delta = telem.get("cpu_delta")
+            if cpu_delta is not None and cpu_delta < 5.0 and probes_count >= 2:
+                findings.append({
+                    "id": "F-CPU-INEFFECTIVE",
+                    "category": "Experiment Quality",
+                    "title": "Configured CPU Stress Produced Ineffective Pressure",
+                    "severity": "Low",
+                    "observed": "Observed CPU utilization did not meaningfully increase during CPU stress injection.",
+                    "evidence": f"CPU delta between baseline and fault was minimal ({round(cpu_delta, 1)}%). Host or container may have ample multi-core capacity or worker processes were restricted.",
+                    "impact": "The experiment may not have imposed sufficient resource pressure to evaluate CPU resilience.",
+                    "suggested_investigation": "Increase worker count, target specific CPU affinity/cgroups, or verify container core limits.",
+                })
+        elif fault_type == "memory_stress":
+            mem_ratio = telem.get("memory_pressure_ratio")
+            if mem_ratio is not None and mem_ratio < 0.05 and probes_count >= 2:
+                findings.append({
+                    "id": "F-MEMORY-LOW-PRESSURE",
+                    "category": "Experiment Quality",
+                    "title": "Configured Memory Stress Imposed Low Pressure",
+                    "severity": "Low",
+                    "observed": "Configured memory stress was minimal relative to container capacity.",
+                    "evidence": "The memory stressor allocated memory, but observed container memory utilization changed only minimally. The experiment may not have imposed sufficient resource pressure to evaluate memory resilience.",
+                    "impact": "Resilience under actual out-of-memory or severe memory pressure was not tested.",
+                    "suggested_investigation": "Increase memory stress allocation closer to container memory limits to test OOM handling.",
+                })
+
+        # 5. Recovery & RTO Findings (Part 2 & Part 4)
+        rec_status = recovery.get("recovery_status") or recovery.get("status")
+        rec_probes = recovery.get("recovery_probe_count")
+        if rec_status == "INCONCLUSIVE" or recovery_time is None or rec_probes == 0:
+            findings.append({
+                "id": "F-REC-INCONCLUSIVE",
+                "category": "Startup & Recovery",
+                "title": "Recovery Trajectory Inconclusive (Insufficient Probe Evidence)",
+                "severity": "Informational",
+                "observed": "Recovery could not be evaluated because no valid recovery probe observations were collected.",
+                "evidence": "Zero recovery probe samples collected after rollback completion.",
+                "impact": "Application recovery time and RTO status remain unverified.",
+                "suggested_investigation": "Ensure synthetic probe endpoint is reachable post-rollback and probe polling interval is configured.",
+            })
+        elif not recovered or recovery.get("timed_out"):
             findings.append({
                 "id": "F-REC-FAIL",
                 "category": "Startup & Recovery",
@@ -456,7 +634,7 @@ class FindingDetector:
                 "impact": "Manual intervention was required to restore service operation following the experiment.",
                 "suggested_investigation": "Verify whether container crashed, process deadlocked, or network rules failed to delete.",
             })
-        elif not rto_met:
+        elif rto_met is False:
             findings.append({
                 "id": "F-REC-SLOW",
                 "category": "Startup & Recovery",
@@ -465,9 +643,9 @@ class FindingDetector:
                 "observed": f"Service recovered in {recovery_time}s, exceeding the target RTO of {rto_target}s.",
                 "evidence": f"Measured recovery time: {recovery_time}s > RTO target: {rto_target}s.",
                 "impact": "Failover or restart time was slower than organizational SLA thresholds.",
-                "suggested_investigation": f"Profile container startup duration, framework initialization overhead, and database migration checks on startup.",
+                "suggested_investigation": "Profile container startup duration, framework initialization overhead, and database migration checks on startup.",
             })
-        elif recovery_time > 0 and rto_met:
+        elif recovery_time is not None and recovery_time >= 0 and rto_met:
             findings.append({
                 "id": "F-REC-MET",
                 "category": "Startup & Recovery",
@@ -502,14 +680,14 @@ class FindingDetector:
     ) -> List[Dict[str, Any]]:
         anomalies = []
 
-        p50 = experiment.get("p50_latency_ms", 0.0)
-        p95 = experiment.get("p95_latency_ms", 0.0)
-        base_avg = baseline.get("avg_latency_ms", 0.0)
-        http_5xx = experiment.get("http_5xx_count", 0)
-        avail = experiment.get("availability_percent", 100.0)
+        p50 = experiment.get("p50_latency_ms")
+        p95 = experiment.get("p95_latency_ms")
+        base_avg = baseline.get("avg_latency_ms") or 0.0
+        http_5xx = experiment.get("http_5xx_count") or 0
+        avail = experiment.get("availability_percent")
 
         # Anomaly 1: Severe latency divergence (P95 >> P50)
-        if p50 > 0 and p95 >= (p50 * 3.5) and p95 > 100:
+        if p50 is not None and p95 is not None and p50 > 0 and p95 >= (p50 * 3.5) and p95 > 100:
             anomalies.append({
                 "title": "Bimodal Latency Divergence (Head-of-Line Blocking)",
                 "description": f"P95 latency ({p95}ms) diverged dramatically from P50 ({p50}ms), indicating tail latency amplification.",
@@ -810,18 +988,24 @@ class CollectiveReportAggregator:
 
             # Recovery metrics
             rec_m = res.get("recovery_metrics") or {}
-            rec_sec = rec_m.get("recovery_time_seconds") or rec_m.get("rto_seconds")
+            rec_status = rec_m.get("recovery_status") or rec_m.get("status")
+            rec_sec = rec_m.get("recovery_time_seconds")
+            if rec_status == "INCONCLUSIVE" or rec_m.get("recovery_probe_count", 1) == 0:
+                rec_sec = None
+            elif rec_sec is None and rec_m.get("rto_seconds") is not None and rec_status not in ("TIMED_OUT", "INCONCLUSIVE"):
+                rec_sec = rec_m.get("rto_seconds")
+
             if rec_sec is not None:
                 recovery_times.append(float(rec_sec))
 
             rto_target = float(rec_m.get("rto_target_seconds") or 5.0)
-            if rec_sec and float(rec_sec) > rto_target:
+            if rec_sec is not None and float(rec_sec) > rto_target:
                 rto_violations += 1
                 pattern_bucket["rto_exceeded"].append(exp_id)
 
             # Score
-            sc = exp.get("resilience_score") or res.get("resilience_score")
-            if sc is not None:
+            sc = exp.get("resilience_score") if exp.get("resilience_score") is not None else res.get("resilience_score")
+            if sc is not None and isinstance(sc, (int, float)):
                 scores.append(float(sc))
 
             # Metrics — use `or` fallbacks because stored values may be explicitly None,
@@ -845,7 +1029,7 @@ class CollectiveReportAggregator:
                 "target": target,
                 "status": status_str,
                 "outcome": verdict or ("Pass" if status_str == "completed" else "Fail"),
-                "recovery_time": f"{rec_sec:.1f}s" if rec_sec is not None else "N/A",
+                "recovery_time": f"{rec_sec:.1f}s" if rec_sec is not None else "Inconclusive",
                 "rto_target": f"{rto_target:.1f}s",
                 "key_finding": key_finding,
                 "resilience_grade": exp.get("resilience_grade") or res.get("resilience_grade") or "-",
@@ -949,10 +1133,10 @@ class CollectiveReportAggregator:
                 roadmap.append(cr["next_experiment"])
 
         # Aggregate metrics
-        avg_rec = round(sum(recovery_times) / len(recovery_times), 2) if recovery_times else 0.0
-        max_rec = round(max(recovery_times), 2) if recovery_times else 0.0
-        overall_score = round(sum(scores) / len(scores)) if scores else 0
-        overall_grade = "A" if overall_score >= 90 else ("B" if overall_score >= 75 else ("C" if overall_score >= 60 else "F"))
+        avg_rec = round(sum(recovery_times) / len(recovery_times), 2) if recovery_times else None
+        max_rec = round(max(recovery_times), 2) if recovery_times else None
+        overall_score = round(sum(scores) / len(scores)) if scores else None
+        overall_grade = "A" if overall_score is not None and overall_score >= 90 else ("B" if overall_score is not None and overall_score >= 75 else ("C" if overall_score is not None and overall_score >= 60 else ("F" if overall_score is not None else "INCONCLUSIVE")))
 
         return {
             "project": project_data,
@@ -1002,19 +1186,12 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
 
     # 1. Baseline — prefer raw_observations for recomputation
     base = res.get("steady_state_baseline") or (res.get("resilience") or {}).get("steady_state_baseline") or {}
-    base_succ = base.get("success_rate_percent") or base.get("availability_percent")
-    if base_succ is None and base.get("available"):
-        base_succ = 100.0 if (base.get("avg_latency_ms") or base.get("sample_count")) else 0.0
-    elif base_succ is None:
-        base_succ = 0.0
-
-    # Attempt recomputation from raw observations if present
     raw_obs_all = res.get("raw_observations") or {}
     raw_baseline_obs = raw_obs_all.get("baseline") or []
     if raw_baseline_obs:
         _recomp = MetricsAggregator.from_raw_observations(raw_baseline_obs)
-        base_succ = _recomp.get("availability_percent", base_succ)
-        base["avg_latency_ms"] = _recomp.get("avg_latency_ms") or base.get("avg_latency_ms")
+        base_succ = _recomp.get("availability_percent")
+        base["avg_latency_ms"] = _recomp.get("avg_latency_ms")
         base["p50_latency_ms"] = _recomp.get("p50_latency_ms")
         base["p75_latency_ms"] = _recomp.get("p75_latency_ms")
         base["p90_latency_ms"] = _recomp.get("p90_latency_ms")
@@ -1023,21 +1200,31 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
         base["min_latency_ms"] = _recomp.get("min_latency_ms")
         base["max_latency_ms"] = _recomp.get("max_latency_ms")
         base["stddev_latency_ms"] = _recomp.get("stddev_latency_ms")
+    else:
+        base_succ = base.get("success_rate_percent") if base.get("success_rate_percent") is not None else base.get("availability_percent")
+        if base_succ is None and base.get("available") and (base.get("avg_latency_ms") or base.get("sample_count")):
+            base_succ = 100.0
+
+    base_probes_cnt = base.get("probes_count") or base.get("sample_count", 0) or len(raw_baseline_obs)
+    base_has_evidence = bool(base.get("available")) and (base_probes_cnt > 0 or bool(base.get("avg_latency_ms")))
+    if not base_has_evidence:
+        base_succ = None
 
     baseline_metrics = {
-        "available": base.get("available", False) or bool(base.get("avg_latency_ms")),
-        "healthy": base.get("healthy", base_succ >= 66.0 if base.get("available") else False),
+        "available": base_has_evidence,
+        "healthy": base.get("healthy", (base_succ is not None and base_succ >= 66.0)),
         "probe_url": base.get("probe_url") or params.get("probe_url") or "N/A",
         "http_method": "GET",
         "expected_status": base.get("expected_status", 200),
-        "actual_status": base.get("status_code", 200) if (base.get("available") and base_succ > 0) else None,
-        "probes_count": base.get("probes_count") or base.get("sample_count", 0),
+        "actual_status": base.get("status_code", 200) if (base_has_evidence and base_succ is not None and base_succ > 0) else None,
+        "probes_count": base_probes_cnt,
         "availability_percent": base_succ,
+        "status": "AVAILABLE" if base_has_evidence else "INSUFFICIENT_DATA",
         "mean_latency_ms": base.get("avg_latency_ms") or base.get("mean_latency_ms"),
         "p50_latency_ms": base.get("p50_latency_ms") or base.get("avg_latency_ms"),
         "p75_latency_ms": base.get("p75_latency_ms"),
         "p90_latency_ms": base.get("p90_latency_ms"),
-        "p95_latency_ms": base.get("p95_latency_ms") or base.get("avg_latency_ms"),
+        "p95_latency_ms": base.get("p95_latency_ms"),
         "p99_latency_ms": base.get("p99_latency_ms"),
         "min_latency_ms": base.get("min_latency_ms"),
         "max_latency_ms": base.get("max_latency_ms"),
@@ -1070,24 +1257,35 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
 
     probes_cnt = exp_m.get("probes_count", 0) or len(raw_fault_obs)
     avail_pct = exp_m.get("availability_percent")
-    if avail_pct is None:
-        avail_pct = exp_m.get("availability_pct", 100.0 if status_str == "completed" else 0.0)
+    if avail_pct is None and probes_cnt == 0:
+        avail_pct = None
+    elif avail_pct is None:
+        avail_pct = exp_m.get("availability_pct")
 
-    avg_lat = exp_m.get("avg_latency_ms") or exp_m.get("mean_latency_ms", 0.0)
-    p95_lat = exp_m.get("p95_latency_ms") or avg_lat
-    p50_lat = exp_m.get("p50_latency_ms") or avg_lat
+    avg_lat = exp_m.get("avg_latency_ms") or exp_m.get("mean_latency_ms")
+    p95_lat = exp_m.get("p95_latency_ms")
+    p50_lat = exp_m.get("p50_latency_ms")
     p99_lat = exp_m.get("p99_latency_ms")
+
+    # If no probes, do not fabricate latencies
+    if probes_cnt == 0:
+        avg_lat = None
+        p95_lat = None
+        p50_lat = None
+        p99_lat = None
 
     # Anomaly summary from agent
     anomaly_summary = res.get("anomaly_summary") or exp_m.get("anomaly_summary") or {}
+    coverage = res.get("observability_coverage") or exp_m.get("observability_coverage") or {}
 
     experiment_metrics = {
         "probes_count": probes_cnt,
         "raw_sample_count": len(raw_fault_obs),
-        "successful_probes": exp_m.get("successful_probes") or exp_m.get("success_count", probes_cnt if avail_pct == 100 else 0),
-        "failed_probes": exp_m.get("failed_probes") or exp_m.get("error_count", 0),
+        "successful_probes": exp_m.get("successful_probes") or (probes_cnt if avail_pct == 100 else 0),
+        "failed_probes": exp_m.get("failed_probes") or 0,
         "availability_percent": avail_pct,
-        "error_rate_percent": round(100 - (avail_pct or 100), 2),
+        "status": "MEASURED" if probes_cnt > 0 else "INSUFFICIENT_DATA",
+        "error_rate_percent": round(100 - avail_pct, 2) if avail_pct is not None else None,
         "p50_latency_ms": p50_lat,
         "p75_latency_ms": exp_m.get("p75_latency_ms"),
         "p90_latency_ms": exp_m.get("p90_latency_ms"),
@@ -1102,6 +1300,7 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
         "http_5xx_count": exp_m.get("http_5xx_count", 0),
         "sample_errors": exp_m.get("sample_errors", []),
         "anomaly_summary": anomaly_summary,
+        "observability_coverage": coverage,
         "rolling_metrics": exp_m.get("rolling_metrics", []),
         "baseline_comparison": exp_m.get("baseline_comparison"),
         # backward-compat alias
@@ -1112,17 +1311,77 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
     rec_m = res.get("recovery_metrics") or (res.get("resilience") or {}).get("recovery_metrics") or {}
     rto_target_sec = float(params.get("rto_target_seconds", 5.0))
     rec_sec = rec_m.get("recovery_time_seconds")
-    if rec_sec is None:
-        rec_sec = rec_m.get("rto_seconds", 0.0)
+    rec_status = rec_m.get("recovery_status") or rec_m.get("status")
+    
+    # Check if raw observations are present
+    has_raw = "raw_observations" in res
+    raw_rec_obs = (res.get("raw_observations") or {}).get("recovery") if has_raw else None
+    
+    if rec_m.get("recovery_probe_count") is not None:
+        rec_probe_cnt = rec_m.get("recovery_probe_count")
+    elif raw_rec_obs is not None:
+        rec_probe_cnt = len(raw_rec_obs)
+    else:
+        # Legacy summary dict without raw_observations:
+        # If there are experiment probes and rec_sec > 0 and recovered is True, default to stability required count
+        try:
+            is_pos = rec_sec is not None and float(rec_sec) > 0
+        except (ValueError, TypeError):
+            is_pos = False
+        if (is_pos and rec_m.get("recovered") is True 
+                and (exp_m.get("probes_count", 0) > 0 or baseline_metrics.get("sample_count", 0) > 0)):
+            rec_probe_cnt = rec_m.get("consecutive_healthy_required") or 3
+        else:
+            rec_probe_cnt = 0
+
+    has_probe_config = bool(base.get("probe_url") or params.get("probe_url") or base.get("available") or probes_cnt > 0) and (baseline_metrics.get("available") or probes_cnt > 0)
+
+    if rec_sec is None and rec_m.get("rto_seconds") is not None and rec_status not in ("INCONCLUSIVE", "TIMED_OUT"):
+        if has_probe_config and rec_probe_cnt > 0:
+            rec_sec = rec_m.get("rto_seconds")
+
+    if not has_probe_config or rec_probe_cnt == 0 or rec_sec is None or rec_status == "INCONCLUSIVE":
+        rec_sec = None
+        rto_met = None
+        rto_delta = None
+        if not has_probe_config or rec_probe_cnt == 0:
+            rec_status = "INCONCLUSIVE"
+            rec_reason = "Recovery could not be evaluated because no valid recovery probe observations were collected."
+        elif rec_m.get("timed_out"):
+            rec_status = "TIMED_OUT"
+            rec_reason = "Post-fault health polling timed out before steady state was restored."
+        else:
+            rec_status = rec_status or "INCONCLUSIVE"
+            rec_reason = rec_m.get("reason") or "Recovery observation was inconclusive."
+        recovered_val = None if (not has_probe_config or rec_probe_cnt == 0) else False
+    else:
+        rec_sec_raw = float(rec_sec)
+        rto_met = (rec_sec_raw <= rto_target_sec) if rec_m.get("recovered", True) else False
+        rto_delta = round(rec_sec_raw - rto_target_sec, 4)
+        rec_sec = round(rec_sec_raw, 4)
+        rec_status = "RECOVERED" if (rto_met or rec_m.get("recovered")) else "FAILED"
+        rec_reason = f"Steady-state confirmed in {rec_sec}s."
+        recovered_val = rec_m.get("recovered", True)
 
     recovery_metrics = {
-        "recovery_time_seconds": float(rec_sec),
+        "recovery_time_seconds": rec_sec,
         "rto_target_seconds": rto_target_sec,
-        "rto_target_met": float(rec_sec) <= rto_target_sec if rec_m.get("recovered") else False,
-        "recovered": rec_m.get("recovered", res.get("recovered", True)),
+        "rto_target_met": rto_met,
+        "rto_delta_seconds": rto_delta,
+        "rto_status": "MET" if rto_met is True else ("VIOLATED" if rto_met is False else "INCONCLUSIVE"),
+        "recovery_status": rec_status,
+        "recovery_reason": rec_reason,
+        "recovered": recovered_val,
         "timed_out": rec_m.get("timed_out", False),
         "post_recovery_latency_ms": rec_m.get("post_recovery_latency_ms"),
-        "metrics_returned_to_baseline": rec_m.get("recovered", True) and (not rec_m.get("timed_out", False)),
+        "recovery_probe_count": rec_probe_cnt,
+        "recovery_successful_probe_count": rec_m.get("recovery_successful_probe_count", 0),
+        "recovery_failed_probe_count": rec_m.get("recovery_failed_probe_count", 0),
+        "recovery_stability_required": rec_m.get("consecutive_healthy_required") or rec_m.get("recovery_stability_required", 3),
+        "recovery_stability_achieved": rec_m.get("recovery_stability_achieved", rec_status == "RECOVERED"),
+        "recovery_first_healthy_at": rec_m.get("recovery_first_healthy_at"),
+        "recovery_confirmed_at": rec_m.get("recovery_confirmed_at"),
+        "metrics_returned_to_baseline": (recovered_val is True) and (not rec_m.get("timed_out", False)),
     }
 
     # 4. Comparative Delta Table
@@ -1195,6 +1454,8 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
         experiment=experiment_metrics,
         recovery=recovery_metrics,
         rollback_success=rollback_ok,
+        parameters=params,
+        telemetry=res.get("telemetry") or res.get("resource_telemetry") or (res.get("details") or {}).get("docker_telemetry"),
     )
 
     anomalies = FindingDetector.detect_anomalies(
@@ -1269,7 +1530,7 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
             "event": f"First failure observed: '{experiment_metrics['sample_errors'][0] if experiment_metrics['sample_errors'] else 'Probe failed'}'.",
         })
     peak_at = lifecycle_timing.get("peak_degradation_at")
-    if experiment_metrics.get("availability_percent", 100) < 100 or experiment_metrics.get("anomaly_summary", {}).get("peak_impact"):
+    if (experiment_metrics.get("availability_percent") is not None and experiment_metrics["availability_percent"] < 100) or experiment_metrics.get("anomaly_summary", {}).get("peak_impact"):
         peak_info = (experiment_metrics.get("anomaly_summary") or {}).get("peak_impact") or {}
         peak_lat = peak_info.get("peak_latency_ms") or experiment_metrics.get("p95_latency_ms", 0)
         timeline.append({
@@ -1286,16 +1547,24 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
         "time": f"T+{round(fault_t0 + fw_dur, 1)}s",
         "event": f"Fault execution window ended ({round(fw_dur, 1)}s); rollback initiated.",
     })
-    if recovery_metrics.get("recovered"):
-        rec_t = recovery_metrics.get('recovery_time_seconds', 0)
+    if recovery_metrics.get("recovery_time_seconds") is not None:
+        rec_t = recovery_metrics['recovery_time_seconds']
         timeline.append({
             "phase": "recovery",
             "t_rel": fault_t0 + fw_dur + rec_t,
             "time": f"T+{round(fault_t0 + fw_dur + rec_t, 1)}s",
-            "event": f"Steady-state confirmed: {rec_t}s recovery (required {recovery_metrics.get('consecutive_healthy_required', 3)} consecutive healthy probes, "
+            "event": f"Steady-state confirmed: {rec_t}s recovery (required {recovery_metrics.get('recovery_stability_required', 3)} consecutive healthy probes, "
                      f"RTO {'met' if recovery_metrics.get('rto_target_met') else 'exceeded'}).",
         })
-    total_dur = lifecycle_timing.get("total_experiment_duration_seconds") or fault_t0 + fw_dur + (recovery_metrics.get("recovery_time_seconds") or 0) + 0.5
+    elif recovery_metrics.get("recovery_status") == "INCONCLUSIVE":
+        timeline.append({
+            "phase": "recovery",
+            "t_rel": fault_t0 + fw_dur,
+            "time": f"T+{round(fault_t0 + fw_dur, 1)}s",
+            "event": f"Recovery trajectory inconclusive: {recovery_metrics.get('recovery_reason')}",
+        })
+    rec_time_for_dur = recovery_metrics.get("recovery_time_seconds") or 0.0
+    total_dur = lifecycle_timing.get("total_experiment_duration_seconds") or fault_t0 + fw_dur + rec_time_for_dur + 0.5
     timeline.append({
         "phase": "complete",
         "t_rel": total_dur,
@@ -1305,18 +1574,28 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
 
     # 10. Resilience Score Explanation
     score_obj = res.get("resilience") or {}
-    score = res.get("resilience_score") or score_obj.get("score", 85)
-    grade = res.get("resilience_grade") or score_obj.get("grade", "B")
-    classification = res.get("classification") or score_obj.get("classification", "Evaluated")
+    score = res.get("resilience_score") if res.get("resilience_score") is not None else score_obj.get("score")
+    grade = res.get("resilience_grade") or score_obj.get("grade")
+    evidence_suff = score_obj.get("evidence_sufficient")
+    if evidence_suff is False or score is None or not has_probe_config or probes_cnt == 0:
+        score = None
+        grade = "INCONCLUSIVE"
+        classification = "Inconclusive"
+    else:
+        classification = res.get("classification") or score_obj.get("classification", "Evaluated")
     score_breakdown = score_obj.get("breakdown") or {}
-    experiment_confidence = res.get("experiment_confidence") or score_obj.get("confidence") or "low"
+    experiment_confidence = res.get("experiment_confidence") or score_obj.get("confidence") or ("low" if score is None else "medium")
     experiment_confidence_reason = res.get("experiment_confidence_reason") or score_obj.get("confidence_reason") or ""
 
+    avail_disp = f"{experiment_metrics['availability_percent']}%" if experiment_metrics['availability_percent'] is not None else "N/A (No probe data)"
+    rec_disp = f"{recovery_metrics['recovery_time_seconds']}s" if recovery_metrics['recovery_time_seconds'] is not None else "Inconclusive"
+    rto_disp = f"Target Met: {'Yes' if recovery_metrics['rto_target_met'] is True else ('No' if recovery_metrics['rto_target_met'] is False else 'Inconclusive')}"
+
     score_explanation = [
-        f"Availability ({score_breakdown.get('availability', '?')} pts): {experiment_metrics['availability_percent']}% during the fault window.",
+        f"Availability ({score_breakdown.get('availability', '?')} pts): {avail_disp} during the fault window.",
         f"Latency Degradation ({score_breakdown.get('latency_degradation', '?')} pts): {experiment_metrics['latency_multiplier']}x baseline mean ({experiment_metrics.get('mean_latency_ms', 0)}ms in-fault vs {baseline_metrics.get('mean_latency_ms', 0)}ms baseline).",
         f"Tail Latency ({score_breakdown.get('tail_latency', '?')} pts): P95={experiment_metrics.get('p95_latency_ms', 'N/A')}ms.",
-        f"Recovery ({score_breakdown.get('recovery', '?')} pts): {recovery_metrics['recovery_time_seconds']}s (RTO Target: {recovery_metrics['rto_target_seconds']}s, Target Met: {'Yes' if recovery_metrics['rto_target_met'] else 'No'}).",
+        f"Recovery ({score_breakdown.get('recovery', '?')} pts): {rec_disp} (RTO Target: {recovery_metrics['rto_target_seconds']}s, {rto_disp}).",
         f"Rollback ({score_breakdown.get('rollback', '?')} pts): {'Clean rollback verified' if rollback_ok else 'Rollback incomplete / dirty state'}.",
         f"Stability ({score_breakdown.get('stability', '?')} pts): {(anomaly_summary or {}).get('spike_count', 0)} spike(s), max {(anomaly_summary or {}).get('max_consecutive_failures', 0)} consecutive failures.",
         f"Hypothesis: {hypothesis_eval['verdict']}.",
@@ -1324,18 +1603,23 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
     ]
 
     # 11. Executive Summary Text
+    rec_summary_str = (
+        f"Recovery: {recovery_metrics['recovery_time_seconds']}s (RTO {'met' if recovery_metrics['rto_target_met'] else 'EXCEEDED'}, target {recovery_metrics['rto_target_seconds']}s)."
+        if recovery_metrics['recovery_time_seconds'] is not None
+        else f"Recovery: Inconclusive ({recovery_metrics['recovery_reason']})."
+    )
     exec_summary = (
         f"The experiment tested '{fault_type.replace('_', ' ')}' against container '{target}' "
         f"for {round(fw_dur, 1)}s while actively probing '{baseline_metrics['probe_url']}'. "
         f"Baseline ({baseline_metrics.get('probes_count', 0)} probes): mean={baseline_metrics.get('mean_latency_ms', 0)}ms, "
         f"stddev={baseline_metrics.get('stddev_latency_ms', 'N/A')}ms, availability={baseline_metrics['availability_percent']}%. "
         f"During fault injection ({experiment_metrics.get('raw_sample_count', probes_cnt)} probe samples): "
-        f"availability={experiment_metrics['availability_percent']}%, "
+        f"availability={avail_disp}, "
         f"mean={experiment_metrics.get('mean_latency_ms', 0)}ms (+{round((experiment_metrics.get('latency_multiplier', 1.0)-1)*100, 1)}%), "
         f"P95={experiment_metrics.get('p95_latency_ms', 'N/A')}ms, "
         f"spikes={anomaly_summary.get('spike_count', 0)}, "
         f"max_consecutive_failures={anomaly_summary.get('max_consecutive_failures', 0)}. "
-        f"Recovery: {recovery_metrics['recovery_time_seconds']}s (RTO {'met' if recovery_metrics['rto_target_met'] else 'EXCEEDED'}, target {recovery_metrics['rto_target_seconds']}s). "
+        f"{rec_summary_str} "
         f"Hypothesis '{hypothesis_eval['hypothesis'][:80]}...' was evaluated as {hypothesis_eval['verdict']}."
     )
 
@@ -1367,6 +1651,11 @@ def generate_experiment_report(fault: Any) -> Dict[str, Any]:
             "breakdown": score_breakdown,
             "confidence": experiment_confidence,
             "confidence_reason": experiment_confidence_reason,
+            "measurement_quality_score": res.get("measurement_quality_score") or score_obj.get("measurement_quality_score"),
+            "measurement_quality_grade": res.get("measurement_quality_grade") or score_obj.get("measurement_quality_grade"),
+            "measurement_quality_breakdown": res.get("measurement_quality_breakdown") or score_obj.get("measurement_quality_breakdown", {}),
+            "score_before_evidence_gate": res.get("score_before_evidence_gate") or score_obj.get("score_before_evidence_gate"),
+            "evidence_adjustment": res.get("evidence_adjustment") or score_obj.get("evidence_adjustment"),
         },
         "executive_summary": exec_summary,
         "hypothesis": hypothesis_eval,

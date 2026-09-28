@@ -510,8 +510,9 @@ def _execute_single_fault(
                 level="WARN"
             )
 
-    # Start active in-fault synthetic probing
-    evaluator.start_in_fault_probing(interval_sec=1.0)
+    # Start active in-fault synthetic probing (use high-resolution cadence for short/restart faults)
+    fault_probe_interval = 0.2 if (fault_type == "container_restart" or configured_dur <= 5) else 1.0
+    evaluator.start_in_fault_probing(high_resolution_interval=fault_probe_interval)
 
     emit_log(f"Executing {executor.display_name} on target '{target}'...")
     fault_exec_t0 = time.time()
@@ -525,21 +526,28 @@ def _execute_single_fault(
             error=str(e),
         )
     fault_window_end = time.time()
-    actual_fault_duration = round(fault_window_end - fault_exec_t0, 2)
+    actual_fault_duration = round(fault_window_end - fault_exec_t0, 3)
 
     # Stop in-fault probing and gather impact metrics — pass fault_window_end for precise timing
     in_fault_metrics = evaluator.stop_in_fault_probing(fault_window_end=fault_window_end)
     if in_fault_metrics.get("probes_count", 0) > 0:
         comp = in_fault_metrics.get("baseline_comparison") or {}
         anoms = in_fault_metrics.get("anomaly_summary") or {}
+        cov = in_fault_metrics.get("observability_coverage") or {}
+        avail_str = f"{in_fault_metrics['availability_percent']}%" if in_fault_metrics['availability_percent'] is not None else "N/A"
+        mean_str = f"{in_fault_metrics.get('avg_latency_ms')}ms" if in_fault_metrics.get('avg_latency_ms') is not None else "N/A"
+        p95_str = f"{in_fault_metrics.get('p95_latency_ms')}ms" if in_fault_metrics.get('p95_latency_ms') is not None else "N/A"
+
         emit_log(
-            f"[CHAOS IMPACT] In-fault availability: {in_fault_metrics['availability_percent']}% | "
-            f"mean={in_fault_metrics.get('avg_latency_ms', 0)}ms "
-            f"(+{comp.get('percentage_delta', 0):.1f}% vs baseline) | "
-            f"P95={in_fault_metrics.get('p95_latency_ms', 'N/A')}ms | "
+            f"[CHAOS IMPACT] In-fault availability: {avail_str} | "
+            f"mean={mean_str} "
+            + (f"(+{comp.get('percentage_delta', 0):.1f}% vs baseline) | " if comp.get("percentage_delta") is not None else "| ")
+            + f"P95={p95_str} | "
             f"spikes={anoms.get('spike_count', 0)} | "
             f"max_consec_fails={anoms.get('max_consecutive_failures', 0)}"
         )
+        if cov.get("under_sampled"):
+            emit_log(f"[SAMPLING WARNING] {cov.get('warning')}", level="WARN")
 
     is_cancelled = (
         cancel_event.is_set()
@@ -549,24 +557,28 @@ def _execute_single_fault(
 
     rto_target_sec = float(params.get("rto_target_seconds", 5.0))
     if is_cancelled:
-        # Immediate clean exit: skip 12.0s recovery polling when user explicitly stopped the job
+        # Immediate clean exit: user explicitly stopped the job
         recovery_metrics = {
-            "recovered": True,
-            "recovery_time_seconds": 0.0,
+            "status": "CANCELLED",
+            "recovered": None,
+            "recovery_time_seconds": None,
             "rto_target_seconds": rto_target_sec,
-            "rto_target_met": True,
+            "rto_target_met": None,
             "aborted_by_user": True,
+            "reason": "Fault execution cancelled by user before recovery verification.",
         }
         emit_log(f"Fault #{fault_id} stopped and cleaned up safely.", level="WARN")
     else:
         # Post-fault RTO recovery verification
         emit_log(f"[RECOVERY] Fault completed. Verifying recovery to steady state (RTO target: {rto_target_sec}s)...")
         recovery_metrics = evaluator.measure_recovery(max_wait_sec=12.0, rto_target_sec=rto_target_sec)
-        rec_time = recovery_metrics.get("recovery_time_seconds", 0)
-        if recovery_metrics.get("recovered"):
+        rec_time = recovery_metrics.get("recovery_time_seconds")
+        if recovery_metrics.get("recovered") and rec_time is not None:
             emit_log(f"[RECOVERY] Steady-state restored in {rec_time}s (RTO target: {rto_target_sec}s, target {'met' if recovery_metrics.get('rto_target_met') else 'exceeded'}).")
+        elif rec_time is None and recovery_metrics.get("status") == "INCONCLUSIVE":
+            emit_log(f"[RECOVERY] Inconclusive: {recovery_metrics.get('reason', 'No recovery observations')}.", level="WARN")
         else:
-            emit_log(f"[RECOVERY] Service did not restore within {rec_time}s timeout.", level="WARN")
+            emit_log(f"[RECOVERY] Service did not restore steady state within timeout.", level="WARN")
 
     # Compute comprehensive Resilience Score & Grade
     resilience_report = ResilienceScorer.calculate_score(
@@ -586,8 +598,11 @@ def _execute_single_fault(
     baseline_dur = lifecycle.get("baseline_duration_seconds")
 
     if not is_cancelled:
+        score_disp = f"{resilience_report['score']}/100" if resilience_report['score'] is not None else "INCONCLUSIVE"
+        grade_disp = resilience_report['grade'] or "INCONCLUSIVE"
         emit_log(
-            f"[RESILIENCE AUDIT] Score: {resilience_report['score']}/100 | Grade: {resilience_report['grade']} ({resilience_report['classification']})"
+            f"[RESILIENCE AUDIT] Score: {score_disp} | Grade: {grade_disp} ({resilience_report['classification']}) | "
+            f"Quality: {resilience_report.get('measurement_quality_score')}/100 ({resilience_report.get('measurement_quality_grade')})"
         )
 
     # 4. Report final result
@@ -611,6 +626,9 @@ def _execute_single_fault(
     result_payload["resilience_score"] = resilience_report["score"]
     result_payload["resilience_grade"] = resilience_report["grade"]
     result_payload["classification"] = resilience_report["classification"]
+    result_payload["measurement_quality_score"] = resilience_report.get("measurement_quality_score")
+    result_payload["measurement_quality_grade"] = resilience_report.get("measurement_quality_grade")
+    result_payload["measurement_quality_breakdown"] = resilience_report.get("measurement_quality_breakdown")
     result_payload["steady_state_baseline"] = evaluator.baseline
     result_payload["experiment_metrics"] = in_fault_metrics
     result_payload["recovery_metrics"] = recovery_metrics

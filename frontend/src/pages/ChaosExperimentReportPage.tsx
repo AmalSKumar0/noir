@@ -98,6 +98,9 @@ interface DetailedExperimentReport {
     breakdown?: Record<string, number>;
     confidence: string;
     confidence_reason?: string;
+    measurement_quality_score?: number | null;
+    measurement_quality_grade?: string | null;
+    score_before_evidence_gate?: number | null;
   };
   executive_summary: string;
   hypothesis: {
@@ -214,6 +217,7 @@ interface DetailedExperimentReport {
     post_recovery_latency_ms?: number | null;
     metrics_returned_to_baseline?: boolean;
     consecutive_healthy_required?: number;
+    recovery_reason?: string | null;
     recovery_trajectory?: Array<{
       t: number;
       success: boolean;
@@ -390,11 +394,16 @@ function generateSingleExperimentMarkdown(project: ProjectData | null, report: D
   md += `| HTTP 5xx Errors | ${b.http_5xx_count} | ${expM.http_5xx_count} | +${expM.http_5xx_count - b.http_5xx_count} | ${expM.http_5xx_count > 0 ? '5XX SPIKE' : 'CLEAN'} |\n\n`;
 
   md += `## 4. Recovery & Rollback Analysis\n`;
-  md += `- **Recovery Time:** ${r.recovery_time_seconds}s\n`;
+  const recStr = r.recovery_time_seconds !== null && r.recovery_time_seconds !== undefined ? `${r.recovery_time_seconds}s` : 'Inconclusive';
+  const rtoStatusStr = r.rto_target_met === true ? 'RTO MET' : (r.rto_target_met === false ? 'RTO EXCEEDED' : 'INCONCLUSIVE');
+  const deltaStr = r.recovery_time_seconds !== null && r.recovery_time_seconds !== undefined
+    ? `(${(r.recovery_time_seconds - r.rto_target_seconds).toFixed(3)}s delta)`
+    : '';
+  md += `- **Recovery Time:** ${recStr}\n`;
   md += `- **Configured RTO Target:** ${r.rto_target_seconds}s\n`;
-  md += `- **RTO Status:** **${r.rto_target_met ? 'RTO MET' : 'RTO EXCEEDED'}** (${(r.recovery_time_seconds - r.rto_target_seconds).toFixed(3)}s delta)\n`;
+  md += `- **RTO Status:** **${rtoStatusStr}** ${deltaStr}\n`;
   md += `- **Stability Criteria:** ${r.consecutive_healthy_required || 3} consecutive steady-state responses\n`;
-  md += `- **Steady State Restored:** ${r.recovered ? 'YES' : 'NO'}\n\n`;
+  md += `- **Steady State Restored:** ${r.recovered === true ? 'YES' : (r.recovered === false ? 'NO' : 'INCONCLUSIVE')}\n\n`;
 
   if (report.findings && report.findings.length > 0) {
     md += `## 5. Empirical Technical Findings\n\n`;
@@ -916,9 +925,11 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                 <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-lg p-2.5">
                   <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Resilience Score</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base font-bold text-zinc-100">{report.score_summary.score}/100</span>
+                    <span className="text-base font-bold text-zinc-100">
+                      {report.score_summary.score !== null ? `${report.score_summary.score}/100` : 'INCONCLUSIVE'}
+                    </span>
                     <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${getScoreGradeColor(report.score_summary.grade)}`}>
-                      Grade {report.score_summary.grade}
+                      Grade {report.score_summary.grade || 'INCONCLUSIVE'}
                     </span>
                   </div>
                 </div>
@@ -926,9 +937,9 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                 <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-lg p-2.5">
                   <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Availability</span>
                   <span className={`text-base font-bold ${
-                    report.experiment_metrics.availability_percent >= 90 ? 'text-emerald-400' : 'text-rose-400'
+                    report.experiment_metrics.availability_percent !== null ? (report.experiment_metrics.availability_percent >= 90 ? 'text-emerald-400' : 'text-rose-400') : 'text-zinc-400'
                   }`}>
-                    {report.experiment_metrics.availability_percent}%
+                    {report.experiment_metrics.availability_percent !== null ? `${report.experiment_metrics.availability_percent}%` : 'Unavailable'}
                   </span>
                 </div>
 
@@ -949,9 +960,9 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                 <div className="bg-zinc-900/60 border border-zinc-800/60 rounded-lg p-2.5">
                   <span className="text-[10px] text-zinc-500 uppercase block mb-0.5">Recovery Time</span>
                   <span className={`text-base font-bold ${
-                    report.recovery.rto_target_met ? 'text-emerald-400' : 'text-amber-400'
+                    report.recovery.recovery_time_seconds !== null ? (report.recovery.rto_target_met ? 'text-emerald-400' : 'text-amber-400') : 'text-zinc-400'
                   }`}>
-                    {report.recovery.recovery_time_seconds}s
+                    {report.recovery.recovery_time_seconds !== null ? `${report.recovery.recovery_time_seconds}s` : 'Inconclusive'}
                   </span>
                 </div>
 
@@ -960,9 +971,9 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                   <div className="flex items-center gap-1.5">
                     <span className="text-base font-bold text-zinc-200">{report.recovery.rto_target_seconds}s</span>
                     <span className={`text-[10px] px-1 py-0.2 rounded font-bold ${
-                      report.recovery.rto_target_met ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      report.recovery.rto_target_met === true ? 'bg-emerald-500/20 text-emerald-400' : (report.recovery.rto_target_met === false ? 'bg-rose-500/20 text-rose-400' : 'bg-zinc-500/20 text-zinc-400')
                     }`}>
-                      {report.recovery.rto_target_met ? 'MET' : 'EXCEEDED'}
+                      {report.recovery.rto_target_met === true ? 'MET' : (report.recovery.rto_target_met === false ? 'EXCEEDED' : 'INCONCLUSIVE')}
                     </span>
                   </div>
                 </div>
@@ -1052,28 +1063,50 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
 
                 {/* 4. Recovery */}
                 <div className={`bg-zinc-900/70 border rounded-lg p-3 relative overflow-hidden ${
-                  report.recovery.rto_target_met ? 'border-emerald-500/30' : 'border-amber-500/30'
+                  report.recovery.rto_target_met === true
+                    ? 'border-emerald-500/30'
+                    : (report.recovery.rto_target_met === false ? 'border-amber-500/30' : 'border-zinc-500/30')
                 }`}>
                   <div className={`absolute top-0 left-0 h-1 w-full ${
-                    report.recovery.rto_target_met ? 'bg-emerald-400' : 'bg-amber-400'
+                    report.recovery.rto_target_met === true
+                      ? 'bg-emerald-400'
+                      : (report.recovery.rto_target_met === false ? 'bg-amber-400' : 'bg-zinc-600')
                   }`} />
                   <div className="flex items-center justify-between text-xs font-mono mb-1">
-                    <span className={`font-bold ${report.recovery.rto_target_met ? 'text-emerald-300' : 'text-amber-300'}`}>
+                    <span className={`font-bold ${
+                      report.recovery.rto_target_met === true
+                        ? 'text-emerald-300'
+                        : (report.recovery.rto_target_met === false ? 'text-amber-300' : 'text-zinc-300')
+                    }`}>
                       4. RECOVERY
                     </span>
-                    <span className="text-[10px] text-zinc-500">{report.recovery.recovery_time_seconds}s</span>
+                    <span className="text-[10px] text-zinc-500">
+                      {report.recovery.recovery_time_seconds !== null ? `${report.recovery.recovery_time_seconds}s` : 'Inconclusive'}
+                    </span>
                   </div>
                   <div className="text-xs text-zinc-200 font-mono font-semibold">
                     Target: {report.recovery.rto_target_seconds}s
                   </div>
                   <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                    {report.recovery.consecutive_healthy_required || 3} steady probes verified
+                    {report.recovery.recovery_reason || `${report.recovery.consecutive_healthy_required || 3} steady probes verified`}
                   </div>
                   <div className={`text-[10px] font-mono mt-2 flex items-center gap-1 ${
-                    report.recovery.rto_target_met ? 'text-emerald-400' : 'text-amber-400'
+                    report.recovery.rto_target_met === true
+                      ? 'text-emerald-400'
+                      : (report.recovery.rto_target_met === false ? 'text-amber-400' : 'text-zinc-400')
                   }`}>
-                    {report.recovery.rto_target_met ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                    <span>{report.recovery.rto_target_met ? 'SLA RTO Satisfied' : 'RTO Target Exceeded'}</span>
+                    {report.recovery.rto_target_met === true ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : (report.recovery.rto_target_met === false ? (
+                      <AlertTriangle className="w-3 h-3" />
+                    ) : (
+                      <Info className="w-3 h-3" />
+                    ))}
+                    <span>
+                      {report.recovery.rto_target_met === true
+                        ? 'SLA RTO Satisfied'
+                        : (report.recovery.rto_target_met === false ? 'RTO Target Exceeded' : 'Recovery Inconclusive')}
+                    </span>
                   </div>
                 </div>
 
@@ -1488,7 +1521,7 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                 <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
                   <h3 className="text-xs font-mono uppercase tracking-wider font-semibold text-zinc-300 flex items-center gap-2">
                     <Shield className="w-3.5 h-3.5 text-cyan-400" />
-                    Resilience Score Breakdown ({report.score_summary.score}/100)
+                    Resilience Score Breakdown ({report.score_summary.score !== null ? `${report.score_summary.score}/100` : 'INCONCLUSIVE'})
                   </h3>
                   <span className="text-[10px] font-mono text-zinc-500">
                     Additive derivation
@@ -1509,6 +1542,15 @@ export default function ChaosExperimentReportPage({ isCompanyView = false }: { i
                       <span className="text-zinc-500 truncate max-w-xs">{report.score_summary.confidence_reason}</span>
                     )}
                   </div>
+
+                  {report.score_summary.measurement_quality_score !== undefined && report.score_summary.measurement_quality_score !== null && (
+                    <div className="pt-1.5 flex items-center justify-between text-[11px] text-zinc-400">
+                      <span>Measurement Quality: <strong className="text-cyan-400">{report.score_summary.measurement_quality_score}/100</strong> ({report.score_summary.measurement_quality_grade || 'EVALUATED'})</span>
+                      {report.score_summary.score_before_evidence_gate !== undefined && report.score_summary.score_before_evidence_gate !== null && (
+                        <span className="text-zinc-500">Pre-gate: {report.score_summary.score_before_evidence_gate}/100</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

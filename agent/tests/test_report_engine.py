@@ -18,19 +18,30 @@ from apps.projects.chaos_reporting import (
 
 class TestMetricsAggregator(unittest.TestCase):
     def test_percentile_calculation(self):
+        # 10 samples: sufficient for P95 (>= 10), but insufficient for P99 (>= 20)
         data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
         percentiles = MetricsAggregator.calculate_percentiles(data)
 
         self.assertAlmostEqual(percentiles["p50"], 50.0, delta=10.0)
         self.assertGreaterEqual(percentiles["p95"], 90.0)
-        self.assertGreaterEqual(percentiles["p99"], 95.0)
+        self.assertIsNone(percentiles["p99"])
+        self.assertEqual(percentiles["p99_status"], "INSUFFICIENT_SAMPLES")
         self.assertEqual(percentiles["min"], 10.0)
         self.assertEqual(percentiles["max"], 100.0)
 
+        # 20 samples: sufficient for both P95 and P99
+        data_20 = [float(x * 5) for x in range(1, 21)]
+        percentiles_20 = MetricsAggregator.calculate_percentiles(data_20)
+        self.assertIsNotNone(percentiles_20["p99"])
+        self.assertEqual(percentiles_20["p99_status"], "AVAILABLE")
+        self.assertGreaterEqual(percentiles_20["p99"], 95.0)
+
     def test_percentile_empty(self):
         res = MetricsAggregator.calculate_percentiles([])
-        self.assertEqual(res["p50"], 0.0)
-        self.assertEqual(res["mean"], 0.0)
+        self.assertIsNone(res["p50"])
+        self.assertIsNone(res["mean"])
+        self.assertEqual(res["p95_status"], "INSUFFICIENT_SAMPLES")
+        self.assertEqual(res["p99_status"], "INSUFFICIENT_SAMPLES")
 
     def test_calculate_percentage_change_safe_zero_division(self):
         res = MetricsAggregator.calculate_percentage_change(0.0, 5.0, higher_is_better=False)

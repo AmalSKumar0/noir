@@ -1,0 +1,67 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noir-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=noir-dev-secret-key-for-local-docker-testing-only-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,backend
+      - BACKEND_BASE_URL=http://localhost:8000
+      - FRONTEND_BASE_URL=http://localhost:3000
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173
+      - PSQL_NAME=noir_db
+      - PSQL_USER=noir_user
+      - PSQL_PASSWORD=noir_password
+      - PSQL_HOST=db
+      - PSQL_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RUN_MIGRATIONS=true
+      - COLLECT_STATIC=true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: noir-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: noir_db
+      POSTGRES_USER: noir_user
+      POSTGRES_PASSWORD: noir_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noir_user -d noir_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: noir-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

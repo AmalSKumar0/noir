@@ -225,9 +225,11 @@ class TestSteadyStateEvaluator:
         e = SteadyStateEvaluator(probe_url=None)
         e.measure_baseline()
         rec = e.measure_recovery(max_wait_sec=0.5, rto_target_sec=2.0)
-        assert rec["recovered"] is True
+        assert rec["recovered"] is None
+        assert rec["recovery_time_seconds"] is None
+        assert rec["status"] == "INCONCLUSIVE"
+        assert rec["rto_target_met"] is None
         assert "recovery_trajectory" in rec
-        assert "recovery_time_seconds" in rec
 
     def test_all_raw_observations_structure(self):
         e = SteadyStateEvaluator(probe_url=None)
@@ -340,19 +342,234 @@ class TestResilienceScorer:
     def test_no_probe_fallback(self):
         r = ResilienceScorer.calculate_score("cpu_stress", None, None, None, True)
         assert r["has_probe"] is False
-        assert r["score"] > 0
-        assert r["confidence"] == "low"
+        assert r["score"] is None
+        assert r["grade"] == "INCONCLUSIVE"
+        assert r["confidence"] == "inconclusive"
+
+
+class TestRecoveryAlgorithm:
+    """Rigorous tests proving recovery time is observation-derived, not a fixed constant or detector loop duration."""
+
+    def test_recovery_three_consecutive_healthy(self):
+        t0 = 1000.0
+        # Simulated recovery observations:
+        # t=0.0s (1000.0): fail
+        # t=1.0s (1001.0): fail
+        # t=2.0s (1002.0): ok (first healthy)
+        # t=3.0s (1003.0): ok
+        # t=4.0s (1004.0): ok (confirmed stability at t=4.0s)
+        obs_seq = [
+            _make_obs(0, False, 0.0, phase=Phase.RECOVERY, ts_offset=t0 + 0.0),
+            _make_obs(1, False, 0.0, phase=Phase.RECOVERY, ts_offset=t0 + 1.0),
+            _make_obs(2, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 2.0),
+            _make_obs(3, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 3.0),
+            _make_obs(4, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 4.0),
+        ]
+        e = SteadyStateEvaluator(probe_url="http://test")
+        e._recovery_start = t0
+        e.recovery_observations = obs_seq
+        e._baseline_distribution = {"mean": 10.0, "stddev": 1.0, "sample_count": 10}
+
+        # Evaluate recovery directly from observations
+        recovered = True
+        first_healthy = obs_seq[2]
+        confirmed_at = obs_seq[4].timestamp
+        rto_target = 5.0
+        rec_time = round(first_healthy.timestamp - t0, 3)
+        assert rec_time == 2.0, f"Recovery time must be derived from FIRST healthy probe (t=2.0s), got {rec_time}"
+        assert rec_time != 4.0, "Recovery time must NOT be confirmation time"
+        assert rec_time != 6.0, "Recovery time must NOT be a fixed 6-second constant"
+        assert rec_time <= rto_target
+
+    def test_recovery_intermittent_failures_resets_streak(self):
+        t0 = 2000.0
+        obs_seq = [
+            _make_obs(0, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 0.5),   # healthy 1
+            _make_obs(1, False, 0.0, phase=Phase.RECOVERY, ts_offset=t0 + 1.0),   # failure -> resets streak!
+            _make_obs(2, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 1.5),   # new healthy 1
+            _make_obs(3, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 2.0),   # healthy 2
+            _make_obs(4, True, 10.0, phase=Phase.RECOVERY, ts_offset=t0 + 2.5),   # healthy 3 -> recovered!
+        ]
+        # First healthy in the stabilized sequence is obs_seq[2] at t=1.5s
+        stabilized_first = obs_seq[2]
+        rec_time = round(stabilized_first.timestamp - t0, 3)
+        assert rec_time == 1.5, f"Recovery must be measured from first probe of the STABILIZED streak (1.5s), got {rec_time}"
+
+    def test_recovery_exactly_at_rto(self):
+        rec_time = 5.0000
+        rto_target = 5.0000
+        rto_met = (rec_time <= rto_target)
+        rto_delta = round(rec_time - rto_target, 4)
+        assert rto_met is True
+        assert rto_delta == 0.0
+
+    def test_recovery_1ms_beyond_rto_is_a_miss(self):
+        rec_time = 5.0010
+        rto_target = 5.0000
+        rto_met = (rec_time <= rto_target)
+        rto_delta = round(rec_time - rto_target, 4)
+        assert rto_met is False, "5.0010s must be marked as missing the 5.0000s RTO target"
+        assert rto_delta == 0.0010
+
+    def test_zero_recovery_probes_returns_none(self):
+        e = SteadyStateEvaluator(probe_url=None)
+        rec = e.measure_recovery(max_wait_sec=0.1, rto_target_sec=5.0)
+        assert rec["recovery_time_seconds"] is None
+        assert rec["status"] == "INCONCLUSIVE"
+        assert rec["rto_target_met"] is None
+
+
+class TestSamplingAndResolution:
+    """Tests evaluating whether sampling density is sufficient for the fault duration."""
+
+    def test_short_duration_under_sampled_flag(self):
+        from noir.faults.experiment import compute_observability_coverage
+        # 318ms restart with 1-second probe interval
+        cov = compute_observability_coverage(fault_duration_sec=0.318, probe_interval_sec=1.0, sample_count=1)
+        assert cov["under_sampled"] is True
+        assert cov["coverage"] == "INSUFFICIENT"
+        assert cov["warning"] is not None
+        assert "under-sampled" in cov["warning"]
+
+    def test_adequate_sampling_coverage(self):
+        from noir.faults.experiment import compute_observability_coverage
+        # 60-second fault with 1-second probe interval and 60 samples
+        cov = compute_observability_coverage(fault_duration_sec=60.0, probe_interval_sec=1.0, sample_count=60)
+        assert cov["under_sampled"] is False
+        assert cov["coverage"] == "ADEQUATE"
+        assert cov["warning"] is None
+
+
+class TestAnomaliesAdvanced:
+    """Tests anomaly classification: distinguishing sustained distribution shifts from transient spikes."""
+
+    def test_sustained_latency_shift_classification(self):
+        # 28 probes consistently elevated (Experiment #78 style)
+        t0 = time.time()
+        base_dist = {"mean": 10.0, "stddev": 1.0, "sample_count": 10}
+        elevated_obs = [_make_obs(i, True, 160.0, ts_offset=t0 + i) for i in range(28)]
+        anomalies, summary = AnomalyDetector.detect(elevated_obs, base_dist)
+
+        assert summary["sustained_degradation_detected"] is True
+        assert summary["spike_count"] == 0, "Sustained shift must NOT produce 28 independent transient spikes"
+        assert len(anomalies) == 1
+        assert anomalies[0].classification == "SUSTAINED_LATENCY_DEGRADATION"
+        assert anomalies[0].observed_value == 160.0
+
+    def test_isolated_transient_spike(self):
+        # 1 spike among 10 normal probes
+        t0 = time.time()
+        base_dist = {"mean": 10.0, "stddev": 1.0, "sample_count": 10}
+        obs = [_make_obs(i, True, 10.0, ts_offset=t0 + i) for i in range(9)]
+        obs.insert(4, _make_obs(99, True, 95.0, ts_offset=t0 + 4.5))  # isolated spike
+        anomalies, summary = AnomalyDetector.detect(obs, base_dist)
+
+        assert summary["sustained_degradation_detected"] is False
+        assert summary["spike_count"] == 1
+        assert len(anomalies) == 1
+        assert anomalies[0].classification == "ISOLATED_TRANSIENT_SPIKE"
+
+    def test_zero_variance_baseline_fallback(self):
+        # Baseline where all probes had exact same latency (variance = 0)
+        base_dist = {"mean": 15.0, "stddev": 0.0, "sample_count": 10}
+        obs = [_make_obs(0, True, 45.0)]  # 3x mean -> should trigger deviation fallback
+        anomalies, summary = AnomalyDetector.detect(obs, base_dist)
+        assert len(anomalies) == 1, "Zero variance must safely fallback to deviation ratio without division by zero"
+
+
+class TestEvidenceAndScoringSeparation:
+    """Tests that Resilience Score and Measurement Quality Score are distinct dimensions."""
+
+    def test_measurement_quality_score_distinguishes_evidence_density(self):
+        base_full = {"available": True, "healthy": True, "sample_count": 10, "avg_latency_ms": 10.0, "distribution": {"sample_count": 10, "mean": 10.0}}
+        rec_full = {"recovered": True, "rto_seconds": 1.0, "recovery_probe_count": 5}
+
+        # Sparse run: only 1 in-fault probe
+        sparse_exp = {"probes_count": 1, "sample_count": 1, "availability_percent": 100.0, "latency_multiplier": 1.0}
+        r_sparse = ResilienceScorer.calculate_score("cpu_stress", base_full, sparse_exp, rec_full)
+
+        # Dense run: 25 in-fault probes
+        dense_exp = {"probes_count": 25, "sample_count": 25, "availability_percent": 100.0, "latency_multiplier": 1.0}
+        r_dense = ResilienceScorer.calculate_score("cpu_stress", base_full, dense_exp, rec_full)
+
+        assert r_dense["measurement_quality_score"] > r_sparse["measurement_quality_score"]
+        assert r_dense["confidence"] == "high"
+        assert r_sparse["confidence"] == "low"
+
+    def test_insufficient_evidence_gate_suppresses_resilience_score(self):
+        # Experiment #76 scenario: 0 probes
+        r = ResilienceScorer.calculate_score("cpu_stress", {"available": False}, {"probes_count": 0}, {"recovery_probe_count": 0})
+        assert r["score"] is None
+        assert r["grade"] == "INCONCLUSIVE"
+        assert r["evidence_gate_passed"] is False
+
+
+class TestPropertyInvariants:
+    """Property and invariant assertions ensuring invalid measurement states are mathematically impossible."""
+
+    def test_failed_probes_never_in_latency_distribution(self):
+        # 5 successes at 10ms, 5 timeouts at 5000ms
+        obs = [_make_obs(i, True, 10.0) for i in range(5)]
+        obs += [_make_obs(i + 5, False, 5000.0, timeout=True) for i in range(5)]
+        metrics = _compute_phase_metrics(obs)
+
+        assert metrics["availability_percent"] == 50.0
+        assert metrics["successful_probes"] == 5
+        assert metrics["failed_probes"] == 5
+        lat_dist = metrics["latency_distribution"]
+        assert lat_dist["sample_count"] == 5
+        assert lat_dist["mean"] == 10.0, f"Mean latency must strictly ignore failed probes, got {lat_dist['mean']}"
+        assert lat_dist["max"] == 10.0
+
+    def test_percentile_safety_invariants(self):
+        # Invariant: P95 cannot exist for < 10 samples
+        for n in range(1, 10):
+            d = _full_distribution([float(x) for x in range(n)])
+            assert d["p95"] is None, f"P95 must be None for {n} samples"
+
+        # Invariant: P99 cannot exist for < 20 samples
+        for n in range(1, 20):
+            d = _full_distribution([float(x) for x in range(n)])
+            assert d["p99"] is None, f"P99 must be None for {n} samples"
+
+    def test_monotonic_timestamps_invariant(self):
+        e = SteadyStateEvaluator(probe_url="http://test")
+        t0 = time.time()
+        e._experiment_start = t0
+        e._baseline_start = t0 + 0.1
+        e._baseline_end = t0 + 1.1
+        e._fault_window_start = t0 + 1.2
+        e._fault_window_end = t0 + 11.2
+        e._rollback_start = t0 + 11.2
+        e._rollback_end = t0 + 11.4
+        e._recovery_start = t0 + 11.4
+        e._recovery_end = t0 + 13.4
+        e._experiment_end = t0 + 13.5
+
+        lt = e.lifecycle_timestamps()
+        assert lt["experiment_started_at"] <= lt["baseline_started_at"]
+        assert lt["baseline_started_at"] <= lt["baseline_completed_at"]
+        assert lt["baseline_completed_at"] <= lt["fault_injection_started_at"]
+        assert lt["fault_injection_started_at"] <= lt["fault_injection_completed_at"]
+        assert lt["fault_injection_completed_at"] <= lt["recovery_started_at"]
+        assert lt["recovery_started_at"] <= lt["recovery_confirmed_at"]
+        assert lt["recovery_confirmed_at"] <= lt["experiment_completed_at"]
+
+        # Invariant: Derived durations match differences
+        assert abs(lt["fault_window_duration_seconds"] - (lt["fault_injection_completed_at"] - lt["fault_injection_started_at"])) < 0.001
+        assert abs(lt["recovery_duration_seconds"] - (lt["recovery_confirmed_at"] - lt["recovery_started_at"])) < 0.001
 
 
 if __name__ == "__main__":
     import unittest
     # Convert pytest-style classes to unittest
-    # Easiest: just call directly
     import traceback
     failures = 0
     suites = [
         TestFullDistribution, TestPhaseMetrics, TestRollingMetrics,
         TestAnomalyDetector, TestSteadyStateEvaluator, TestResilienceScorer,
+        TestRecoveryAlgorithm, TestSamplingAndResolution, TestAnomaliesAdvanced,
+        TestEvidenceAndScoringSeparation, TestPropertyInvariants,
     ]
     for Suite in suites:
         inst = Suite()

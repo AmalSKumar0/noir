@@ -34,18 +34,28 @@ class ContainerRestartExecutor(FaultExecutor):
         t0 = time.time()
         try:
             res = docker_mgr.restart_container(container_name, timeout=timeout)
-            duration = round(time.time() - t0, 2)
+            duration = res.get("restart_duration_seconds", round(time.time() - t0, 3))
             is_running = res.get("running", False)
+
+            lifecycle_events = {
+                "container_stop_requested_at": res.get("container_stop_requested_at"),
+                "container_stopped_at": res.get("container_stopped_at"),
+                "container_start_requested_at": res.get("container_start_requested_at"),
+                "container_started_at": res.get("container_started_at"),
+                "container_healthy_at": res.get("container_healthy_at"),
+                "container_restart_duration_seconds": duration,
+            }
 
             if is_running:
                 return FaultResult(
                     success=True,
-                    message=f"Container '{container_name}' successfully restarted and confirmed running in {duration}s.",
+                    message=f"Container '{container_name}' restarted in {duration}s (Docker lifecycle verified).",
                     details={
                         "target": container_name,
                         "timeout": timeout,
                         "restart_duration_seconds": duration,
                         "status": res.get("status", "running"),
+                        "docker_lifecycle_events": lifecycle_events,
                     },
                     duration_seconds=duration,
                     recovered=True,

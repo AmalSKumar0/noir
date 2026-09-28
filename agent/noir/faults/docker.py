@@ -229,16 +229,28 @@ class DockerManager:
         if not container:
             self._raise_container_not_found(target)
 
-        t0 = time.time()
-        container.restart(timeout=timeout)
-        duration = round(time.time() - t0, 2)
+        stop_req = time.time()
+        container.stop(timeout=timeout)
+        stopped_at = time.time()
+
+        start_req = time.time()
+        container.start()
+        started_at = time.time()
 
         container.reload()
+        healthy_at = time.time() if container.status == "running" else None
+        duration = round(started_at - stop_req, 3)
+
         return {
             "container_name": container.name,
             "status": container.status,
             "running": container.status == "running",
             "restart_duration_seconds": duration,
+            "container_stop_requested_at": round(stop_req, 3),
+            "container_stopped_at": round(stopped_at, 3),
+            "container_start_requested_at": round(start_req, 3),
+            "container_started_at": round(started_at, 3),
+            "container_healthy_at": round(healthy_at, 3) if healthy_at else None,
         }
 
     def stop_container(self, target: str, timeout: int = 10) -> Dict[str, Any]:

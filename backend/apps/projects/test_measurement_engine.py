@@ -228,3 +228,156 @@ class TestFindingDetectorNewFindings(TestCase):
             len(non_info), 0,
             f"Unexpected non-informational findings on a perfect run: {[f['id'] for f in non_info]}"
         )
+
+    def test_experiment_76_no_probe_produces_inconclusive_score(self):
+        """Experiment #76: Missing probe data MUST NOT produce a numeric score or 0.0s recovery."""
+        from apps.projects.chaos_reporting import generate_experiment_report
+
+        class MockFault:
+            id = 76
+            fault_type = "cpu_stress"
+            target = "worker"
+            status = "completed"
+            parameters = {"duration": 60, "workers": 2, "rto_target_seconds": 5.0}
+            result = {
+                "message": "CPU stress completed",
+                "resilience": {"evidence_sufficient": False, "score": None, "grade": "INCONCLUSIVE"},
+                "steady_state_baseline": {"available": False, "probes_count": 0},
+                "experiment_metrics": {"probes_count": 0, "availability_percent": None},
+                "recovery_metrics": {
+                    "recovery_status": "INCONCLUSIVE",
+                    "recovery_time_seconds": None,
+                    "recovery_probe_count": 0,
+                },
+            }
+
+        report = generate_experiment_report(MockFault())
+        self.assertIsNone(report["score_summary"]["score"], "Score must be None when no probe evidence exists")
+        self.assertEqual(report["score_summary"]["grade"], "INCONCLUSIVE")
+        self.assertIsNone(report["recovery"]["recovery_time_seconds"], "Recovery time must be None, NOT 0.0s")
+        self.assertEqual(report["recovery"]["recovery_status"], "INCONCLUSIVE")
+        self.assertIsNone(report["recovery"]["rto_target_met"], "RTO met must be None, NOT False/True")
+        finding_ids = [f["id"] for f in report["findings"]]
+        self.assertIn("F-PROBE-NONE", finding_ids)
+
+    def test_network_latency_amplification_detected(self):
+        """Experiments #77, #78, #80: Configured +50ms delay with 150ms observed delta triggers amplification finding."""
+        exp = {
+            "probes_count": 15,
+            "availability_percent": 100.0,
+            "mean_latency_ms": 160.0, "avg_latency_ms": 160.0,
+            "p50_latency_ms": 155.0, "p95_latency_ms": 175.0,
+            "latency_multiplier": 16.0,
+            "failed_probes": 0, "successful_probes": 15,
+            "connection_errors_count": 0, "http_5xx_count": 0,
+            "sample_errors": [], "anomaly_summary": {},
+        }
+        params = {"latency_ms": 50.0}
+        findings = FindingDetector.detect_findings(
+            "network_delay", "api", self._base_baseline(), exp, self._base_recovery(), True, parameters=params
+        )
+        amp_finding = next((f for f in findings if f["id"] == "CONFIGURED_IMPAIRMENT_VS_OBSERVED_IMPACT"), None)
+        self.assertIsNotNone(amp_finding, "Network amplification finding must be generated")
+        self.assertEqual(amp_finding["metrics"]["configured_latency_ms"], 50.0)
+        self.assertEqual(amp_finding["metrics"]["amplification_ratio"], 3.0)
+        self.assertIn("Further investigation is required", amp_finding["suggested_investigation"])
+
+    def test_short_duration_under_sampling_detected(self):
+        """Experiment #82: A short fault duration relative to probe interval triggers F-UNDER-SAMPLED."""
+        exp = {
+            "probes_count": 1,
+            "availability_percent": 100.0,
+            "avg_latency_ms": 10.0, "mean_latency_ms": 10.0,
+            "p50_latency_ms": 10.0, "p95_latency_ms": 10.0,
+            "latency_multiplier": 1.0,
+            "failed_probes": 0, "successful_probes": 1,
+            "connection_errors_count": 0, "http_5xx_count": 0,
+            "sample_errors": [],
+            "observability_coverage": {
+                "fault_duration": 0.318,
+                "probe_interval": 1.0,
+                "under_sampled": True,
+            },
+        }
+        findings = FindingDetector.detect_findings(
+            "container_restart", "web", self._base_baseline(), exp, self._base_recovery(), True
+        )
+        finding_ids = [f["id"] for f in findings]
+        self.assertIn("F-UNDER-SAMPLED", finding_ids)
+
+    def test_sustained_latency_shift_detected(self):
+        """Experiment #78: Consistent elevation is classified as F-LAT-SUSTAINED, not transient spikes."""
+        exp = {
+            "probes_count": 28,
+            "availability_percent": 100.0,
+            "avg_latency_ms": 160.0, "mean_latency_ms": 160.0,
+            "p50_latency_ms": 158.0, "p95_latency_ms": 170.0,
+            "latency_multiplier": 16.0,
+            "failed_probes": 0, "successful_probes": 28,
+            "connection_errors_count": 0, "http_5xx_count": 0,
+            "sample_errors": [],
+            "anomaly_summary": {
+                "sustained_degradation_detected": True,
+                "sustained_ratio": 1.0,
+                "sustained_sample_count": 28,
+                "spike_count": 28,
+            },
+        }
+        findings = FindingDetector.detect_findings(
+            "network_delay", "web", self._base_baseline(), exp, self._base_recovery(), True
+        )
+        finding_ids = [f["id"] for f in findings]
+        self.assertIn("F-LAT-SUSTAINED", finding_ids)
+        self.assertNotIn("F-SPIKE-TRANSIENT", finding_ids, "Sustained degradation must suppress independent spikes")
+
+    def test_resource_pressure_ineffective_findings(self):
+        """Experiments #79, #81: Ineffective CPU / low memory pressure triggers experiment quality findings."""
+        exp = {
+            "probes_count": 5, "availability_percent": 100.0,
+            "avg_latency_ms": 10.0, "mean_latency_ms": 10.0,
+            "p50_latency_ms": 10.0, "p95_latency_ms": 11.0,
+            "latency_multiplier": 1.0, "failed_probes": 0, "successful_probes": 5,
+            "connection_errors_count": 0, "http_5xx_count": 0,
+            "sample_errors": [], "anomaly_summary": {},
+        }
+        # Ineffective CPU stress
+        findings_cpu = FindingDetector.detect_findings(
+            "cpu_stress", "worker", self._base_baseline(), exp, self._base_recovery(), True,
+            telemetry={"cpu_delta": 2.0}
+        )
+        self.assertIn("F-CPU-INEFFECTIVE", [f["id"] for f in findings_cpu])
+
+        # Low memory pressure
+        findings_mem = FindingDetector.detect_findings(
+            "memory_stress", "worker", self._base_baseline(), exp, self._base_recovery(), True,
+            telemetry={"memory_pressure_ratio": 0.02}
+        )
+        self.assertIn("F-MEMORY-LOW-PRESSURE", [f["id"] for f in findings_mem])
+
+    def test_sub_second_rto_precision_boundary(self):
+        """Part 5: Recovery at 5.0001s with RTO 5.0000s is marked EXCEEDED without rounding down."""
+        from apps.projects.chaos_reporting import generate_experiment_report
+
+        class MockPrecisionFault:
+            id = 80
+            fault_type = "network_delay"
+            target = "gateway"
+            status = "completed"
+            parameters = {"rto_target_seconds": 5.0}
+            result = {
+                "resilience": {"score": 85, "grade": "B", "evidence_sufficient": True},
+                "steady_state_baseline": {"available": True, "probes_count": 10, "avg_latency_ms": 10.0},
+                "experiment_metrics": {"probes_count": 10, "availability_percent": 100.0, "avg_latency_ms": 50.0},
+                "recovery_metrics": {
+                    "recovery_status": "RECOVERED",
+                    "recovery_time_seconds": 5.0001,
+                    "rto_target_seconds": 5.0,
+                    "recovery_probe_count": 5,
+                    "recovered": True,
+                },
+            }
+
+        report = generate_experiment_report(MockPrecisionFault())
+        self.assertFalse(report["recovery"]["rto_target_met"], "5.0001s must exceed 5.0s target")
+        self.assertEqual(report["recovery"]["rto_status"], "VIOLATED")
+        self.assertAlmostEqual(report["recovery"]["rto_delta_seconds"], 0.0001, places=4)

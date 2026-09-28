@@ -97,14 +97,17 @@ class TestSteadyStateEvaluator(unittest.TestCase):
         mock_probe.side_effect = [
             ProbeResult(timestamp=100.0, status_code=None, latency_ms=0, success=False, error="Refused"),
             ProbeResult(timestamp=100.2, status_code=200, latency_ms=15.0, success=True),
+            ProbeResult(timestamp=100.4, status_code=200, latency_ms=15.0, success=True),
+            ProbeResult(timestamp=100.6, status_code=200, latency_ms=15.0, success=True),
         ]
 
-        evaluator = SteadyStateEvaluator(probe_url="http://localhost:8000/health")
+        evaluator = SteadyStateEvaluator(probe_url="http://localhost:8000/health", recovery_consecutive_required=3)
         rec = evaluator.measure_recovery(max_wait_sec=2.0, poll_interval=0.02)
 
         self.assertTrue(rec["recovered"])
         self.assertFalse(rec["timed_out"])
-        self.assertGreater(rec["rto_seconds"], 0)
+        self.assertIsNotNone(rec["recovery_time_seconds"])
+        self.assertGreater(rec["recovery_time_seconds"], 0)
 
 
 class TestResilienceScorer(unittest.TestCase):
@@ -190,9 +193,10 @@ class TestResilienceScorer(unittest.TestCase):
             recovery_metrics=None,
             rollback_success=True,
         )
-        self.assertEqual(res["score"], 80)
-        self.assertEqual(res["grade"], "B")
+        self.assertIsNone(res["score"])
+        self.assertEqual(res["grade"], "INCONCLUSIVE")
         self.assertFalse(res["has_probe"])
+        self.assertFalse(res["evidence_gate_passed"])
 
     def test_auto_detect_container_endpoint(self):
         with patch("docker.from_env"):

@@ -12,24 +12,47 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 
 
+# Service Base URLs
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL")
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL")
 
-
+# Redis Configuration (Supports REDIS_URL or host/port/db with optional SSL & password)
+REDIS_URL = os.getenv("REDIS_URL")
 REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT")
-REDIS_DB = os.getenv("REDIS_DB")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_DB = os.getenv("REDIS_DB", "0")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+REDIS_USE_SSL = os.getenv("REDIS_USE_SSL", "False").lower() in ("true", "1")
 
-# DataBase
+if REDIS_URL:
+    REDIS_LOCATION = REDIS_URL
+elif REDIS_HOST:
+    _scheme = "rediss" if REDIS_USE_SSL else "redis"
+    _auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
+    REDIS_LOCATION = f"{_scheme}://{_auth}{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+else:
+    REDIS_LOCATION = None
+
+# Database Configuration (Supports DATABASE_URL or individual PSQL_* variables)
+DATABASE_URL = os.getenv("DATABASE_URL")
 PSQL_NAME = os.getenv("PSQL_NAME")
 PSQL_USER = os.getenv("PSQL_USER")
 PSQL_PASSWORD = os.getenv("PSQL_PASSWORD")
 PSQL_HOST = os.getenv("PSQL_HOST")
-PSQL_PORT = os.getenv("PSQL_PORT")
+PSQL_PORT = os.getenv("PSQL_PORT", "5432")
+PSQL_SSLMODE = os.getenv("PSQL_SSLMODE")
 
-
-
-
+if DATABASE_URL:
+    import urllib.parse
+    _url = urllib.parse.urlparse(DATABASE_URL)
+    PSQL_NAME = _url.path.lstrip("/") if _url.path else ""
+    PSQL_USER = _url.username or ""
+    PSQL_PASSWORD = _url.password or ""
+    PSQL_HOST = _url.hostname or ""
+    PSQL_PORT = str(_url.port or 5432)
+    _query = urllib.parse.parse_qs(_url.query)
+    if "sslmode" in _query:
+        PSQL_SSLMODE = _query["sslmode"][0]
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -54,7 +77,15 @@ if ALLOWED_HOSTS_ENV:
 elif DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "testserver",
+        ".amazonaws.com",
+        ".awsapprunner.com",
+        ".elb.amazonaws.com",
+    ]
 
 
 REST_FRAMEWORK = {
@@ -117,15 +148,26 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'backend.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+if REDIS_LOCATION:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_LOCATION],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -158,23 +200,41 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
+if PSQL_NAME and PSQL_HOST:
+    _db_config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": PSQL_NAME,
-        "USER": PSQL_USER,
-        "PASSWORD": PSQL_PASSWORD,
+        "USER": PSQL_USER or "postgres",
+        "PASSWORD": PSQL_PASSWORD or "",
         "HOST": PSQL_HOST,
-        "PORT": PSQL_PORT,
+        "PORT": int(PSQL_PORT) if str(PSQL_PORT).isdigit() else 5432,
     }
-}
+    if PSQL_SSLMODE:
+        _db_config["OPTIONS"] = {"sslmode": PSQL_SSLMODE}
+    DATABASES = {
+        "default": _db_config
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+if REDIS_LOCATION:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_LOCATION,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -210,14 +270,36 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Disallow the global wildcard
-CORS_ALLOWED_ALL_ORIGINS = False
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-# Explicitly whitelist your frontend URL(s)
+# AWS & Reverse Proxy Configuration (ALB / CloudFront / App Runner)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+if not DEBUG and os.getenv("SECURE_SSL_REDIRECT", "False").lower() in ("true", "1"):
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", 31536000))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# CORS Configuration
+CORS_ALLOWED_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL", "False").lower() in ("true", "1")
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Your React/Vue/Next.js dev server
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -226,7 +308,35 @@ CORS_ALLOWED_ORIGINS = [
     "https://aistudio.google.com"
 ]
 
+if FRONTEND_BASE_URL and FRONTEND_BASE_URL.rstrip('/') not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(FRONTEND_BASE_URL.rstrip('/'))
+
+EXTRA_CORS = os.getenv("CORS_ALLOWED_ORIGINS")
+if EXTRA_CORS:
+    for origin in EXTRA_CORS.split(","):
+        trimmed = origin.strip().rstrip('/')
+        if trimmed and trimmed not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(trimmed)
+
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF Trusted Origins (Required for Django 4+ with reverse proxy & AWS domains)
+CSRF_TRUSTED_ORIGINS_ENV = os.getenv("CSRF_TRUSTED_ORIGINS")
+if CSRF_TRUSTED_ORIGINS_ENV:
+    CSRF_TRUSTED_ORIGINS = [orig.strip().rstrip('/') for orig in CSRF_TRUSTED_ORIGINS_ENV.split(",") if orig.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    if FRONTEND_BASE_URL and FRONTEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(FRONTEND_BASE_URL.rstrip('/'))
+    if BACKEND_BASE_URL and BACKEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(BACKEND_BASE_URL.rstrip('/'))
 
 AUTH_USER_MODEL = "accounts.User"
 

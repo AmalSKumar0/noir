@@ -1,0 +1,84 @@
+# ===================================================================
+# Noir Backend - Production Docker Compose Stack
+# Ideal for single-instance AWS EC2 deployments (e.g. t3.small / t3.medium)
+# ===================================================================
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: noir-backend:latest
+    container_name: noir-backend-prod
+    restart: always
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - PORT=8000
+      - RUN_MIGRATIONS=${RUN_MIGRATIONS:-true}
+      - COLLECT_STATIC=${COLLECT_STATIC:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - static_volume:/app/staticfiles
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: postgres:16-alpine
+    container_name: noir-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${PSQL_NAME:-noir_db}
+      POSTGRES_USER: ${PSQL_USER:-noir_user}
+      POSTGRES_PASSWORD: ${PSQL_PASSWORD:-noir_secure_prod_password}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PSQL_USER:-noir_user} -d ${PSQL_NAME:-noir_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: noir-redis-prod
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  static_volume:

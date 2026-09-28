@@ -470,7 +470,8 @@ function generateMarkdownReport(
     md += `## 3. IN-DEPTH ANALYSIS: EXPERIMENT #${selectedExp.metadata.id} (${formatFaultName(selectedExp.metadata.fault_type)})\n\n`;
     md += `**Target:** \`${selectedExp.metadata.target}\`\n`;
     md += `**Status:** ${selectedExp.metadata.status.toUpperCase()}\n`;
-    md += `**Resilience Score:** ${selectedExp.score_summary.score}/100 (${selectedExp.score_summary.grade}) — ${selectedExp.score_summary.classification}\n`;
+    const scoreVal = selectedExp.score_summary.score !== null ? `${selectedExp.score_summary.score}/100` : 'INCONCLUSIVE';
+    md += `**Resilience Score:** ${scoreVal} (${selectedExp.score_summary.grade || 'INCONCLUSIVE'}) — ${selectedExp.score_summary.classification}\n`;
     md += `**Evidence Confidence:** ${selectedExp.score_summary.confidence.toUpperCase()} (${selectedExp.score_summary.confidence_reason || 'Verified sample'})\n\n`;
 
     md += `### Hypothesis Evaluation\n`;
@@ -483,10 +484,19 @@ function generateMarkdownReport(
     md += `|---|---|---|---|---|\n`;
     const b = selectedExp.baseline;
     const e = selectedExp.experiment_metrics;
-    md += `| Availability | ${b.available ? b.availability_percent + '%' : 'N/A'} | ${e.availability_percent}% | ${b.available ? (e.availability_percent - b.availability_percent).toFixed(1) + '%' : 'N/A'} | - |\n`;
+    md += `| Availability | ${b.available ? b.availability_percent + '%' : 'N/A'} | ${e.availability_percent !== null ? e.availability_percent + '%' : 'Unavailable'} | ${b.available && e.availability_percent !== null ? (e.availability_percent - b.availability_percent).toFixed(1) + '%' : 'N/A'} | - |\n`;
     md += `| Mean Latency | ${b.mean_latency_ms !== null ? b.mean_latency_ms + 'ms' : 'N/A'} | ${e.mean_latency_ms !== null ? e.mean_latency_ms + 'ms' : 'N/A'} | ${b.mean_latency_ms && e.mean_latency_ms ? (e.mean_latency_ms - b.mean_latency_ms).toFixed(2) + 'ms' : 'N/A'} | ${e.latency_multiplier ? ((e.latency_multiplier - 1) * 100).toFixed(1) + '%' : 'N/A'} |\n`;
     md += `| P95 Latency | ${b.p95_latency_ms !== null ? b.p95_latency_ms + 'ms' : 'N/A'} | ${e.p95_latency_ms !== null ? e.p95_latency_ms + 'ms' : 'P95 unavailable'} | - | - |\n`;
-    md += `| Recovery Time | Target: ${selectedExp.recovery.rto_target_seconds}s | Observed: ${selectedExp.recovery.recovery_time_seconds}s | ${(selectedExp.recovery.recovery_time_seconds - selectedExp.recovery.rto_target_seconds).toFixed(2)}s | RTO ${selectedExp.recovery.rto_target_met ? 'MET' : 'EXCEEDED'} |\n\n`;
+    const recSecStr = selectedExp.recovery.recovery_time_seconds !== null && selectedExp.recovery.recovery_time_seconds !== undefined
+      ? `${selectedExp.recovery.recovery_time_seconds}s`
+      : 'Inconclusive';
+    const recDeltaStr = selectedExp.recovery.recovery_time_seconds !== null && selectedExp.recovery.recovery_time_seconds !== undefined
+      ? `${(selectedExp.recovery.recovery_time_seconds - selectedExp.recovery.rto_target_seconds).toFixed(2)}s`
+      : 'N/A';
+    const rtoMetStr = selectedExp.recovery.rto_target_met === true
+      ? 'RTO MET'
+      : (selectedExp.recovery.rto_target_met === false ? 'RTO EXCEEDED' : 'INCONCLUSIVE');
+    md += `| Recovery Time | Target: ${selectedExp.recovery.rto_target_seconds}s | Observed: ${recSecStr} | ${recDeltaStr} | ${rtoMetStr} |\n\n`;
 
     if (selectedExp.findings?.length) {
       md += `### Evidence-Backed Findings\n\n`;
@@ -2024,10 +2034,12 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
                       <div className="text-right font-mono">
                         <span className="text-[10px] text-zinc-500 uppercase block">Resilience Score</span>
                         <div className="flex items-baseline gap-1.5 justify-end">
-                          <span className="text-xl font-bold text-white">{selectedExpReport.score_summary.score}</span>
-                          <span className="text-xs text-zinc-400">/ 100</span>
+                          <span className="text-xl font-bold text-white">
+                            {selectedExpReport.score_summary.score !== null ? selectedExpReport.score_summary.score : 'INCONCLUSIVE'}
+                          </span>
+                          {selectedExpReport.score_summary.score !== null && <span className="text-xs text-zinc-400">/ 100</span>}
                           <span className={`px-1.5 py-0.2 rounded text-[10px] border ${getScoreGradeColor(selectedExpReport.score_summary.grade)}`}>
-                            {selectedExpReport.score_summary.grade}
+                            {selectedExpReport.score_summary.grade || 'INCONCLUSIVE'}
                           </span>
                         </div>
                       </div>
@@ -2094,10 +2106,20 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
                       <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded">
                         <span className="text-[10px] text-cyan-400 block uppercase font-semibold">4. Steady-State Recovery</span>
                         <span className="text-zinc-200 block text-xs mt-0.5">
-                          {selectedExpReport.recovery.recovery_time_seconds}s recovery
+                          {selectedExpReport.recovery.recovery_time_seconds !== null && selectedExpReport.recovery.recovery_time_seconds !== undefined
+                            ? `${selectedExpReport.recovery.recovery_time_seconds}s recovery`
+                            : 'Inconclusive recovery'}
                         </span>
-                        <span className={`text-[10px] ${selectedExpReport.recovery.rto_target_met ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          RTO {selectedExpReport.recovery.rto_target_met ? 'Met' : 'Exceeded'} (Target {selectedExpReport.recovery.rto_target_seconds}s)
+                        <span className={`text-[10px] ${
+                          selectedExpReport.recovery.rto_target_met === true
+                            ? 'text-emerald-400'
+                            : (selectedExpReport.recovery.rto_target_met === false ? 'text-rose-400' : 'text-zinc-400')
+                        }`}>
+                          {selectedExpReport.recovery.rto_target_met === true
+                            ? `RTO Met (Target ${selectedExpReport.recovery.rto_target_seconds}s)`
+                            : (selectedExpReport.recovery.rto_target_met === false
+                              ? `RTO Exceeded (Target ${selectedExpReport.recovery.rto_target_seconds}s)`
+                              : `RTO Inconclusive (Target ${selectedExpReport.recovery.rto_target_seconds}s)`)}
                         </span>
                       </div>
                     </div>
@@ -2357,18 +2379,22 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
                           Recovery Analysis & RTO Compliance
                         </h4>
                         <span className={`px-2 py-0.2 rounded text-[10px] font-mono border font-semibold ${
-                          selectedExpReport.recovery.rto_target_met
+                          selectedExpReport.recovery.rto_target_met === true
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                            : (selectedExpReport.recovery.rto_target_met === false ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400')
                         }`}>
-                          RTO {selectedExpReport.recovery.rto_target_met ? 'MET' : 'EXCEEDED'}
+                          RTO {selectedExpReport.recovery.rto_target_met === true ? 'MET' : (selectedExpReport.recovery.rto_target_met === false ? 'EXCEEDED' : 'INCONCLUSIVE')}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono text-xs">
                         <div className="bg-zinc-950 border border-zinc-800/80 p-2 rounded">
                           <span className="text-[10px] text-zinc-500 uppercase block">Recovery Time</span>
-                          <span className="text-sm font-bold text-white">{selectedExpReport.recovery.recovery_time_seconds}s</span>
+                          <span className="text-sm font-bold text-white">
+                            {selectedExpReport.recovery.recovery_time_seconds !== null && selectedExpReport.recovery.recovery_time_seconds !== undefined
+                              ? `${selectedExpReport.recovery.recovery_time_seconds}s`
+                              : 'Inconclusive'}
+                          </span>
                         </div>
                         <div className="bg-zinc-950 border border-zinc-800/80 p-2 rounded">
                           <span className="text-[10px] text-zinc-500 uppercase block">RTO Target</span>
@@ -2377,11 +2403,15 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
                         <div className="bg-zinc-950 border border-zinc-800/80 p-2 rounded">
                           <span className="text-[10px] text-zinc-500 uppercase block">Delta</span>
                           <span className={`text-sm font-bold ${
-                            selectedExpReport.recovery.recovery_time_seconds <= selectedExpReport.recovery.rto_target_seconds
-                              ? 'text-emerald-400'
-                              : 'text-rose-400'
+                            selectedExpReport.recovery.recovery_time_seconds !== null && selectedExpReport.recovery.recovery_time_seconds !== undefined
+                              ? (selectedExpReport.recovery.recovery_time_seconds <= selectedExpReport.recovery.rto_target_seconds
+                                ? 'text-emerald-400'
+                                : 'text-rose-400')
+                              : 'text-zinc-400'
                           }`}>
-                            {(selectedExpReport.recovery.recovery_time_seconds - selectedExpReport.recovery.rto_target_seconds).toFixed(3)}s
+                            {selectedExpReport.recovery.recovery_time_seconds !== null && selectedExpReport.recovery.recovery_time_seconds !== undefined
+                              ? `${(selectedExpReport.recovery.recovery_time_seconds - selectedExpReport.recovery.rto_target_seconds).toFixed(3)}s`
+                              : 'N/A'}
                           </span>
                         </div>
                         <div className="bg-zinc-950 border border-zinc-800/80 p-2 rounded">
@@ -2476,7 +2506,7 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
                       <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-wider font-semibold text-zinc-300 flex items-center gap-2">
                           <Shield className="w-3.5 h-3.5 text-cyan-400" />
-                          Resilience Score Breakdown (Why {selectedExpReport.score_summary.score}/100?)
+                          Resilience Score Breakdown ({selectedExpReport.score_summary.score !== null ? `${selectedExpReport.score_summary.score}/100` : 'INCONCLUSIVE'})
                         </h4>
                         <span className="text-[10px] font-mono text-zinc-500">
                           Additive verification criteria

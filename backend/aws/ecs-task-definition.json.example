@@ -1,0 +1,73 @@
+{
+  "family": "noir-backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "noir-backend",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/noir-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "DEBUG", "value": "False" },
+        { "name": "PORT", "value": "8000" },
+        { "name": "ALLOWED_HOSTS", "value": "*" },
+        { "name": "BACKEND_BASE_URL", "value": "https://api.yourdomain.com" },
+        { "name": "FRONTEND_BASE_URL", "value": "https://app.yourdomain.com" },
+        { "name": "CORS_ALLOWED_ORIGINS", "value": "https://app.yourdomain.com" },
+        { "name": "CSRF_TRUSTED_ORIGINS", "value": "https://api.yourdomain.com,https://app.yourdomain.com" },
+        { "name": "PSQL_HOST", "value": "your-rds-endpoint.us-east-1.rds.amazonaws.com" },
+        { "name": "PSQL_PORT", "value": "5432" },
+        { "name": "PSQL_NAME", "value": "noir_db" },
+        { "name": "PSQL_USER", "value": "noir_user" },
+        { "name": "PSQL_SSLMODE", "value": "require" },
+        { "name": "REDIS_HOST", "value": "your-elasticache-cluster.cache.amazonaws.com" },
+        { "name": "REDIS_PORT", "value": "6379" },
+        { "name": "REDIS_DB", "value": "0" },
+        { "name": "REDIS_USE_SSL", "value": "True" },
+        { "name": "RUN_MIGRATIONS", "value": "true" },
+        { "name": "COLLECT_STATIC", "value": "true" }
+      ],
+      "secrets": [
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:noir/backend/SECRET_KEY"
+        },
+        {
+          "name": "PSQL_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:noir/backend/PSQL_PASSWORD"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/noir-backend",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/api/health/ || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      }
+    }
+  ]
+}

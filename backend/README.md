@@ -133,3 +133,77 @@ Centralized folder containing reusable utility modules across all backend apps:
    python manage.py runserver 8000
    ```
    *The server runs ASGI Daphne at `http://127.0.0.1:8000/` and supports WebSockets at `ws://127.0.0.1:8000/ws/project/<code?>/logs/`.*
+
+---
+
+## 🐳 Running with Docker
+
+### Local Multi-Container Stack (Postgres + Redis + Backend)
+
+To launch the complete backend environment with PostgreSQL and Redis in isolated containers:
+
+```bash
+cd backend
+docker compose up --build
+```
+
+The container automatically:
+- Waits for PostgreSQL to become reachable.
+- Applies database migrations (`manage.py migrate`).
+- Collects static files via WhiteNoise (`manage.py collectstatic`).
+- Launches the Daphne ASGI server on `http://localhost:8000` with WebSocket support at `ws://localhost:8000/ws/...`.
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+---
+
+## ☁️ AWS Cloud Deployment Guide (Docker)
+
+> [!TIP]
+> For a comprehensive step-by-step walkthrough covering IAM, ECR, RDS, ElastiCache, Secrets Manager, and Nginx SSL setup, refer to the full **[AWS Deployment Guide](AWS_DEPLOYMENT.md)**.
+
+### 1. Build and Push Image to Amazon ECR
+
+```bash
+# Set environment variables
+export AWS_REGION="us-east-1"
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export ECR_REPO_NAME="noir-backend"
+
+# Authenticate Docker with Amazon ECR
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+# Create ECR repository (if not already created)
+aws ecr create-repository --repository-name ${ECR_REPO_NAME} --region ${AWS_REGION}
+
+# Build, tag, and push image
+cd backend
+docker build -t ${ECR_REPO_NAME}:latest .
+docker tag ${ECR_REPO_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest
+docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest
+```
+
+### 2. Deployment Pathways
+
+| Pathway | Guide & Resources | Best For |
+| :--- | :--- | :--- |
+| **AWS App Runner** | [Instructions in AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md#method-1-aws-app-runner-fastest--simplest-managed-service) | Serverless, zero-maintenance, native HTTPS & WebSockets |
+| **AWS ECS Fargate** | [Task Definition Template](aws/ecs-task-definition.json.example) & [ECS Guide](AWS_DEPLOYMENT.md#method-2-aws-ecs-elastic-container-service-with-fargate) | Enterprise production, VPC isolation, ALB routing |
+| **AWS EC2 + Docker** | [docker-compose.prod.yml](docker-compose.prod.yml) & [EC2 Guide](AWS_DEPLOYMENT.md#method-3-aws-ec2-instance-with-docker-compose-budget--demo-friendly) | Low-cost ($3–$15/mo) single-instance demo or college project |
+
+### 3. Health Checks & Verification
+
+- **Basic Health Check**: `GET /api/health/`
+  ```bash
+  curl https://<your-backend-domain>/api/health/
+  # Output: {"status": "healthy", "service": "noir-backend"}
+  ```
+- **Deep Health Check (inspects RDS & Redis connectivity)**: `GET /api/health/?deep=1`
+  ```bash
+  curl "https://<your-backend-domain>/api/health/?deep=1"
+  # Output: {"status": "healthy", "service": "noir-backend", "database": "connected", "cache": "connected"}
+  ```
+
