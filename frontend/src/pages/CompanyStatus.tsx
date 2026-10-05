@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, LogOut, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { logout, checkAndRefreshToken } from '../utils/auth';
 
 export default function CompanyStatus() {
@@ -16,7 +16,7 @@ export default function CompanyStatus() {
   const fetchStatus = async () => {
     setIsRefreshing(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const token = await checkAndRefreshToken();
       const res = await apiFetch(`${baseUrl}/api/accounts/company/me/`, {
         headers: {

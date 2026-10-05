@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import BackgroundBoids from '../components/BackgroundBoids';
 import Loader from '../components/Loader';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { setAuthTokens, isAuthenticated, getRoleHomePath } from '../utils/auth';
 
 // Global single-flight set to prevent duplicate code exchange in React StrictMode
@@ -41,7 +41,7 @@ export default function AuthCallback() {
       const processCallback = async () => {
         try {
           console.time("Auth callback");
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+          const baseUrl = getApiBaseUrl();
           const response = await apiFetch(`${baseUrl}/api/accounts/common-auth/callback/`, {
             method: 'POST',
             headers: {

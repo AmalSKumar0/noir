@@ -21,7 +21,7 @@ import {
 import UserNavBar from '../components/UserNavBar';
 import Footer from '../components/Footer';
 import { checkAndRefreshToken } from '../utils/auth';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 
 interface CompanyProfileData {
   id?: number;
@@ -86,7 +86,7 @@ export default function UserProfile() {
       const token = await checkAndRefreshToken();
       if (!token) return;
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const res = await apiFetch(`${baseUrl}/api/accounts/profile/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -145,7 +145,7 @@ export default function UserProfile() {
       const token = await checkAndRefreshToken();
       if (!token) return;
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const bodyPayload: any = {
         first_name: firstName,
         last_name: lastName,
@@ -204,7 +204,7 @@ export default function UserProfile() {
       const token = await checkAndRefreshToken();
       if (!token) return;
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const res = await apiFetch(`${baseUrl}/api/accounts/profile/`, {
         method: 'PATCH',
         headers: {
@@ -239,7 +239,7 @@ export default function UserProfile() {
       const token = await checkAndRefreshToken();
       if (!token) return;
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const res = await apiFetch(`${baseUrl}/api/accounts/profile/`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }

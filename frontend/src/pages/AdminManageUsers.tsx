@@ -5,7 +5,7 @@ import { Search, UserPlus, Shield, ShieldOff, Edit2, Trash2, Eye, Key, Github, A
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
 import { checkAndRefreshToken } from '../utils/auth';
-import { apiFetch, subscribeToThrottle, ThrottleInfo } from '../utils/api';
+import { apiFetch, getApiBaseUrl, subscribeToThrottle, ThrottleInfo } from '../utils/api';
 
 const fallbackUsers = [
   {
@@ -87,7 +87,7 @@ export default function AdminManageUsers() {
     setIsLoading(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/user/all/?page=${page}&page_size=${pageSize}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
@@ -228,7 +228,7 @@ export default function AdminManageUsers() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/user/${user.id}/`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
@@ -260,7 +260,7 @@ export default function AdminManageUsers() {
     setActionError('');
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/user/${currentUser.id}/`, {
         method: 'DELETE',
         headers: {
@@ -292,7 +292,7 @@ export default function AdminManageUsers() {
     setActionError('');
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       
       const nameParts = fullName.trim().split(/\s+/);
       const first_name = nameParts[0] || '';

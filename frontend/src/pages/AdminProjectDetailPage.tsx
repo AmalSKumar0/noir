@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { formatLastUpdated } from './Dashboard';
 
@@ -213,7 +213,7 @@ export default function AdminProjectDetailPage() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -342,7 +342,7 @@ export default function AdminProjectDetailPage() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/project/${project.id}/`, {
         method: 'PATCH',
         headers: {
@@ -375,7 +375,7 @@ export default function AdminProjectDetailPage() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/project/${project.id}/`, {
         method: 'DELETE',
         headers: {

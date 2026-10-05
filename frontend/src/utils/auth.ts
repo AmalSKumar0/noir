@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiFetch } from './api';
+import { apiFetch, getApiBaseUrl } from './api';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -115,7 +115,7 @@ export async function checkAndRefreshToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/token/refresh/`, {
         method: 'POST',
         headers: {
@@ -154,7 +154,7 @@ export async function checkAndRefreshToken(): Promise<string | null> {
  * 3. Asynchronously invalidates refresh token on backend.
  */
 export async function logout(navigate?: (path: string, options?: any) => void): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const baseUrl = getApiBaseUrl();
   const refreshToken = getRefreshToken();
   const accessToken = getAccessToken();
 

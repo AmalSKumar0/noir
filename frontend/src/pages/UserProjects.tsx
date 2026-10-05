@@ -17,7 +17,7 @@ import {
 import UserLayout from '../components/UserLayout';
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, setCachedProjects, Project } from '../utils/projectCache';
 
@@ -84,7 +84,7 @@ export default function UserProjects() {
     setError(null);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       
       const payload = {
         title: newProjectTitle.trim(),
@@ -152,7 +152,7 @@ export default function UserProjects() {
     if (window.confirm('Are you sure you want to delete this project and clear all associated telemetry streams?')) {
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = getApiBaseUrl();
         await apiFetch(`${baseUrl}/api/projects/${projectId}/`, {
           method: 'DELETE',
           headers: {

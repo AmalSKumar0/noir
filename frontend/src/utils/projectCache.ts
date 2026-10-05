@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { apiFetch, getApiBaseUrl } from './api';
 import { checkAndRefreshToken } from './auth';
 
 export interface Project {
@@ -78,7 +78,7 @@ export async function getUserProjects(options?: { forceRefresh?: boolean }): Pro
 
   try {
     const token = await checkAndRefreshToken();
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const baseUrl = getApiBaseUrl();
     const response = await apiFetch(`${baseUrl}/api/project/my/`, {
       method: 'GET',
       headers: {

@@ -23,7 +23,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { setAuthTokens, getRoleHomePath } from '../utils/auth';
 import { 
   validateEmail, 
@@ -222,7 +222,7 @@ export default function CompanyRegister() {
     setError('');
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/register/company/`, {
         method: 'POST',
         headers: {

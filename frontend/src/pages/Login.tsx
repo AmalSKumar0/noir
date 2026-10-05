@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { setAuthTokens, getRoleHomePath } from '../utils/auth';
 import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
 import { validateEmail } from '../utils/validation';
@@ -27,7 +27,7 @@ export default function Login() {
     setError('');
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const endpoint = `${baseUrl}/api/accounts/login/`;
 
       const response = await apiFetch(endpoint, {

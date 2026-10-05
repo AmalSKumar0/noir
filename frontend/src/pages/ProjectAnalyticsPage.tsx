@@ -17,7 +17,7 @@ import {
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import TestHistoryAnalytics, { TestRunItem } from '../components/TestHistoryAnalytics';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
 interface ProjectDetailData {
@@ -44,7 +44,7 @@ export default function ProjectAnalyticsPage({ isCompanyView = false }: { isComp
     const fetchData = async () => {
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = getApiBaseUrl();
         const headers = {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})

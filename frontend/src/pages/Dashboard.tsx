@@ -22,7 +22,7 @@ import {
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getWsBaseUrl, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken, getAccessToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, Project, formatLastUpdated } from '../utils/projectCache';
 
@@ -80,7 +80,7 @@ export default function Dashboard() {
   const fetchDeveloperCompanyInfo = async () => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       // Whoami info
@@ -106,7 +106,7 @@ export default function Dashboard() {
   const handleRespondCompanyRequest = async (requestId: number, action: 'accept' | 'reject') => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
 
       const res = await apiFetch(`${baseUrl}/api/accounts/developer/company-requests/${requestId}/respond/`, {
         method: 'POST',
@@ -129,7 +129,7 @@ export default function Dashboard() {
   const fetchTestRuns = async () => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       const res = await apiFetch(`${baseUrl}/api/projects/test-runs/`, { headers });
@@ -185,13 +185,10 @@ export default function Dashboard() {
       wsRef.current = null;
     }
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    let host = apiBase.replace(/^https?:\/\//, '');
-    if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
-    const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+    const wsBase = getWsBaseUrl();
     const token = getAccessToken();
     const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-    const wsUrl = `${wsProtocol}//${host}/ws/project/${code}/logs/${tokenQuery}`;
+    const wsUrl = `${wsBase}/ws/project/${code}/logs/${tokenQuery}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -280,7 +277,7 @@ export default function Dashboard() {
     const checkStatus = async () => {
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = getApiBaseUrl();
         const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
         const res = await apiFetch(`${baseUrl}/api/project/${code}/stream-status/`, { headers });
@@ -375,7 +372,7 @@ export default function Dashboard() {
     setError(null);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       
       const payload = {
         title: newProjectTitle.trim(),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Activity } from 'lucide-react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getWsBaseUrl } from '../utils/api';
 import { getAccessToken } from '../utils/auth';
 
 export default function LiveStreamTerminal({ 
@@ -22,13 +22,10 @@ export default function LiveStreamTerminal({
   const connectWs = () => {
     if (!connectionCode || wsRef.current) return;
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    let host = apiBase.replace(/^https?:\/\//, '');
-    if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
-    const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+    const wsBase = getWsBaseUrl();
     const token = getAccessToken();
     const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-    const wsUrl = `${wsProtocol}//${host}/ws/project/${connectionCode}/logs/${tokenQuery}`;
+    const wsUrl = `${wsBase}/ws/project/${connectionCode}/logs/${tokenQuery}`;
 
     try {
       const ws = new WebSocket(wsUrl);

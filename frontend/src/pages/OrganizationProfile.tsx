@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl, getMediaUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
 interface CompanyData {
@@ -88,7 +88,7 @@ export default function OrganizationProfile() {
     setIsLoading(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       // Get user info
@@ -179,11 +179,7 @@ export default function OrganizationProfile() {
                 <div className="w-24 h-24 rounded-3xl bg-black/60 border border-white/15 p-2 flex items-center justify-center shadow-xl flex-shrink-0">
                   {company.logo ? (
                     <img
-                      src={
-                        company.logo.startsWith('data:') || company.logo.startsWith('http://') || company.logo.startsWith('https://')
-                          ? company.logo
-                          : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${company.logo.startsWith('/') ? '' : '/'}${company.logo}`
-                      }
+                      src={getMediaUrl(company.logo)}
                       alt={company.company_name}
                       className="w-full h-full object-contain rounded-2xl"
                     />

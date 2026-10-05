@@ -54,7 +54,7 @@ import {
 } from 'recharts';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
 // -----------------------------------------------------------------------------
@@ -588,7 +588,7 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
 
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = getApiBaseUrl();
         const headers = {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -667,7 +667,7 @@ export default function ProjectReportsPage({ isCompanyView = false }: { isCompan
       setIsLoadingDetail(true);
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = getApiBaseUrl();
         const headers = {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})

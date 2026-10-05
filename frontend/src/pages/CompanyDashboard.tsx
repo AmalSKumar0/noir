@@ -44,7 +44,7 @@ import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
 import Modal from '../components/Modal';
 import TestHistoryAnalytics from '../components/TestHistoryAnalytics';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl, getMediaUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 import { getUserProjects, getCachedProjects, Project } from '../utils/projectCache';
 
@@ -198,7 +198,7 @@ export default function CompanyDashboard() {
     setIsLoading(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       // 1. Fetch Company profile
@@ -294,7 +294,7 @@ export default function CompanyDashboard() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       const res = await apiFetch(
@@ -330,7 +330,7 @@ export default function CompanyDashboard() {
     setModalError(null);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
 
       const res = await apiFetch(`${baseUrl}/api/accounts/company/developer-requests/`, {
         method: 'POST',
@@ -365,7 +365,7 @@ export default function CompanyDashboard() {
   const handleCancelRequest = async (requestId: number) => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
 
       const res = await apiFetch(`${baseUrl}/api/accounts/company/developer-requests/${requestId}/cancel/`, {
         method: 'DELETE',
@@ -388,7 +388,7 @@ export default function CompanyDashboard() {
     setIsRemoving(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
 
       const res = await apiFetch(`${baseUrl}/api/accounts/company/developers/${removingDev.id}/`, {
         method: 'DELETE',
@@ -451,7 +451,7 @@ export default function CompanyDashboard() {
     setTeamModalError(null);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { 
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}) 
@@ -495,7 +495,7 @@ export default function CompanyDashboard() {
 
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
 
       const res = await apiFetch(`${baseUrl}/api/accounts/company/teams/${deletingTeam.id}/`, {
         method: 'DELETE',
@@ -551,7 +551,7 @@ export default function CompanyDashboard() {
     setError(null);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       
       const payload = {
         title: newProjectTitle.trim(),

@@ -32,7 +32,7 @@ import { Skeleton } from '../components/Skeleton';
 import LiveStreamTerminal from '../components/LiveStreamTerminal';
 import TestHistoryAnalytics from '../components/TestHistoryAnalytics';
 import FaultInjectionPanel from '../components/FaultInjectionPanel';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
 export interface DockerContainerData {
@@ -117,7 +117,7 @@ export default function CompanyProjectDetail() {
   const fetchProjectDetails = async () => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})

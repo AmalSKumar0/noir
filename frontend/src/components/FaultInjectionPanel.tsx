@@ -34,7 +34,7 @@ import {
 import Modal from './Modal';
 import FaultDetailModal from './FaultDetailModal';
 import FaultReportModal from './FaultReportModal';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getWsBaseUrl } from '../utils/api';
 import { getAccessToken } from '../utils/auth';
 
 export interface FaultRecord {
@@ -336,13 +336,10 @@ export default function FaultInjectionPanel({ projectIdentifier, projectCode, in
     const connectWebSocket = () => {
       if (isUnmounted) return;
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      let host = apiBase.replace(/^https?:\/\//, '');
-      if (host.endsWith('/api')) host = host.replace(/\/api$/, '');
-      const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+      const wsBase = getWsBaseUrl();
       const token = getAccessToken();
       const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-      const wsUrl = `${wsProtocol}//${host}/ws/project/${connCode}/logs/${tokenQuery}`;
+      const wsUrl = `${wsBase}/ws/project/${connCode}/logs/${tokenQuery}`;
 
       try {
         const ws = new WebSocket(wsUrl);

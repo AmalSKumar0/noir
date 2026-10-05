@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { checkAndRefreshToken } from '../utils/auth';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 
 type ActivityKind = 'user' | 'company' | 'project';
 type StatusFilter = 'all' | 'users' | 'companies' | 'projects';
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       setIsLoading(true);
       try {
         const token = await checkAndRefreshToken();
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+        const baseUrl = getApiBaseUrl();
         const headers = {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -21,7 +21,7 @@ import {
 import Modal from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
 import { checkAndRefreshToken } from '../utils/auth';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl, getMediaUrl } from '../utils/api';
 
 export default function AdminManageCompanies() {
   const [companies, setCompanies] = useState<any[]>([]);
@@ -47,7 +47,7 @@ export default function AdminManageCompanies() {
     setIsLoading(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/admin/companies/?page=${page}&page_size=${pageSize}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
@@ -83,7 +83,7 @@ export default function AdminManageCompanies() {
   const handleUpdateStatus = async (companyId: number, status: 'approved' | 'rejected') => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/admin/companies/${companyId}/`, {
         method: 'PATCH',
         headers: {
@@ -124,7 +124,7 @@ export default function AdminManageCompanies() {
     setActionError('');
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/admin/companies/${currentCompany.id}/`, {
         method: 'DELETE',
         headers: {
@@ -245,11 +245,7 @@ export default function AdminManageCompanies() {
                         <div className="flex items-center gap-3">
                           {company.logo ? (
                             <img 
-                              src={
-                                company.logo.startsWith('data:') || company.logo.startsWith('http://') || company.logo.startsWith('https://')
-                                  ? company.logo
-                                  : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${company.logo.startsWith('/') ? '' : '/'}${company.logo}`
-                              } 
+                              src={getMediaUrl(company.logo)} 
                               alt={company.company_name} 
                               className="w-9 h-9 rounded-xl object-cover border border-white/10 bg-black/40"
                             />
@@ -426,11 +422,7 @@ export default function AdminManageCompanies() {
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
               {currentCompany?.logo ? (
                 <img 
-                  src={
-                    currentCompany.logo.startsWith('data:') || currentCompany.logo.startsWith('http://') || currentCompany.logo.startsWith('https://')
-                      ? currentCompany.logo
-                      : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api$/, '')}${currentCompany.logo.startsWith('/') ? '' : '/'}${currentCompany.logo}`
-                  } 
+                  src={getMediaUrl(currentCompany.logo)} 
                   alt={currentCompany.company_name} 
                   className="w-14 h-14 rounded-2xl object-cover border border-white/10" 
                 />

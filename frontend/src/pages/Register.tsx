@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Lock, Eye, EyeOff, User, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { setAuthTokens } from '../utils/auth';
 import { initiateGithubOAuth, initiateGoogleOAuth } from '../utils/oauth';
 import { validateEmail, validateUsername, validatePassword, validateConfirmPassword } from '../utils/validation';
@@ -64,7 +64,7 @@ export default function Register() {
         setIsGithubLoading(true);
         setError('');
         try {
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+          const baseUrl = getApiBaseUrl();
           const response = await apiFetch(`${baseUrl}/api/accounts/github/callback/`, {
             method: 'POST',
             headers: {
@@ -118,7 +118,7 @@ export default function Register() {
     setError('');
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const response = await apiFetch(`${baseUrl}/api/accounts/register/`, {
         method: 'POST',
         headers: {

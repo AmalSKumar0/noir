@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearAuthTokens, getAccessToken, getRefreshToken } from '../utils/auth';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 
 export default function Logout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const baseUrl = getApiBaseUrl();
     const refreshToken = getRefreshToken();
     const accessToken = getAccessToken();
 

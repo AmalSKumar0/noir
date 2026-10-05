@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Folder, Code2, Users, LogOut, Bell, Building2, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getUserRole, checkAndRefreshToken } from '../utils/auth';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import NotificationInbox from './NotificationInbox';
 
 export default function UserNavBar() {
@@ -31,7 +31,7 @@ export default function UserNavBar() {
       const token = await checkAndRefreshToken();
       if (!token) return;
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const res = await apiFetch(`${baseUrl}/api/accounts/notifications/unread-count/`, {
         headers: { Authorization: `Bearer ${token}` }
       });

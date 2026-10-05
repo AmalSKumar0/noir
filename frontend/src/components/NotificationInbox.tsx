@@ -16,7 +16,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getApiBaseUrl } from '../utils/api';
 import { checkAndRefreshToken } from '../utils/auth';
 
 export interface NotificationItem {
@@ -47,7 +47,7 @@ export default function NotificationInbox({ isOpen, onClose, onUnreadCountChange
     setIsLoading(true);
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       const res = await apiFetch(`${baseUrl}/api/accounts/notifications/`, { headers });
@@ -73,7 +73,7 @@ export default function NotificationInbox({ isOpen, onClose, onUnreadCountChange
   const handleMarkAsRead = async (id: number, link?: string) => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       await apiFetch(`${baseUrl}/api/accounts/notifications/${id}/read/`, {
@@ -99,7 +99,7 @@ export default function NotificationInbox({ isOpen, onClose, onUnreadCountChange
   const handleMarkAllRead = async () => {
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       await apiFetch(`${baseUrl}/api/accounts/notifications/read-all/`, {
@@ -119,7 +119,7 @@ export default function NotificationInbox({ isOpen, onClose, onUnreadCountChange
     e.stopPropagation();
     try {
       const token = await checkAndRefreshToken();
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const baseUrl = getApiBaseUrl();
       const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       await apiFetch(`${baseUrl}/api/accounts/notifications/${id}/`, {

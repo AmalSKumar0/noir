@@ -28,6 +28,52 @@ function notifyThrottle(info: ThrottleInfo) {
 const responseCache = new Map<string, any>();
 
 /**
+ * Centralized function to obtain the backend API base URL from Vite environment (.env).
+ * Strips any trailing slashes or accidental '/api' suffix so consumers always receive
+ * a clean base URL (e.g. "https://api.amalskumar.dev" or "http://127.0.0.1:8000").
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  let base = (envUrl && typeof envUrl === 'string' && envUrl.trim())
+    ? envUrl.trim()
+    : 'http://127.0.0.1:8000';
+
+  // Strip trailing slashes
+  base = base.replace(/\/+$/, '');
+  // If user provided a base ending with '/api', strip it so paths can append '/api/...' consistently
+  if (base.endsWith('/api')) {
+    base = base.replace(/\/api$/, '');
+  }
+  return base;
+}
+
+/**
+ * Derives the WebSocket base URL corresponding to the backend API.
+ * Automatically handles protocol conversion:
+ *   https://api.domain.com -> wss://api.domain.com
+ *   http://127.0.0.1:8000  -> ws://127.0.0.1:8000
+ */
+export function getWsBaseUrl(): string {
+  const apiBase = getApiBaseUrl();
+  const host = apiBase.replace(/^https?:\/\//, '');
+  const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
+  return `${wsProtocol}//${host}`;
+}
+
+/**
+ * Safely constructs a full media or asset URL (e.g. company logo, report asset).
+ */
+export function getMediaUrl(path?: string | null): string {
+  if (!path) return '';
+  if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const base = getApiBaseUrl();
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${cleanPath}`;
+}
+
+/**
  * Centralized fetch helper that intercepts 429 Throttle errors,
  * serves cached GET data instantly during throttle periods,
  * and tracks a global throttle countdown timer.
@@ -36,12 +82,12 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   let urlString = typeof input === 'string' ? input : (input as any).url || input.toString();
   const method = init?.method || 'GET';
 
-  // Base domain host from env (e.g. "http://127.0.0.1:8000")
-  let rawBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-  let host = rawBase.replace(/\/$/, '');
-  if (host.endsWith('/api')) {
-    host = host.replace(/\/api$/, '');
-  }
+  // Base domain host from .env via getApiBaseUrl()
+  const host = getApiBaseUrl();
+
+  // If input URL has a hardcoded localhost:8000 or 127.0.0.1:8000 from legacy calls,
+  // normalize it to use the configured host from .env:
+  urlString = urlString.replace(/^https?:\/\/(localhost|127\.0\.0\.1):8000/, host);
 
   if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
     const cleanPath = urlString.replace(/^\//, '');
