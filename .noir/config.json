@@ -1,5 +1,5 @@
 {
-    "backend": "http://localhost:8000",
+    "backend": "https://api.amalskumar.dev",
     "project_id": "NR-TBOODKT5",
     "version": 1
 }

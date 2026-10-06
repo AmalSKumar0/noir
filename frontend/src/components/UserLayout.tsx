@@ -14,7 +14,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
       }}
     >
       <UserNavBar />
-      <div className="pl-20 md:pl-24 pr-4 md:pr-8 py-3 max-w-[1680px] mx-auto overflow-hidden">
+      <div className="pt-20 md:pt-4 px-3.5 sm:px-6 md:pl-24 md:pr-8 max-w-[1680px] mx-auto overflow-hidden">
         {children}
       </div>
     </div>

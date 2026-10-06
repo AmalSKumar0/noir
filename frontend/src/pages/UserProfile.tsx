@@ -279,7 +279,7 @@ export default function UserProfile() {
       {/* Floating User Navigation Bar */}
       <UserNavBar />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 md:px-8 pl-20 md:pl-28 py-10 z-10">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 md:pl-28 pt-20 md:py-10 pb-12 z-10">
         
         {/* Header Title */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 border-b border-white/10 pb-6">

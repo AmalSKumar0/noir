@@ -30,7 +30,7 @@ func TestWorkspaceConfig(t *testing.T) {
 	}
 
 	// Initialize workspace
-	err = InitWorkspace("test-project-123", "http://127.0.0.1:8000", map[string]interface{}{"name": "Test Project"}, nil)
+	err = InitWorkspace("test-project-123", "https://api.amalskumar.dev", map[string]interface{}{"name": "Test Project"}, nil)
 	if err != nil {
 		t.Fatalf("InitWorkspace failed: %v", err)
 	}
@@ -47,8 +47,8 @@ func TestWorkspaceConfig(t *testing.T) {
 
 	// Test GetBackendURL
 	backend := GetBackendURL()
-	if backend != "http://127.0.0.1:8000" {
-		t.Errorf("expected backend 'http://127.0.0.1:8000', got '%s'", backend)
+	if backend != "https://api.amalskumar.dev" {
+		t.Errorf("expected backend 'https://api.amalskumar.dev', got '%s'", backend)
 	}
 
 	// Test ReadProjectJSON

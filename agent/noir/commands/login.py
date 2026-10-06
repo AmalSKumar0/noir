@@ -107,3 +107,4 @@ def login_github():
 def login_google():
     """Authenticate Noir developer session via Google OAuth."""
     _handle_oauth_login("google", "Google")
+cc

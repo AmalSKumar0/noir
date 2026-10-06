@@ -66,7 +66,7 @@ from django.core.exceptions import ImproperlyConfigured
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-2qx=0=y&(p@o9s%59obad+$q1lz%m)dv-lf4392o2b$*9&5ze0")
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith("django-insecure")):
     raise ImproperlyConfigured("In production (DEBUG=False), SECRET_KEY must be set to a secure secret in environment variables.")

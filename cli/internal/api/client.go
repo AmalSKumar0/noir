@@ -22,16 +22,16 @@ type Client struct {
 func NewClient() *Client {
 	rawURL := os.Getenv("API_KEY")
 	if rawURL == "" || (!strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://")) {
-		rawURL = os.Getenv("NOIR_API_URL")
+		rawURL = "https://api.amalskumar.dev"
 	}
 	if rawURL == "" {
 		rawURL = config.GetBackendURL()
 	}
 	if rawURL == "" {
-		rawURL = "http://127.0.0.1:8000"
+		rawURL = config.DefaultBackend
 	}
 
-	cleanURL := strings.TrimRight(rawURL, "/")
+	cleanURL := config.NormalizeBackendURL(rawURL)
 	if strings.HasSuffix(cleanURL, "/api") {
 		cleanURL = cleanURL[:len(cleanURL)-4]
 	}

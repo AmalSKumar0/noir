@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 	ReportsDirName  = "reports"
 	LogsDirName     = "logs"
 	TempDirName     = "temp"
-	DefaultBackend  = "http://127.0.0.1:8000"
+	DefaultBackend  = "https://api.amalskumar.dev"
 )
 
 // WorkspaceConfig represents .noir/config.json
@@ -101,17 +102,28 @@ func GetProjectID() string {
 	return ""
 }
 
+func NormalizeBackendURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+		raw = "https://" + raw
+	}
+	return strings.TrimRight(raw, "/")
+}
+
 func GetBackendURL() string {
 	if envURL := os.Getenv("NOIR_API_URL"); envURL != "" {
-		return envURL
+		return NormalizeBackendURL(envURL)
 	}
 	if envKey := os.Getenv("API_KEY"); envKey != "" && (len(envKey) > 7 && (envKey[:7] == "http://" || envKey[:8] == "https://")) {
-		return envKey
+		return NormalizeBackendURL(envKey)
 	}
 	cfg, err := ReadConfig()
 	if err == nil {
 		if u, ok := cfg["backend"].(string); ok && u != "" {
-			return u
+			return NormalizeBackendURL(u)
 		}
 	}
 	return DefaultBackend

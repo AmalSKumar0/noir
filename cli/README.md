@@ -89,15 +89,18 @@ cli/
 - Go 1.22 or higher (only needed to build from source)
 - Docker (optional, needed for container execution and chaos fault injection)
 
-### Build Locally
+### Build & Install Locally
 ```bash
 cd cli
 
 # Run tests
 go test -v ./...
 
-# Build optimized production binary
-go build -ldflags="-s -w" -o noir main.go
+# Build local binary
+make build  # or: go build -ldflags="-s -w" -o noir main.go
+
+# Install globally to ~/.local/bin (accessible anywhere on $PATH)
+make install
 ```
 
 ### Cross-Compilation (Zero Dependencies)
@@ -133,7 +136,7 @@ Runs comprehensive health checks on:
 - Git executable & branch state
 - Docker daemon connectivity & container status
 - Stored developer credentials (Keyring & `~/.noir/credentials.json`)
-- Backend reachability & latency (`http://127.0.0.1:8000`)
+- Backend reachability & latency (`https://api.amalskumar.dev`)
 - Current workspace connection state
 
 ### 2. Authentication
@@ -165,7 +168,7 @@ Runs comprehensive health checks on:
 # View or update configuration keys
 ./noir config show
 ./noir config get backend
-./noir config set backend http://api.production.noir.sh
+./noir config set backend https://api.amalskumar.dev
 
 # Disconnect workspace
 ./noir disconnect
