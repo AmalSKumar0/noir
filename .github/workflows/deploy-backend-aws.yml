@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ap-south-2
   ECR_REPOSITORY: noir-backend
   IMAGE_TAG: ${{ github.sha }}
 
