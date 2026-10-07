@@ -437,7 +437,7 @@ function generateMarkdownReport(
   let md = `# NOIR RESILIENCE ENGINEERING REPORT\n\n`;
   md += `**Project:** ${project?.title || 'Workspace'} (\`${project?.connection_code || '-'}\`)\n`;
   md += `**Generated:** ${ts}\n`;
-  md += `**Engine Version:** Noir Chaos Kernel v2.4.0\n\n`;
+  md += `**Engine Version:** Noir Chaos Kernel v2.4.1\n\n`;
 
   md += `## 1. EXECUTIVE RESILIENCE SUMMARY\n\n`;
   if (collective) {

@@ -9,9 +9,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "noir",
-	Short: "Noir CLI - AI-powered reliability engineering agent.",
-	Long:  `Noir CLI is an autonomous, AI-powered reliability engineering agent designed to run in developer local workspaces and CI/CD pipelines.`,
+	Use:     "noir",
+	Version: "2.4.1",
+	Short:   "Noir CLI - AI-powered reliability engineering agent.",
+	Long:    `Noir CLI is an autonomous, AI-powered reliability engineering agent designed to run in developer local workspaces and CI/CD pipelines.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ui.PrintBanner()
 		fmt.Println("\nRun \"noir --help\" to get started.")

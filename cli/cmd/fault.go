@@ -668,7 +668,7 @@ func executeQueuedFault(faultID int, faultType, target string, params map[string
 		emitLog(fmt.Sprintf("[STEADY STATE] Measuring baseline on '%s'...", probeURL), "INFO")
 		baseline := evaluator.MeasureBaseline(5, 0.5)
 		if healthy, _ := baseline["healthy"].(bool); healthy {
-			emitLog(fmt.Sprintf("[STEADY STATE] Baseline healthy: mean=%vms", baseline["avg_latency_ms"]), "INFO")
+			emitLog(fmt.Sprintf("[STEADY STATE] Baseline healthy: mean=%s", formatVal(baseline["avg_latency_ms"], "ms")), "INFO")
 		} else {
 			emitLog("[STEADY STATE] Target endpoint unreachable before fault.", "WARN")
 		}
