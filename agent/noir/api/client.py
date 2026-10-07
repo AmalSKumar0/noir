@@ -13,7 +13,7 @@ load_dotenv()
 class ApiClient:
 
     def __init__(self):
-        raw_url = os.getenv("API_KEY") or os.getenv("NOIR_API_URL") or "http://127.0.0.1:8000"
+        raw_url = os.getenv("API_KEY") or os.getenv("NOIR_API_URL") or "https://api.amalskumar.dev"
         clean_url = raw_url.rstrip('/')
         if clean_url.endswith('/api'):
             clean_url = clean_url[:-4]

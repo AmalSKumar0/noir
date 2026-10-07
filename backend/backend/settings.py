@@ -12,9 +12,14 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 
 
-# Service Base URLs
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL")
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL")
+DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
+
+# Service Base URLs (populated via .env with fallback defaults)
+_raw_backend = os.getenv("BACKEND_BASE_URL")
+_raw_frontend = os.getenv("FRONTEND_BASE_URL")
+
+BACKEND_BASE_URL = (_raw_backend.strip().rstrip('/') if _raw_backend else ("http://127.0.0.1:8000" if DEBUG else "https://api.amalskumar.dev"))
+FRONTEND_BASE_URL = (_raw_frontend.strip().rstrip('/') if _raw_frontend else ("http://localhost:3000" if DEBUG else "https://noir.amalskumar.dev"))
 
 # Redis Configuration (Supports REDIS_URL or host/port/db with optional SSL & password)
 REDIS_URL = os.getenv("REDIS_URL")
@@ -66,7 +71,7 @@ from django.core.exceptions import ImproperlyConfigured
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "")
+SECRET_KEY = os.getenv("SECRET_KEY") or ("django-insecure-noir-local-dev-secret-key-12345" if DEBUG else "")
 
 if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith("django-insecure")):
     raise ImproperlyConfigured("In production (DEBUG=False), SECRET_KEY must be set to a secure secret in environment variables.")
@@ -82,10 +87,23 @@ else:
         "127.0.0.1",
         "0.0.0.0",
         "testserver",
+        "api.amalskumar.dev",
+        "noir.amalskumar.dev",
+        ".amalskumar.dev",
         ".amazonaws.com",
         ".awsapprunner.com",
         ".elb.amazonaws.com",
     ]
+
+# Ensure host from BACKEND_BASE_URL is always present in ALLOWED_HOSTS
+if BACKEND_BASE_URL and "*" not in ALLOWED_HOSTS:
+    try:
+        from urllib.parse import urlparse
+        _b_host = urlparse(BACKEND_BASE_URL).hostname
+        if _b_host and _b_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_b_host)
+    except Exception:
+        pass
 
 
 REST_FRAMEWORK = {
@@ -333,10 +351,11 @@ else:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
-    if FRONTEND_BASE_URL and FRONTEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(FRONTEND_BASE_URL.rstrip('/'))
-    if BACKEND_BASE_URL and BACKEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(BACKEND_BASE_URL.rstrip('/'))
+
+if FRONTEND_BASE_URL and FRONTEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_BASE_URL.rstrip('/'))
+if BACKEND_BASE_URL and BACKEND_BASE_URL.rstrip('/') not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(BACKEND_BASE_URL.rstrip('/'))
 
 AUTH_USER_MODEL = "accounts.User"
 

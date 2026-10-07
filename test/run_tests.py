@@ -93,6 +93,14 @@ def main():
         help="Generate an HTML test report in test/reports/report.html",
     )
     parser.add_argument(
+        "--formal-report",
+        "--pdf",
+        action="store_true",
+        dest="formal_report",
+        default=False,
+        help="Compile IEEE 829 formal test specification into HTML & PDF (NOIR_SELENIUM_TEST_REPORT.pdf)",
+    )
+    parser.add_argument(
         "--check-services",
         action="store_true",
         default=False,
@@ -175,7 +183,18 @@ def main():
 
     if args.report:
         report_file = config.REPORTS_DIR / "report.html"
-        print(f"\n[Report] Test report generated at: {report_file}")
+        print(f"\n[Report] PyTest HTML report generated at: {report_file}")
+
+    if args.formal_report:
+        print("\n==========================================")
+        print("  STEP 3: COMPILING IEEE 829 FORMAL PDF")
+        print("==========================================")
+        from test.reports.generate_report_pdf import main as generate_formal_report
+        try:
+            generate_formal_report()
+            print(f"[Formal Report] PDF compiled successfully at: {config.REPORTS_DIR / 'NOIR_SELENIUM_TEST_REPORT.pdf'}")
+        except Exception as e:
+            print(f"[Error] Failed to compile formal PDF report: {e}")
 
     sys.exit(exit_code)
 

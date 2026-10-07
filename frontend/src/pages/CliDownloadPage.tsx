@@ -93,13 +93,21 @@ const BINARIES: BinaryInfo[] = [
   }
 ];
 
+const defaultAppUrl = (
+  (import.meta.env.VITE_APP_URL as string | undefined) ||
+  (import.meta.env.APP_URL as string | undefined) ||
+  'https://noir.amalskumar.dev'
+);
+
 export default function CliDownloadPage() {
   const [platform, setPlatform] = useState<Platform>('linux');
   const [detectedOs, setDetectedOs] = useState<string>('Linux');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [baseUrl, setBaseUrl] = useState<string>('');
+  const [baseUrl, setBaseUrl] = useState<string>(
+    typeof window !== 'undefined' && window.location.origin ? window.location.origin : defaultAppUrl
+  );
 
   const userRole = getUserRole();
   const isAuthenticated = Boolean(userRole);
@@ -107,7 +115,7 @@ export default function CliDownloadPage() {
   // Detect Host Base URL and User's Operating System
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setBaseUrl(window.location.origin);
+      setBaseUrl(window.location.origin || defaultAppUrl);
 
       const ua = window.navigator.userAgent.toLowerCase();
       if (ua.includes('win')) {
@@ -129,9 +137,9 @@ export default function CliDownloadPage() {
     setTimeout(() => setCopiedKey(null), 2200);
   };
 
-  const linuxInstallCmd = `curl -fsSL ${baseUrl || 'https://app.noirengineering.com'}/install.sh | bash`;
-  const windowsInstallCmd = `irm ${baseUrl || 'https://app.noirengineering.com'}/install.ps1 | iex`;
-  const macInstallCmd = `curl -fsSL ${baseUrl || 'https://app.noirengineering.com'}/install.sh | bash`;
+  const linuxInstallCmd = `curl -fsSL ${baseUrl || defaultAppUrl}/install.sh | bash`;
+  const windowsInstallCmd = `irm ${baseUrl || defaultAppUrl}/install.ps1 | iex`;
+  const macInstallCmd = `curl -fsSL ${baseUrl || defaultAppUrl}/install.sh | bash`;
 
   // Main Page Content
   const content = (
@@ -318,11 +326,11 @@ export default function CliDownloadPage() {
                 </div>
                 <div className="rounded-xl bg-zinc-950 border border-zinc-800/80 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto flex items-center justify-between gap-3">
                   <code>
-                    curl -fsSL {baseUrl || 'https://app.noirengineering.com'}/downloads/noir-linux-amd64 -o noir && chmod +x noir && sudo mv noir /usr/local/bin/
+                    curl -fsSL {baseUrl || defaultAppUrl}/downloads/noir-linux-amd64 -o noir && chmod +x noir && sudo mv noir /usr/local/bin/
                   </code>
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(`curl -fsSL ${baseUrl || 'https://app.noirengineering.com'}/downloads/noir-linux-amd64 -o noir && chmod +x noir && sudo mv noir /usr/local/bin/`, 'linux-manual')}
+                    onClick={() => copyToClipboard(`curl -fsSL ${baseUrl || defaultAppUrl}/downloads/noir-linux-amd64 -o noir && chmod +x noir && sudo mv noir /usr/local/bin/`, 'linux-manual')}
                     className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors shrink-0"
                   >
                     {copiedKey === 'linux-manual' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -413,7 +421,7 @@ export default function CliDownloadPage() {
                 <div className="rounded-xl bg-zinc-950 border border-zinc-800/80 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto space-y-1">
                   <div className="text-zinc-500"># 1. Download noir-windows-amd64.exe and rename to noir.exe</div>
                   <div className="text-zinc-500"># 2. Move to C:\Windows\System32 or any folder in your PATH</div>
-                  <div className="text-zinc-200">Invoke-WebRequest -Uri "{baseUrl || 'https://app.noirengineering.com'}/downloads/noir-windows-amd64.exe" -OutFile "$HOME\noir.exe"</div>
+                  <div className="text-zinc-200">Invoke-WebRequest -Uri "{baseUrl || defaultAppUrl}/downloads/noir-windows-amd64.exe" -OutFile "$HOME\noir.exe"</div>
                 </div>
               </div>
             </div>

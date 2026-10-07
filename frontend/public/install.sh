@@ -40,10 +40,10 @@ esac
 BINARY_NAME="noir-${OS_NAME}-${ARCH_NAME}"
 
 # Determine Base URL
-BASE_URL="${NOIR_SERVER_URL:-}"
+BASE_URL="${NOIR_SERVER_URL:-https://noir.amalskumar.dev}"
 if [ -z "$BASE_URL" ]; then
-    # Default to current origin or fallback
-    BASE_URL="http://localhost:3000"
+    # Default to deployed origin or fallback
+    BASE_URL="https://noir.amalskumar.dev"
 fi
 
 DOWNLOAD_URL="${BASE_URL%/}/downloads/${BINARY_NAME}"

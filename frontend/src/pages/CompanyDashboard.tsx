@@ -1245,7 +1245,7 @@ export default function CompanyDashboard() {
                 </Link>
               </div>
               <pre className="p-2.5 rounded-xl bg-black/80 text-[10px] font-mono text-emerald-300 overflow-x-auto">
-                <code>curl -fsSL {window.location.origin}/install.sh | bash</code>
+                <code>curl -fsSL {(typeof window !== 'undefined' && window.location.origin) ? window.location.origin : (import.meta.env.VITE_APP_URL || import.meta.env.APP_URL || 'https://noir.amalskumar.dev')}/install.sh | bash</code>
               </pre>
             </div>
 

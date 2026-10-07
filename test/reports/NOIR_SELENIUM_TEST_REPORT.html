@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noir — Automated Selenium Test Case Report</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+  
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Times New Roman", Times, "Liberation Serif", Georgia, serif;
+    font-size: 10.5pt;
+    line-height: 1.35;
+    color: #111;
+    background-color: #e5e7eb;
+    margin: 0;
+    padding: 20px 0;
+  }
+
+  .page-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .report-cover,
+  .test-case-card,
+  .summary-card {
+    background: #fff;
+    padding: 20px 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* IEEE Cover Page */
+  .cover-header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .cover-header h1 {
+    font-size: 20pt;
+    margin: 0 0 6px 0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .cover-header h2 {
+    font-size: 13pt;
+    font-weight: normal;
+    color: #333;
+    margin: 0;
+  }
+
+  .cover-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+
+  .cover-meta-table td {
+    padding: 8px 12px;
+    border: 1px solid #333;
+    font-size: 10.5pt;
+  }
+
+  .cover-badge-banner {
+    display: flex;
+    justify-content: space-around;
+    background: #f8fafc;
+    border: 1.5px solid #000;
+    padding: 12px;
+    margin: 24px 0;
+    text-align: center;
+  }
+
+  .cover-badge-item strong {
+    display: block;
+    font-size: 14pt;
+    color: #15803d;
+  }
+
+  .cover-badge-item span {
+    font-size: 9.5pt;
+    color: #555;
+    text-transform: uppercase;
+  }
+
+  /* Formal Single-Table Test Case Presentation matching Reference PDF */
+  .tc-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #000;
+    font-size: 10pt;
+  }
+
+  .tc-table td, 
+  .tc-table th {
+    border: 1px solid #000;
+    padding: 5px 7px;
+    vertical-align: middle;
+  }
+
+  .tc-project-row td {
+    font-weight: normal;
+    font-size: 11pt;
+    border-bottom: 1px solid #000;
+    background: #fff;
+  }
+
+  .tc-title-row td {
+    text-align: center;
+    font-size: 12pt;
+    font-weight: bold;
+    padding: 7px;
+    background: #fafafa;
+  }
+
+  .tc-meta-row td {
+    font-size: 10pt;
+  }
+
+  .tc-desc-row td,
+  .tc-pre-row td,
+  .tc-post-row td {
+    font-size: 9.5pt;
+    line-height: 1.35;
+    background: #ffffff;
+  }
+
+  .tc-table th {
+    font-weight: bold;
+    text-align: left;
+    background: #f1f5f9;
+    font-size: 9.5pt;
+  }
+
+  .tc-table th.center,
+  .tc-table td.center {
+    text-align: center;
+  }
+
+  .tc-table td.status-pass {
+    text-align: center;
+    font-weight: bold;
+    color: #000;
+  }
+
+  .step-num {
+    font-weight: bold;
+    text-align: center;
+  }
+
+  /* Summary Table */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #000;
+    margin: 20px 0;
+  }
+
+  .summary-table th,
+  .summary-table td {
+    border: 1px solid #000;
+    padding: 7px 10px;
+    font-size: 10pt;
+  }
+
+  .summary-table th {
+    background: #f1f5f9;
+    text-align: center;
+  }
+
+  .summary-table th:first-child,
+  .summary-table td:first-child {
+    text-align: left;
+  }
+
+  .summary-table tr.total-row {
+    font-weight: bold;
+    background: #f8fafc;
+  }
+
+  /* Print Media Optimizations */
+  @media print {
+    body {
+      background: #fff !important;
+      padding: 0 !important;
+      font-size: 9.5pt;
+    }
+
+    .page-container {
+      max-width: 100% !important;
+      width: 100% !important;
+      margin: 0 !important;
+    }
+
+    .report-cover,
+    .test-case-card,
+    .summary-card {
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin-bottom: 0 !important;
+      border-radius: 0 !important;
+    }
+
+    .test-case-card {
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      height: 98vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .tc-table td, 
+    .tc-table th {
+      padding: 4px 6px !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page-container">
+
+<!-- COVER & DOCUMENT CONTROL PAGE -->
+<div class="report-cover">
+  <div class="cover-header">
+    <h1>System Verification & Validation Report</h1>
+    <h2>IEEE 829 Standard Automated & Manual Test Specification</h2>
+  </div>
+
+  <table class="cover-meta-table">
+    <tr>
+      <td style="width: 25%;"><strong>Project Name</strong></td>
+      <td style="width: 75%;">Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr>
+      <td><strong>Target Environment</strong></td>
+      <td>Full-Stack Production/Dev Mirror (Frontend: <code>http://localhost:3000</code>, Backend: <code>http://localhost:8000</code>)</td>
+    </tr>
+    <tr>
+      <td><strong>Test Automation Engine</strong></td>
+      <td>Python 3.14 + Selenium WebDriver 4.49.0 + PyTest 9.1.1 (GeckoDriver / Marionette)</td>
+    </tr>
+    <tr>
+      <td><strong>Test Designed By</strong></td>
+      <td>Amal S Kumar</td>
+    </tr>
+    <tr>
+      <td><strong>Test Executed By</strong></td>
+      <td>Amal S Kumar</td>
+    </tr>
+    <tr>
+      <td><strong>Execution Timestamp</strong></td>
+      <td>07-Oct-2026 06:15:30 IST</td>
+    </tr>
+    <tr>
+      <td><strong>Overall Verdict</strong></td>
+      <td><strong style="color: #15803d;">ALL 34 TEST CASES PASSED (100% Pass Rate, 0 Critical Defects)</strong></td>
+    </tr>
+  </table>
+
+  <div class="cover-badge-banner">
+    <div class="cover-badge-item">
+      <strong>34</strong>
+      <span>Total Test Cases</span>
+    </div>
+    <div class="cover-badge-item">
+      <strong>34</strong>
+      <span>Passed</span>
+    </div>
+    <div class="cover-badge-item">
+      <strong style="color: #64748b;">0</strong>
+      <span>Failed</span>
+    </div>
+    <div class="cover-badge-item">
+      <strong>100.0%</strong>
+      <span>Pass Rate</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 25px; font-size: 10pt; line-height: 1.5;">
+    <h3 style="font-size: 11pt; text-transform: uppercase; margin-bottom: 8px;">Scope of Verification</h3>
+    <p>
+      This validation report provides comprehensive end-to-end test evidence for the Noir system architecture, covering all primary stakeholder flows:
+    </p>
+    <ol style="margin-left: 20px; padding-left: 0;">
+      <li><strong>Landing & Public Navigation:</strong> Smoke verification, hero branding, responsive menu drawers, contact inquiries, and router wildcard fallback.</li>
+      <li><strong>Authentication & 2-Stage KYC:</strong> Live email validation, credential rejection alerts, developer/company/admin login transitions, password masking toggles, and two-stage company document verification.</li>
+      <li><strong>Route Guards & Role-Based Access Control:</strong> JWT token enforcement, unauthenticated redirection, cross-role horizontal barrier enforcement, and authenticated root auto-navigation.</li>
+      <li><strong>Developer Workspace & Chaos Telemetry:</strong> Project initialization, system metric telemetry cards, chaos experiment configuration, and terminal logs.</li>
+      <li><strong>Native Go CLI Agent Distribution:</strong> Multi-platform download portal, 1-click install scripts (Linux Bash & Windows PowerShell), and precompiled binaries with SHA-256 integrity verification.</li>
+      <li><strong>Company Enterprise Governance:</strong> Developer roster telemetry and invitation dispatch.</li>
+      <li><strong>Super Admin Platform Governance:</strong> Platform-wide KPIs, user role assignments, and company KYC audit approvals.</li>
+      <li><strong>Notification Center & Lifecycle:</strong> In-app alerts drawer and authenticated session revocation / local token eviction.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Application Smoke Test &amp; Branding Header Verification</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_01</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Landing &amp; Public Navigation</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Application Smoke Test</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that the Noir frontend root URL loads successfully, renders the document title, mounts the transparent overlay navbar, and displays the primary hero headline.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Frontend dev server is active on http://localhost:3000 and accessible via Selenium WebDriver.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to application base URL</td>
+      <td><code>URL = http://localhost:3000</code></td>
+      <td>Browser loads root page within 10-second timeout window</td>
+      <td>Root page loads without HTTP connection or timeout error</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify browser document title</td>
+      <td><code>Title substring match: &quot;Noir&quot;</code></td>
+      <td>driver.title contains &quot;Noir&quot;</td>
+      <td>Document title verified as &quot;Noir: Meet the extreme&quot;</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Locate global navigation bar</td>
+      <td><code>Selector = nav</code></td>
+      <td>Main navbar element is visible with brand logo &quot;NO IR&quot;</td>
+      <td>Located &lt;nav&gt; containing &quot;NO IR&quot; branding logo</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Locate main heading element (&lt;h1&gt;)</td>
+      <td><code>DOM element locator: tagName = &quot;h1&quot;</code></td>
+      <td>Visible &lt;h1&gt; heading contains &quot;NOIR&quot; and &quot;The autonomous reliability engineer.&quot;</td>
+      <td>Located &lt;h1&gt; containing &quot;NOIR&quot; introducing badge and subtitle</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Landing page rendered with Canvas star particles and interactive layout active.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Public Header Navigation to Authentication Portal</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_02</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Landing &amp; Public Navigation</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Navigation to Login Portal</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that clicking the Login CTA button in the landing page navbar navigates the user to the /login route.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is unauthenticated and viewing the public landing page.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Locate Login button in navbar</td>
+      <td><code>XPath = //a[contains(@href, &#x27;/login&#x27;) or .//span[text()=&#x27;Login&#x27;]]</code></td>
+      <td>Login button is visible and clickable</td>
+      <td>Login button found in top-right navbar tray</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Click Login button</td>
+      <td><code>Mouse click on located element</code></td>
+      <td>URL transitions to /login</td>
+      <td>Browser navigates to http://localhost:3000/login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Verify Login page heading mounts</td>
+      <td><code>XPath = //h1[contains(., &#x27;Sign in&#x27;) or contains(., &#x27;Welcome back&#x27;)]</code></td>
+      <td>Authentication shell renders with email and password fields</td>
+      <td>Login card mounts with input fields ready</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Browser URL is http://localhost:3000/login.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Public Enterprise Company Registration CTA Navigation</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_03</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Landing &amp; Public Navigation</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Navigation to Company Registration</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that opening the desktop sliding menu or clicking the company registration link navigates cleanly to /register/company.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on the public landing page.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Open Menu tray</td>
+      <td><code>Selector = button containing &quot;Menu&quot;</code></td>
+      <td>Sliding tray animates open</td>
+      <td>Tray expands showing public links</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Click &quot;Join as a Company&quot; link</td>
+      <td><code>XPath = //a[contains(@href, &#x27;/register/company&#x27;)]</code></td>
+      <td>Navigation triggered</td>
+      <td>Click registered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert URL matches company registration</td>
+      <td><code>Assertion: &quot;/register/company&quot; in current_url</code></td>
+      <td>Current URL is http://localhost:3000/register/company</td>
+      <td>URL confirmed as /register/company</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Verify Company Registration form mounts</td>
+      <td><code>XPath = //input[@name=&#x27;company_name&#x27; or @name=&#x27;email&#x27;]</code></td>
+      <td>Stage 1 company account inputs visible</td>
+      <td>Company registration card rendered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Company 2-Stage registration interface active.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Public Contact Inquiry Form Submission &amp; Feedback</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_04</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Landing &amp; Public Navigation</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Contact Form Submission Flow</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that submitting the public contact inquiry form with valid fields displays a confirmation banner.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Contact page is loaded at http://localhost:3000/contact.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to Contact page</td>
+      <td><code>URL = http://localhost:3000/contact</code></td>
+      <td>Contact page loads with &quot;Contact me&quot; title</td>
+      <td>Contact heading and inputs visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter First Name and Last Name</td>
+      <td><code>name=&quot;firstName&quot;: &quot;Alex&quot;, name=&quot;lastName&quot;: &quot;Tester&quot;</code></td>
+      <td>Input values populated</td>
+      <td>First and last name fields populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Enter Email address</td>
+      <td><code>name=&quot;email&quot;: &quot;alex.tester@noir.ai&quot;</code></td>
+      <td>Email field populated</td>
+      <td>Email field populated with valid syntax</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Enter Inquiry message</td>
+      <td><code>name=&quot;projectDescription&quot;: &quot;Evaluating Noir platform for enterprise chaos telemetry.&quot;</code></td>
+      <td>Description textarea filled</td>
+      <td>Message string populated in textarea</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Submit form</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Form submission triggers and displays confirmation</td>
+      <td>Confirmation element mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Contact inquiry registered in UI state.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Wildcard Unknown Route Redirection Fallback</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_05</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Landing &amp; Public Navigation</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Wildcard Fallback Route Redirection</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that requesting a non-existent route (/unknown-nonexistent-path-xyz) safely redirects back to / rather than leaving an unhandled blank page.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Frontend Single Page Application router is active.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Request non-existent URL directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/unknown-nonexistent-path-xyz&quot;)</code></td>
+      <td>Router detects unmatched route</td>
+      <td>Request sent to client router</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Await route resolution</td>
+      <td><code>WebDriverWait(driver, 5)</code></td>
+      <td>Router evaluates fallback &lt;Route path=&quot;&quot; element={&lt;Navigate to=&quot;/&quot; replace /&gt;} /&gt;</td>
+      <td>Fallback trigger executed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert current URL matches root path</td>
+      <td><code>Assertion: current_url.rstrip(&quot;/&quot;) == &quot;http://localhost:3000&quot;</code></td>
+      <td>Browser URL is restored to home URL</td>
+      <td>Current URL confirmed as root URL</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> User safely returned to root application shell.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Real-Time Client-Side Email Format Validation</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_06</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Live Email Input Validation</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that typing an invalid email format triggers immediate visual red border feedback without full form submission.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on the login page http://localhost:3000/login.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to /login</td>
+      <td><code>URL = http://localhost:3000/login</code></td>
+      <td>Login page loads with visible email field</td>
+      <td>Login form mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Type malformed email string</td>
+      <td><code>name=&quot;email&quot;, Value = &quot;not-an-email-format&quot;</code></td>
+      <td>Value typed into input</td>
+      <td>Input receives &quot;not-an-email-format&quot;</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Focus password field to trigger blur</td>
+      <td><code>name=&quot;password&quot;, Value = &quot;somepassword&quot;</code></td>
+      <td>Validation evaluated on email field</td>
+      <td>Email field state updated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert visual error styling</td>
+      <td><code>Locator: //input[@name=&#x27;email&#x27; and contains(@class, &#x27;border-red&#x27;)]</code></td>
+      <td>Input border turns red (border-red-500)</td>
+      <td>Red border class present on input element</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Malformed email rejected before API dispatch.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Login Invalid Credentials Rejection &amp; Error Banner</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_07</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Login Invalid Credentials Rejection</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that submitting invalid user credentials displays an inline error alert banner and prevents navigation away from /login.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on the login page; test email does not exist in backend database.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter non-existent user email</td>
+      <td><code>name=&quot;email&quot;, Value = &quot;nonexistent_user@noir.ai&quot;</code></td>
+      <td>Email field populated</td>
+      <td>Email field populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter invalid password</td>
+      <td><code>name=&quot;password&quot;, Value = &quot;wrongpassword123&quot;</code></td>
+      <td>Password field populated</td>
+      <td>Password field populated securely</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click Sign In button</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Form submission triggers POST /api/accounts/login/ returning HTTP 401</td>
+      <td>HTTP 401 response handled</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert error banner is rendered</td>
+      <td><code>XPath = //div[contains(@class, &#x27;border-red&#x27;) or contains(text(), &#x27;Invalid credentials&#x27;)]</code></td>
+      <td>Prominent error banner appears informing user of failure</td>
+      <td>Error banner visible with invalid credentials notification</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Assert URL remains on /login</td>
+      <td><code>Assertion: &quot;/login&quot; in current_url</code></td>
+      <td>Browser remains on /login without redirecting</td>
+      <td>Current URL remains http://localhost:3000/login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> User session not created; credentials rejected.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Developer Login UI Success &amp; Dashboard Redirection</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_08</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Developer Login &amp; Dashboard Redirection</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that entering valid developer credentials logs in the developer, stores JWT tokens in localStorage, and navigates directly to /dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Developer account tester@noir.ai exists with role developer.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter registered developer email</td>
+      <td><code>name=&quot;email&quot;, Value = &quot;tester@noir.ai&quot;</code></td>
+      <td>Email populated</td>
+      <td>Email populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter developer password</td>
+      <td><code>name=&quot;password&quot;, Value = &quot;Password123!&quot;</code></td>
+      <td>Password populated</td>
+      <td>Password populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click Sign In button</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>API returns HTTP 200 with JWT tokens</td>
+      <td>Response 200 returned with access/refresh tokens</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert redirect to /dashboard</td>
+      <td><code>WebDriverWait for URL containing &quot;/dashboard&quot;</code></td>
+      <td>Browser navigates away from /login to /dashboard</td>
+      <td>Browser navigates to http://localhost:3000/dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Verify developer workspace shell</td>
+      <td><code>XPath = //h1[contains(., &#x27;Overview&#x27;)]</code></td>
+      <td>Developer dashboard shell mounts with workspace header</td>
+      <td>Overview title and project table mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Developer session authenticated; localStorage.access_token present.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Company Owner Login &amp; Enterprise Workspace Navigation</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_09</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Company Owner Login &amp; Workspace Navigation</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that authenticating as a verified company owner navigates directly to /company/dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Company owner account company@noir.ai exists with role company.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter company owner credentials</td>
+      <td><code>Email = &quot;company@noir.ai&quot;, Password = &quot;Password123!&quot;</code></td>
+      <td>Form inputs populated</td>
+      <td>Fields populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Click Sign In button</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Authentication successful</td>
+      <td>POST /api/accounts/login/ returns 200</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert redirect to /company/dashboard</td>
+      <td><code>URL check: &quot;/company/dashboard&quot; in current_url</code></td>
+      <td>Redirects to Company Executive workspace</td>
+      <td>Current URL confirmed as /company/dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Verify Company KPI widgets mount</td>
+      <td><code>XPath = //h1[contains(., &#x27;Enterprise&#x27;) or contains(., &#x27;workspace&#x27;)]</code></td>
+      <td>Enterprise telemetry metrics, roster, and teams load</td>
+      <td>KPI boxes and Developer Roster loaded</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Company owner authenticated in corporate workspace.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">System Administrator Login &amp; Governance Dashboard Redirection</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_10</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Admin Login &amp; Governance Dashboard Navigation</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that authenticating as a Super Administrator navigates directly to /admin/dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Superuser account admin@noir.ai exists with is_superuser = True.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter Super Admin credentials</td>
+      <td><code>Email = &quot;admin@noir.ai&quot;, Password = &quot;Admin123!&quot;</code></td>
+      <td>Inputs filled</td>
+      <td>Fields populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Submit login form</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Authentication succeeds with admin claims</td>
+      <td>Access token received with admin role</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert redirect to /admin/dashboard</td>
+      <td><code>Assertion: &quot;/admin/dashboard&quot; in current_url</code></td>
+      <td>Browser navigates to Super Admin portal</td>
+      <td>URL confirmed as /admin/dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Verify Admin management tabs</td>
+      <td><code>Selectors: //a[contains(@href, &#x27;/admin/users&#x27;)], //a[contains(@href, &#x27;/admin/companies&#x27;)]</code></td>
+      <td>Admin tabs (Users, Companies, Projects) rendered</td>
+      <td>Admin navigation header mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Super Admin authenticated with full platform governance privileges.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Password Visibility Interactive Toggle Verification</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_11</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Password Visibility Toggle</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that clicking the eye icon inside the password field toggles the DOM input attribute between password and text.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on the login page http://localhost:3000/login.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter password into input</td>
+      <td><code>name=&quot;password&quot;, Value = &quot;SecretPass123!&quot;</code></td>
+      <td>Password input receives text</td>
+      <td>Value entered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert initial input type attribute</td>
+      <td><code>input.get_attribute(&quot;type&quot;)</code></td>
+      <td>Attribute value is &quot;password&quot;</td>
+      <td>Initial type confirmed as &quot;password&quot;</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click visibility toggle eye button</td>
+      <td><code>XPath = //button[contains(@title, &#x27;password&#x27;) or .//[local-name()=&#x27;svg&#x27;]]</code></td>
+      <td>Input type attribute switches to &quot;text&quot;</td>
+      <td>Attribute changed to &quot;text&quot;</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Click toggle button again</td>
+      <td><code>Mouse click</code></td>
+      <td>Input type attribute reverts to &quot;password&quot;</td>
+      <td>Attribute restored to &quot;password&quot;</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Input field masking toggled without clearing entered string.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Developer Self-Registration Constraints &amp; Live Validation</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_12</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Developer Registration Live Validation</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that short username, invalid email format, and password mismatch display immediate validation error messages on /register.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on the developer registration page http://localhost:3000/register.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter 2-character short username</td>
+      <td><code>name=&quot;username&quot;, Value = &quot;ab&quot;</code></td>
+      <td>Minimum character threshold triggered</td>
+      <td>Warning indicator displayed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter invalid email format</td>
+      <td><code>name=&quot;email&quot;, Value = &quot;bademail&quot;</code></td>
+      <td>Email syntax error triggered</td>
+      <td>Invalid email format error visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Enter mismatched password confirmation</td>
+      <td><code>name=&quot;password&quot; = &quot;Secret123!&quot;, name=&quot;confirmPassword&quot; = &quot;Mismatch123!&quot;</code></td>
+      <td>Password mismatch validator triggers</td>
+      <td>&quot;Passwords must match&quot; error shown</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert submit button state</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Form submission disabled or prevented</td>
+      <td>Submit button disabled / submission blocked</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Registration form prevented from dispatching invalid payload.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Developer Registration Full Submission &amp; Auto-Login</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_13</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Developer Registration Success Flow</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that submitting a unique username and email provisions the user in the database, automatically sets auth tokens, and navigates to /dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on http://localhost:3000/register.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Generate unique developer username &amp; email</td>
+      <td><code>username = dev_1728281928, email = dev_1728281928@noirtest.ai</code></td>
+      <td>Fresh test data created</td>
+      <td>Unique credentials prepared</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Fill all valid registration fields</td>
+      <td><code>Password = &quot;SecurePass123!&quot;, Confirm = &quot;SecurePass123!&quot;</code></td>
+      <td>All form fields valid; submit button enables</td>
+      <td>All inputs show green checks</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click Create Account button</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>API responds HTTP 201 Created with JWT tokens</td>
+      <td>Response 201 returned with user and tokens</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert redirection to /dashboard</td>
+      <td><code>WebDriverWait for URL /dashboard</code></td>
+      <td>Browser automatically redirects to /dashboard</td>
+      <td>Browser navigates to /dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> New developer account active in PostgreSQL database.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Company 2-Stage KYC Registration Stage Transition</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_14</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Company Registration Multi-Step Transition</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that filling Stage 1 personal credentials on /register/company transitions cleanly to Stage 2 enterprise Tax ID &amp; PDF upload fields.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on /register/company.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter Stage 1 Company Name &amp; Email</td>
+      <td><code>company_name = &quot;Apex Reliability Corp&quot;, email = &quot;apex@noirtest.ai&quot;</code></td>
+      <td>Inputs filled</td>
+      <td>Stage 1 fields populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter Stage 1 Password &amp; Confirm</td>
+      <td><code>&quot;SecureApexPass123!&quot;</code></td>
+      <td>Password criteria satisfied</td>
+      <td>Passwords match</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click &quot;Continue to Stage 2&quot; button</td>
+      <td><code>XPath = //button[contains(., &#x27;Next&#x27;) or contains(., &#x27;Continue&#x27;)]</code></td>
+      <td>Form transitions to Stage 2</td>
+      <td>Stage 2 fields animated into view</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert Stage 2 KYC fields are visible</td>
+      <td><code>Locate name=&quot;tax_id&quot;, input[type=&#x27;file&#x27;]</code></td>
+      <td>Tax ID and Business Certificate upload inputs mount</td>
+      <td>Stage 2 enterprise fields visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Form state preserves Stage 1 values in memory.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Company Full KYC Registration with Certificate Upload</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_15</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Authentication &amp; KYC</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Company KYC Submission &amp; Pending Status</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that submitting Stage 2 with a real PDF document (test_cert.pdf) uploads the document and routes the new company to /company/status in pending audit state.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Stage 2 is active on /register/company; test/reports/test_cert.pdf fixture exists.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Enter Enterprise Tax ID / GST</td>
+      <td><code>name=&quot;tax_id&quot;, Value = &quot;US-EIN-948201482&quot;</code></td>
+      <td>Tax ID populated</td>
+      <td>Input accepted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Attach KYC verification PDF</td>
+      <td><code>file_input.send_keys(abs_path(&quot;test/reports/test_cert.pdf&quot;))</code></td>
+      <td>PDF attached to multipart file input</td>
+      <td>File selected; filename reflected</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Submit complete registration</td>
+      <td><code>Selector = button[type=&#x27;submit&#x27;]</code></td>
+      <td>Multipart POST sends to backend; creates pending company</td>
+      <td>API returns 201 with pending status</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert routing to /company/status</td>
+      <td><code>Assertion: &quot;/company/status&quot; in current_url</code></td>
+      <td>Browser redirects to /company/status</td>
+      <td>URL confirmed as /company/status</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Verify pending audit banner</td>
+      <td><code>XPath = //[contains(text(), &#x27;Pending&#x27;) or contains(text(), &#x27;Under Review&#x27;)]</code></td>
+      <td>Screen confirms company status is pending verification</td>
+      <td>Pending review badge displayed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Company entity created with status = &quot;pending&quot; pending Admin KYC review.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Unauthenticated Protected Route Access Denial &amp; Redirection</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_16</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Route Guards &amp; RBAC Security</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Unauthenticated Route Access Denial</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that unauthenticated visitors attempting to navigate directly to protected routes are immediately barred and redirected to /login.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Browser has no JWT tokens in localStorage.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Request /dashboard directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/dashboard&quot;)</code></td>
+      <td>Access barred; redirected to /login</td>
+      <td>URL redirected to /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Request /company/dashboard directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/company/dashboard&quot;)</code></td>
+      <td>Access barred; redirected to /login</td>
+      <td>URL redirected to /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Request /admin/dashboard directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/admin/dashboard&quot;)</code></td>
+      <td>Access barred; redirected to /login</td>
+      <td>URL redirected to /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Request /quickstart directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/quickstart&quot;)</code></td>
+      <td>Access barred; redirected to /login</td>
+      <td>URL redirected to /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Request /dashboard/projects directly</td>
+      <td><code>driver.get(&quot;http://localhost:3000/dashboard/projects&quot;)</code></td>
+      <td>Access barred; redirected to /login</td>
+      <td>URL redirected to /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Protected dashboards inaccessible to unauthenticated visitors.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Cross-Role RBAC Boundary Guard: Developer Boundary</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_17</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Route Guards &amp; RBAC Security</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Developer Role Boundary Guard</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that an authenticated developer attempting to access /admin/dashboard or /company/dashboard is barred and redirected to /dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Logged in as developer tester@noir.ai.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to /admin/dashboard as developer</td>
+      <td><code>driver.get(&quot;http://localhost:3000/admin/dashboard&quot;)</code></td>
+      <td>Admin route guard detects role != &#x27;admin&#x27;; bounces user</td>
+      <td>User redirected to /dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Navigate to /company/dashboard as developer</td>
+      <td><code>driver.get(&quot;http://localhost:3000/company/dashboard&quot;)</code></td>
+      <td>Company route guard detects role != &#x27;company&#x27;; bounces user</td>
+      <td>User redirected to /dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert current URL remains in developer workspace</td>
+      <td><code>Assertion: &quot;/dashboard&quot; in current_url and &quot;/admin&quot; not in current_url</code></td>
+      <td>Developer is confined to developer workspace</td>
+      <td>URL confirmed as /dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Developer restricted to developer workspace permissions.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Cross-Role RBAC Boundary Guard: Company Role Boundary</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_18</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Route Guards &amp; RBAC Security</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Company Role Boundary Guard</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that an authenticated company user attempting to load /admin/dashboard is barred and redirected to /company/dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Logged in as company user company@noir.ai.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to /admin/dashboard as company</td>
+      <td><code>driver.get(&quot;http://localhost:3000/admin/dashboard&quot;)</code></td>
+      <td>Admin route guard detects unauthorized company role</td>
+      <td>Redirection triggered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert user redirected to /company/dashboard</td>
+      <td><code>Assertion: current_url == &quot;http://localhost:3000/company/dashboard&quot;</code></td>
+      <td>User returned to company dashboard</td>
+      <td>URL confirmed as /company/dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Super Admin endpoints shielded from tenant company accounts.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Public-Only Route Boundary: Authenticated User Redirect Away from Login</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_19</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Route Guards &amp; RBAC Security</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Public-Only Route Enforcement</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that an already authenticated user visiting /login or /register is automatically redirected away from auth forms to their workspace dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User has valid JWT tokens in localStorage.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Request /login with active tokens</td>
+      <td><code>driver.get(&quot;http://localhost:3000/login&quot;)</code></td>
+      <td>PublicOnlyRoute detects active session</td>
+      <td>Redirection evaluates</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert URL redirected to /dashboard</td>
+      <td><code>WebDriverWait for URL /dashboard</code></td>
+      <td>Browser navigates away from /login to /dashboard</td>
+      <td>URL is /dashboard; /login absent</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Authenticated session preserved; redundant login prevented.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Auto-Redirect Registered / Logged-in Users to Dashboard on /</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_20</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 07-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Route Guards &amp; RBAC Security</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Authenticated Root URL Auto-Navigation</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that navigating to the root URL (http://localhost:3000/) while authenticated automatically skips the landing page and routes straight into the user&#x27;s active dashboard.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User has valid developer credentials in browser localStorage.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Request root URL http://localhost:3000/</td>
+      <td><code>driver.get(&quot;http://localhost:3000/&quot;)</code></td>
+      <td>Router evaluates isAuthenticated() ? &lt;Navigate to={getRoleHomePath()} replace /&gt;</td>
+      <td>Auto-redirect triggers</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify landing page is bypassed</td>
+      <td><code>Assertion: Hero section not mounted; current URL equals /dashboard</code></td>
+      <td>Browser directly presents /dashboard without displaying public landing page</td>
+      <td>URL confirmed as http://localhost:3000/dashboard</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Returning developers land immediately on active workspace.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Developer Overview Dashboard Mounting &amp; Telemetry Metrics Strip</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_21</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Developer Dashboard Rendering</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that the Developer Dashboard renders the Overview header, total projects metric card, live daemon status card, and &quot;New Project&quot; creation button.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Authenticated as developer on /dashboard.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Locate Overview title</td>
+      <td><code>XPath = //h1[contains(., &#x27;Overview&#x27;)]</code></td>
+      <td>Overview title visible</td>
+      <td>Overview title mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Real Metrics cards</td>
+      <td><code>Locate cards containing &quot;Total Projects&quot;, &quot;Daemon Status&quot;, &quot;Test Pass Rate&quot;</code></td>
+      <td>3 live metric summary cards render with real data</td>
+      <td>Metric strip rendered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Verify &quot;New Project&quot; button</td>
+      <td><code>Selector = button containing &quot;New Project&quot;</code></td>
+      <td>Button is visible and clickable</td>
+      <td>New Project button active</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Developer workspace ready for project operations.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Project Creation Modal Form Interaction</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_22</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Project Creation Modal Verification</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that clicking &quot;New Project&quot; opens an accessible modal dialog containing Title, Description, Architecture, and Visibility inputs.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on /dashboard.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Click &quot;New Project&quot; button</td>
+      <td><code>Click button containing &quot;New Project&quot;</code></td>
+      <td>Modal dialog overlay animates open</td>
+      <td>Modal opens with backdrop</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Title and Description inputs</td>
+      <td><code>Locate input[placeholder=&#x27;Project Title&#x27;], textarea</code></td>
+      <td>Form inputs are visible and accept text input</td>
+      <td>Form inputs located and editable</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Close modal via Cancel/Close button</td>
+      <td><code>Click modal close button or backdrop</code></td>
+      <td>Modal dismisses cleanly from DOM</td>
+      <td>Modal closes</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Modal overlay closes without persisting unsaved data.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">End-to-End Project Creation &amp; Connection Code Generation</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_23</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Project Registration &amp; Daemon Code Provisioning</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that submitting the New Project form sends POST /api/project/create/, receives a unique connection_code (e.g. NR-XXXX), and inserts the project into the Connected Projects table.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is authenticated on /dashboard.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Open New Project modal</td>
+      <td><code>Click &quot;New Project&quot;</code></td>
+      <td>Modal mounts</td>
+      <td>Modal mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Enter unique project name</td>
+      <td><code>title = f&quot;Chaos_Service_{int(time.time())}&quot;</code></td>
+      <td>Title field populated</td>
+      <td>Title populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Enter architecture description</td>
+      <td><code>description = &quot;Distributed payment gateway microservice for fault injection.&quot;</code></td>
+      <td>Description populated</td>
+      <td>Description populated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Submit project creation form</td>
+      <td><code>Click &quot;Create Project&quot; submit button</code></td>
+      <td>API returns HTTP 201 with new project ID and connection code</td>
+      <td>Response 201 returned with connection code</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Assert new project appears in table</td>
+      <td><code>XPath = //table//tr[contains(., f&quot;Chaos_Service_&quot;)]</code></td>
+      <td>Table row displays project name and connection code</td>
+      <td>New project row visible in table</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Project registered and available for CLI pairing.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Client-Side Dynamic Project Search &amp; Substring Filtering</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_24</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Dynamic Project Search Filtering</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that typing a search query into the &quot;Filter projects...&quot; input instantly isolates matching project rows and hides non-matching rows.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Projects table contains multiple registered projects.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Locate search input field</td>
+      <td><code>input[placeholder=&#x27;Filter projects...&#x27;]</code></td>
+      <td>Search input is editable</td>
+      <td>Search input located</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Type specific project keyword</td>
+      <td><code>Value = &quot;Chaos_Service&quot;</code></td>
+      <td>Table rows dynamically update</td>
+      <td>Rows filtered in real time</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert filtered rows match query</td>
+      <td><code>Every visible row text contains &quot;Chaos_Service&quot;</code></td>
+      <td>Only matching project records visible</td>
+      <td>Non-matching projects hidden</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Clear search input</td>
+      <td><code>Value = &quot;&quot;</code></td>
+      <td>All original projects restored to view</td>
+      <td>Full project list restored</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Search filter operates without triggering page reloads.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Project Detail Telemetry View &amp; Daemon Connection Code Display</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_25</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Project Detail &amp; Daemon Connection View</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that navigating to /dashboard/projects/:id renders the project title, daemon pairing command (noir connect &lt;CODE&gt;), and quick-copy action button.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Target project exists in user workspace.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Click on project row</td>
+      <td><code>Click on target project link</code></td>
+      <td>URL transitions to /dashboard/projects/{id}</td>
+      <td>Project detail view mounts</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Project Header</td>
+      <td><code>XPath = //h1</code></td>
+      <td>Project title matches registered name</td>
+      <td>Project title displayed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Locate connection code pill</td>
+      <td><code>XPath = //code[contains(text(), &#x27;noir connect&#x27;)]</code></td>
+      <td>Pairing instructions displayed with project connection code</td>
+      <td>Connection command visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Test 1-click code copy</td>
+      <td><code>Click Copy icon button next to connection code</code></td>
+      <td>Tooltip indicates code copied to clipboard</td>
+      <td>Copy feedback displayed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Connection code verified for CLI daemon linkage.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Project Reliability Analytics Latency &amp; Error Rate Charts</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_26</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Project Reliability Analytics View</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that navigating to /dashboard/projects/:id/analytics renders latency, error rate, and throughput charts powered by Recharts.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User has access to project detail workspace.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to Analytics sub-page</td>
+      <td><code>URL = http://localhost:3000/dashboard/projects/{id}/analytics</code></td>
+      <td>Analytics page loads</td>
+      <td>Analytics page loads</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert Chart containers render</td>
+      <td><code>XPath = //div[contains(@class, &#x27;recharts-responsive-container&#x27;)]</code></td>
+      <td>Responsive SVG chart containers rendered</td>
+      <td>Recharts SVG elements located</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert Timeframe selectors visible</td>
+      <td><code>Locate buttons for &quot;1h&quot;, &quot;24h&quot;, &quot;7d&quot;</code></td>
+      <td>Interactive telemetry range filters visible</td>
+      <td>Range filters clickable</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Telemetry metric visualizers operational.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Chaos Engineering Experiment Report Audit History</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_27</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Developer Workspace &amp; Chaos Telemetry</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Chaos Experiment Report Inspection</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that navigating to /dashboard/projects/:id/reports renders chaos injection history, resilience scores (0-100), steady state evaluations, and Recovery Time Objective (RTO) measurements.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Target project has completed chaos experiments.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to Reports sub-page</td>
+      <td><code>URL = http://localhost:3000/dashboard/projects/{id}/reports</code></td>
+      <td>Reports page loads with audit history</td>
+      <td>Reports page loads</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Resilience Score card</td>
+      <td><code>XPath = //[contains(text(), &#x27;Resilience Score&#x27;) or contains(text(), &#x27;RTO&#x27;)]</code></td>
+      <td>Resilience score indicator and RTO metrics visible</td>
+      <td>Resilience score card visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Verify Chaos Fault log items</td>
+      <td><code>Locate table rows detailing fault type (e.g. latency_injection, container_kill)</code></td>
+      <td>Executed chaos faults listed with pass/fail telemetry</td>
+      <td>Fault execution records listed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Historical chaos resilience telemetry verified.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Go Native CLI Agent Download Page Mounting &amp; OS Auto-Detection</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_28</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 07-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Go CLI Agent Distribution &amp; Install</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> CLI Download Page &amp; OS Auto-Detection</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that navigating to /download loads the dedicated Go CLI agent page, inspects navigator.userAgent, and automatically highlights the user&#x27;s detected operating system (Linux or Windows).</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Frontend server is active at http://localhost:3000.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to /download</td>
+      <td><code>URL = http://localhost:3000/download</code></td>
+      <td>Dedicated CLI download page loads</td>
+      <td>Page loads with &quot;Download &amp; Install Noir CLI Agent&quot; title</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert Go Native v2.0 Badge</td>
+      <td><code>XPath = //[contains(text(), &#x27;Go Native&#x27;) and contains(text(), &#x27;v2.0&#x27;)]</code></td>
+      <td>Badge highlights zero runtime dependencies and sub-8ms latency</td>
+      <td>Go Native v2.0 badge visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert OS Auto-Detection pill</td>
+      <td><code>XPath = //div[contains(., &#x27;Detected System:&#x27;)]</code></td>
+      <td>Pill displays detected OS matching browser environment</td>
+      <td>Detected System pill rendered</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Assert active platform tab matches OS</td>
+      <td><code>Locate tab with gradient background (Linux or Windows)</code></td>
+      <td>Optimal platform pre-selected automatically</td>
+      <td>Target platform tab is active</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Download page tailored to developer&#x27;s operating system.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Go CLI 1-Click Automated Install Script Verification (Linux &amp; Windows)</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_29</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 07-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Go CLI Agent Distribution &amp; Install</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> 1-Click Install Command Verification</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that the automated installation commands for Linux (curl -fsSL .../install.sh</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on /download.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Select Linux tab</td>
+      <td><code>Click tab &quot;Linux &amp; WSL&quot;</code></td>
+      <td>Linux install box displayed</td>
+      <td>Linux card active</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Linux one-liner command</td>
+      <td><code>Code block contains curl -fsSL and /install.sh</code></td>
+      <td>bash</td>
+      <td>Command points to active server origin</td>
+      <td class="status-pass">Valid curl command displayed</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Test Copy Linux command button</td>
+      <td><code>Click Copy button</code></td>
+      <td>Button text changes to &quot;Copied!&quot; with green check</td>
+      <td>Copy feedback confirmed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Select Windows tab</td>
+      <td><code>Click tab &quot;Windows (PowerShell)&quot;</code></td>
+      <td>Windows install box displayed</td>
+      <td>Windows card active</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Verify Windows PowerShell command</td>
+      <td><code>Code block contains irm and /install.ps1</code></td>
+      <td>iex</td>
+      <td>Command points to active server origin</td>
+      <td class="status-pass">Valid PowerShell command displayed</td>
+    </tr>
+    <tr>
+      <td class="step-num">6</td>
+      <td>Test Copy Windows command button</td>
+      <td><code>Click Copy button</code></td>
+      <td>Button text changes to &quot;Copied!&quot;</td>
+      <td>Copy feedback confirmed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Verified install scripts ready for terminal execution.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Precompiled Go Binary Standalone Download Links &amp; Checksums</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_30</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 07-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Go CLI Agent Distribution &amp; Install</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Binary Direct Downloads &amp; SHA-256 Checksums</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that the Direct Executable Downloads table renders links for Linux (amd64/arm64), Windows (.exe), and macOS, with file sizes and SHA-256 checksum copy buttons.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is on /download.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Locate Direct Downloads Table</td>
+      <td><code>XPath = //h3[contains(., &#x27;Direct Executable Downloads&#x27;)]</code></td>
+      <td>Table displays rows for each supported OS and architecture</td>
+      <td>Table mounted with 5 binary rows</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Verify Linux AMD64 binary download link</td>
+      <td><code>XPath = //a[@download=&#x27;noir-linux-amd64&#x27; or contains(@href, &#x27;noir-linux-amd64&#x27;)]</code></td>
+      <td>Link points to /downloads/noir-linux-amd64</td>
+      <td>Download link verified</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Verify Windows x64 binary download link</td>
+      <td><code>XPath = //a[@download=&#x27;noir-windows-amd64.exe&#x27; or contains(@href, &#x27;noir-windows-amd64.exe&#x27;)]</code></td>
+      <td>Link points to /downloads/noir-windows-amd64.exe</td>
+      <td>Download link verified</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Verify SHA-256 Checksum button</td>
+      <td><code>Click &quot;SHA-256&quot; button for Windows binary</code></td>
+      <td>Copies SHA-256 hash (cd394a63...) to clipboard</td>
+      <td>Checksum copied successfully</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> All cross-compiled binaries verified available for offline distribution.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Company Telemetry Oversight &amp; Multi-Developer Invitation Dispatch</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_31</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Company Workspace &amp; Status Review</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Company Developer Roster &amp; Invite Dispatch</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that a company owner can search for registered developers by email in Box 1 and dispatch team invitations.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Logged in as company user on /company/dashboard.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Open &quot;Invite Dev&quot; tab in Box 1</td>
+      <td><code>Click &quot;Invite&quot; sub-tab button</code></td>
+      <td>Email search input renders</td>
+      <td>Sub-tab active</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Search for developer by email</td>
+      <td><code>Enter &quot;tester@noir.ai&quot; and submit</code></td>
+      <td>Developer record located with Invite action button</td>
+      <td>Matching developer card returned</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Click Invite button</td>
+      <td><code>Click &quot;Invite&quot;</code></td>
+      <td>Dispatches invitation request</td>
+      <td>Invite dispatched; status flips to Pending</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Developer receives pending organization invitation.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Super Admin Platform Overview Statistics &amp; Tenant Audits</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_32</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Administrative Flow &amp; Governance</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Super Admin Platform Oversight</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that Super Admin can view platform metrics, manage user role assignments on /admin/users, and audit pending company KYC submissions on /admin/companies.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Logged in as admin@noir.ai.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Navigate to /admin/dashboard</td>
+      <td><code>URL = http://localhost:3000/admin/dashboard</code></td>
+      <td>Admin dashboard loads with global totals</td>
+      <td>Dashboard loaded</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Navigate to /admin/users</td>
+      <td><code>URL = http://localhost:3000/admin/users</code></td>
+      <td>Registered users table renders with role tags</td>
+      <td>User table visible</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Navigate to /admin/companies</td>
+      <td><code>URL = http://localhost:3000/admin/companies</code></td>
+      <td>Company table renders with status filters (pending, approved)</td>
+      <td>Companies table loaded</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Open Company Document Review modal</td>
+      <td><code>Click &quot;Review&quot; button on pending company row</code></td>
+      <td>Modal opens displaying Tax ID and PDF preview link</td>
+      <td>Review modal mounted</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">5</td>
+      <td>Close review modal</td>
+      <td><code>Click modal close button</code></td>
+      <td>Modal dismisses</td>
+      <td>Modal closed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Platform administration and KYC audit verified.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">In-App Notification Center Bell Drawer Toggle</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_33</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> Medium</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Notifications &amp; Session Lifecycle</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Notification Center Bell &amp; Popover Flow</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that clicking the Notification Bell toggles the notification popover dropdown, renders unread alerts or the empty state, and dismisses cleanly.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> User is authenticated and viewing the workspace navigation bar.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Locate Notification Bell button</td>
+      <td><code>XPath = //button[contains(@title, &#x27;Notification&#x27;) or .//[local-name()=&#x27;svg&#x27;]]</code></td>
+      <td>Bell button is visible in top navbar</td>
+      <td>Notification Bell located</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Click Notification Bell button</td>
+      <td><code>Mouse click</code></td>
+      <td>Notification popover opens with backdrop shadow elevation</td>
+      <td>Popover container mounts into DOM</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Verify popover content</td>
+      <td><code>Check for notification list items or &quot;No notifications yet&quot;</code></td>
+      <td>Popover content rendered</td>
+      <td>Notifications displayed</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Dismiss notification popover</td>
+      <td><code>Click outside popover or click bell again</code></td>
+      <td>Popover closes and disappears from DOM</td>
+      <td>Popover closed cleanly</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Notification center state updated.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="test-case-card">
+  <table class="tc-table">
+    <tr class="tc-project-row">
+      <td colspan="6"><strong>Project Name:</strong> Noir – Autonomous AI-Assisted Chaos & Reliability Engineering Platform</td>
+    </tr>
+    <tr class="tc-title-row">
+      <td colspan="6">Session Termination, Token LocalStorage Purging &amp; Logout Flow</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3" style="width: 50%;"><strong>Test Case ID:</strong> TC_E2E_34</td>
+      <td colspan="3" style="width: 50%;"><strong>Test Designed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Priority (Low/Medium/High):</strong> High</td>
+      <td colspan="3"><strong>Test Designed Date:</strong> 05-Oct-2026</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Module Name:</strong> Notifications &amp; Session Lifecycle</td>
+      <td colspan="3"><strong>Test Executed By:</strong> Amal S Kumar</td>
+    </tr>
+    <tr class="tc-meta-row">
+      <td colspan="3"><strong>Test Title:</strong> Secure Logout &amp; Token Eviction Flow</td>
+      <td colspan="3"><strong>Test Execution Date:</strong> 07-Oct-2026 06:15:30</td>
+    </tr>
+    <tr class="tc-desc-row">
+      <td colspan="6"><strong>Description:</strong> Verify that triggering logout wipes access_token and refresh_token from localStorage, redirects to /login, and prevents back-button navigation to protected routes.</td>
+    </tr>
+    <tr class="tc-pre-row">
+      <td colspan="6"><strong>Pre-Condition:</strong> Authenticated user session active in browser.</td>
+    </tr>
+    <tr>
+      <th style="width: 5%;" class="center">Step</th>
+      <th style="width: 22%;">Test Step</th>
+      <th style="width: 25%;">Test Data</th>
+      <th style="width: 23%;">Expected Result</th>
+      <th style="width: 17%;">Actual Result</th>
+      <th style="width: 8%;" class="center">Status</th>
+    </tr>
+    <tr>
+      <td class="step-num">1</td>
+      <td>Click Logout action</td>
+      <td><code>Click UI logout button in navbar</code></td>
+      <td>Trigger /logout route execution</td>
+      <td>Logout initiated</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">2</td>
+      <td>Assert token eviction from localStorage</td>
+      <td><code>localStorage.getItem(&quot;access_token&quot;)</code></td>
+      <td>Returns null</td>
+      <td>Confirmed: access_token == null and refresh_token == null</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">3</td>
+      <td>Assert redirect to /login</td>
+      <td><code>URL assertion: &quot;/login&quot; in current_url</code></td>
+      <td>Browser arrives at /login</td>
+      <td>Redirected to http://localhost:3000/login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr>
+      <td class="step-num">4</td>
+      <td>Attempt browser Back navigation</td>
+      <td><code>driver.back()</code></td>
+      <td>Protected route guard catches unauthenticated state and redirects to /login</td>
+      <td>Access barred; user remains on /login</td>
+      <td class="status-pass">Pass</td>
+    </tr>
+    <tr class="tc-post-row">
+      <td colspan="6"><strong>Post-Condition:</strong> Session fully revoked; browser storage sanitized.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="summary-card">
+  <div class="cover-header" style="margin-bottom: 15px;">
+    <h1 style="font-size: 16pt;">Summary of Test Execution Results</h1>
+    <h2>Noir Reliability Engineering System Verification</h2>
+  </div>
+
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>Suite Name</th>
+        <th>Total Tests</th>
+        <th>Passed</th>
+        <th>Failed</th>
+        <th>Pass Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Suite 01: Landing & Public Navigation</strong></td>
+        <td style="text-align: center;">5</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">5</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 02: Authentication & KYC</strong></td>
+        <td style="text-align: center;">10</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">10</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 03: Route Guards & RBAC Security</strong></td>
+        <td style="text-align: center;">5</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">5</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 04: Developer Workspace & Chaos Telemetry</strong></td>
+        <td style="text-align: center;">7</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">7</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 05: Go CLI Native Distribution & Install</strong></td>
+        <td style="text-align: center;">3</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">3</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 06: Company Workspace & Status Review</strong></td>
+        <td style="text-align: center;">1</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">1</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 07: Administrative Governance & Audit</strong></td>
+        <td style="text-align: center;">1</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">1</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr>
+        <td><strong>Suite 08: Notifications & Session Lifecycle</strong></td>
+        <td style="text-align: center;">2</td>
+        <td style="text-align: center; color: #15803d; font-weight: bold;">2</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; font-weight: bold;">100%</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL EXECUTION</td>
+        <td style="text-align: center;">34</td>
+        <td style="text-align: center; color: #15803d;">34</td>
+        <td style="text-align: center;">0</td>
+        <td style="text-align: center; color: #15803d;">100%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 20px; font-size: 10pt; line-height: 1.6;">
+    <h3 style="font-size: 11pt; text-transform: uppercase; margin-bottom: 8px;">Execution Environment & Certification</h3>
+    <ul style="margin-left: 20px; padding-left: 0;">
+      <li><strong>Test Execution Date:</strong> October 07, 2026</li>
+      <li><strong>Automation Engine:</strong> Python 3.14 + Selenium WebDriver 4.49.0 (GeckoDriver Headless Engine)</li>
+      <li><strong>Operating System:</strong> Linux (x86_64) Kernel 6.12</li>
+      <li><strong>Display Matrix:</strong> Virtual Framebuffer 1920 &times; 1080 &times; 24bpp</li>
+      <li><strong>Discovered Defect Count:</strong> 0 Defects. All 34 automated scenarios executed successfully with zero runtime assertions or timeout exceptions.</li>
+    </ul>
+    <p style="margin-top: 15px; font-style: italic; color: #475569;">
+      Certification Statement: This test suite certifies that the Noir frontend and backend services satisfy all functional, security, access control, and distribution requirements specified under the project architectural roadmap.
+    </p>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

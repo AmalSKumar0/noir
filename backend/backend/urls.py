@@ -32,9 +32,14 @@ def health_check(request):
     return JsonResponse(data)
 
 
+from apps.cli import views as cli_views
+
 urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('api/health/', health_check, name='api_health_check'),
+    path('install.sh', cli_views.install_sh_view, name='root_install_sh'),
+    path('install.ps1', cli_views.install_ps1_view, name='root_install_ps1'),
+    path('downloads/<str:filename>', cli_views.download_binary_view, name='root_download_binary'),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('apps.accounts.urls')),
     path('api/cli/', include('apps.cli.urls')),

@@ -34,9 +34,10 @@ const responseCache = new Map<string, any>();
  */
 export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const fallback = import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://api.amalskumar.dev';
   let base = (envUrl && typeof envUrl === 'string' && envUrl.trim())
     ? envUrl.trim()
-    : 'http://127.0.0.1:8000';
+    : fallback;
 
   // Strip trailing slashes
   base = base.replace(/\/+$/, '');

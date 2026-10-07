@@ -14,7 +14,11 @@ if str(BACKEND_DIR) not in sys.path:
 # Disambiguate local 'test' package from Python stdlib 'test'
 sys.modules.pop("test", None)
 
+from dotenv import load_dotenv
+load_dotenv(BACKEND_DIR / ".env")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+if not os.environ.get("SECRET_KEY"):
+    os.environ["SECRET_KEY"] = "noir-test-secret-key-development-override-12345"
 
 import django
 django.setup()

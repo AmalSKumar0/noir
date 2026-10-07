@@ -15,7 +15,7 @@ Write-Host ""
 # Determine Base URL
 $BaseUrl = $env:NOIR_SERVER_URL
 if (-not $BaseUrl) {
-    $BaseUrl = "http://localhost:3000"
+    $BaseUrl = "https://noir.amalskumar.dev"
 }
 $BaseUrl = $BaseUrl.TrimEnd('/')
 
