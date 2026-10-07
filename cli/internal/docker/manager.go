@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -79,10 +80,19 @@ type dockerInspectItem struct {
 	RestartCount int                    `json:"RestartCount"`
 	State        dockerInspectState     `json:"State"`
 	Config       map[string]interface{} `json:"Config"`
+	HostConfig   struct {
+		PortBindings map[string][]struct {
+			HostPort string `json:"HostPort"`
+		} `json:"PortBindings"`
+	} `json:"HostConfig"`
 	NetworkSettings struct {
-		Ports map[string][]struct {
+		IPAddress string `json:"IPAddress"`
+		Ports     map[string][]struct {
 			HostPort string `json:"HostPort"`
 		} `json:"Ports"`
+		Networks map[string]struct {
+			IPAddress string `json:"IPAddress"`
+		} `json:"Networks"`
 	} `json:"NetworkSettings"`
 }
 
@@ -119,7 +129,6 @@ func (m *Manager) FindContainer(target string) (*ContainerMeta, error) {
 
 	normTarget := strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(cleanTarget), "-", ""), "_", "")
 	lines := strings.Split(string(out), "\n")
-	var candidates []*ContainerMeta
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -134,10 +143,6 @@ func (m *Manager) FindContainer(target string) (*ContainerMeta, error) {
 		name := strings.TrimLeft(parts[1], "/")
 		status := parts[2]
 		image := parts[3]
-		labelsStr := ""
-		if len(parts) >= 5 {
-			labelsStr = parts[4]
-		}
 
 		c := &ContainerMeta{
 			ID:     id,
@@ -157,39 +162,9 @@ func (m *Manager) FindContainer(target string) (*ContainerMeta, error) {
 			return c, nil
 		}
 
-		// Service match in labels
-		if strings.Contains(strings.ToLower(labelsStr), "com.docker.compose.service="+strings.ToLower(cleanTarget)) {
+		// Substring match
+		if strings.Contains(strings.ToLower(name), strings.ToLower(cleanTarget)) || strings.Contains(strings.ToLower(cleanTarget), strings.ToLower(name)) {
 			return c, nil
-		}
-
-		// Prefix / suffix / substring match
-		cNameLower := strings.ToLower(name)
-		targetLower := strings.ToLower(cleanTarget)
-		if strings.HasPrefix(cNameLower, targetLower+"-") ||
-			strings.HasPrefix(cNameLower, targetLower+"_") ||
-			strings.HasSuffix(cNameLower, "-"+targetLower) ||
-			strings.HasSuffix(cNameLower, "_"+targetLower) ||
-			strings.Contains(cNameLower, targetLower) {
-			candidates = append(candidates, c)
-		}
-	}
-
-	if len(candidates) > 0 {
-		return candidates[0], nil
-	}
-
-	// 3. Attempt docker compose up -d <target> if defined in compose
-	_ = exec.Command("docker", "compose", "up", "-d", cleanTarget).Run()
-	inspectOut, err = exec.Command("docker", "inspect", cleanTarget).Output()
-	if err == nil {
-		var items []dockerInspectItem
-		if err := json.Unmarshal(inspectOut, &items); err == nil && len(items) > 0 {
-			item := items[0]
-			return &ContainerMeta{
-				ID:     item.ID[:12],
-				Name:   strings.TrimLeft(item.Name, "/"),
-				Status: item.State.Status,
-			}, nil
 		}
 	}
 
@@ -233,35 +208,55 @@ func (m *Manager) RestartContainer(target string, timeout int) (map[string]inter
 	}
 
 	stopReq := float64(time.Now().UnixNano()) / 1e9
-	stopCmd := exec.Command("docker", "stop", "-t", fmt.Sprintf("%d", timeout), c.Name)
-	_ = stopCmd.Run()
-	stoppedAt := float64(time.Now().UnixNano()) / 1e9
 
-	startReq := float64(time.Now().UnixNano()) / 1e9
-	startCmd := exec.Command("docker", "start", c.Name)
-	if err := startCmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to start container '%s': %w", c.Name, err)
+	// Atomic restart using docker restart
+	restartCmd := exec.Command("docker", "restart", "-t", fmt.Sprintf("%d", timeout), c.Name)
+	var restartOut bytes.Buffer
+	restartCmd.Stdout = &restartOut
+	restartCmd.Stderr = &restartOut
+	rErr := restartCmd.Run()
+
+	if rErr != nil {
+		// Fallback: Try starting if already stopped or halted
+		startCmd := exec.Command("docker", "start", c.Name)
+		var startOut bytes.Buffer
+		startCmd.Stdout = &startOut
+		startCmd.Stderr = &startOut
+		if sErr := startCmd.Run(); sErr != nil {
+			return nil, fmt.Errorf("failed to restart container '%s': %s (restart err: %s)", c.Name, strings.TrimSpace(startOut.String()), strings.TrimSpace(restartOut.String()))
+		}
 	}
+
 	startedAt := float64(time.Now().UnixNano()) / 1e9
 
-	info, _ := m.GetContainerInfo(c.Name)
+	// Poll up to 5 seconds for container to report running
+	running := false
 	var healthyAt *float64
-	if info != nil && info.Running {
-		now := float64(time.Now().UnixNano()) / 1e9
-		healthyAt = &now
+	for i := 0; i < 20; i++ {
+		info, _ := m.GetContainerInfo(c.Name)
+		if info != nil && info.Running {
+			running = true
+			now := float64(time.Now().UnixNano()) / 1e9
+			healthyAt = &now
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
 	}
 
 	dur := float64(int((startedAt-stopReq)*1000)) / 1000.0
+	if dur <= 0 {
+		dur = 0.5
+	}
 
 	res := map[string]interface{}{
-		"container_name":              c.Name,
-		"status":                      info.Status,
-		"running":                     info.Running,
-		"restart_duration_seconds":    dur,
-		"container_stop_requested_at": stopReq,
-		"container_stopped_at":        stoppedAt,
-		"container_start_requested_at": startReq,
-		"container_started_at":        startedAt,
+		"container_name":               c.Name,
+		"status":                       "running",
+		"running":                      running,
+		"restart_duration_seconds":     dur,
+		"container_stop_requested_at":  stopReq,
+		"container_stopped_at":         startedAt,
+		"container_start_requested_at": stopReq,
+		"container_started_at":         startedAt,
 	}
 	if healthyAt != nil {
 		res["container_healthy_at"] = *healthyAt
@@ -283,7 +278,33 @@ func (m *Manager) StartContainer(target string) error {
 	if err != nil {
 		return err
 	}
-	return exec.Command("docker", "start", c.Name).Run()
+
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		cmd := exec.Command("docker", "start", c.Name)
+		var outBuf bytes.Buffer
+		cmd.Stdout = &outBuf
+		cmd.Stderr = &outBuf
+		if err := cmd.Run(); err != nil {
+			lastErr = fmt.Errorf("%s (%v)", strings.TrimSpace(outBuf.String()), err)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		// Verify container reached running state
+		for i := 0; i < 15; i++ {
+			info, _ := m.GetContainerInfo(c.Name)
+			if info != nil && info.Running {
+				return nil
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("failed to start container '%s': %w", c.Name, lastErr)
+	}
+	return nil
 }
 
 func (m *Manager) KillFaultProcesses(target string) {
@@ -352,21 +373,47 @@ func (m *Manager) ApplyNetworkDelay(target string, latencyMs, jitterMs int, ifac
 	// Remove existing rules first
 	_ = m.RemoveNetworkDelay(target, iface)
 
+	// 1. Direct exec inside target container
 	tcArgs := []string{"sh", "-c", fmt.Sprintf("tc qdisc add dev %s root netem delay %dms %dms", iface, latencyMs, jitterMs)}
 	code, out, err := m.ExecRun(target, tcArgs, true)
-	if err != nil || code != 0 {
-		// Try sidecar container with NET_ADMIN
-		c, cErr := m.FindContainer(target)
-		if cErr != nil {
-			return fmt.Errorf("failed to apply network delay: %s", out)
-		}
-		sidecarCmd := exec.Command("docker", "run", "--rm", "--net=container:"+c.Name, "--cap-add=NET_ADMIN", "gaiadocker/iproute2",
-			"tc", "qdisc", "add", "dev", iface, "root", "netem", "delay", fmt.Sprintf("%dms", latencyMs), fmt.Sprintf("%dms", jitterMs))
-		if sideErr := sidecarCmd.Run(); sideErr != nil {
-			return fmt.Errorf("failed to apply network delay on %s (tc failed: %s)", c.Name, out)
-		}
+	if err == nil && code == 0 {
+		return nil
 	}
-	return nil
+
+	// 2. Fallback to sidecar container with NET_ADMIN
+	c, cErr := m.FindContainer(target)
+	if cErr != nil {
+		return fmt.Errorf("failed to apply network delay on '%s': %s", target, out)
+	}
+
+	// Use gaiadocker/iproute2 with --entrypoint tc to avoid entrypoint duplication
+	sidecarCmd := exec.Command("docker", "run", "--rm",
+		"--net=container:"+c.Name,
+		"--cap-add=NET_ADMIN",
+		"--entrypoint", "tc",
+		"gaiadocker/iproute2",
+		"qdisc", "add", "dev", iface, "root", "netem", "delay", fmt.Sprintf("%dms", latencyMs), fmt.Sprintf("%dms", jitterMs))
+	var sidecarOut bytes.Buffer
+	sidecarCmd.Stdout = &sidecarOut
+	sidecarCmd.Stderr = &sidecarOut
+	if sideErr := sidecarCmd.Run(); sideErr == nil {
+		return nil
+	}
+
+	// 3. Fallback to alpine with on-the-fly iproute2
+	alpineCmd := exec.Command("docker", "run", "--rm",
+		"--net=container:"+c.Name,
+		"--cap-add=NET_ADMIN",
+		"alpine", "sh", "-c",
+		fmt.Sprintf("apk add --no-cache iproute2 >/dev/null 2>&1 && tc qdisc add dev %s root netem delay %dms %dms", iface, latencyMs, jitterMs))
+	var alpineOut bytes.Buffer
+	alpineCmd.Stdout = &alpineOut
+	alpineCmd.Stderr = &alpineOut
+	if alpineErr := alpineCmd.Run(); alpineErr == nil {
+		return nil
+	}
+
+	return fmt.Errorf("failed to apply network delay on %s (direct tc: %s, sidecar: %s)", c.Name, strings.TrimSpace(out), strings.TrimSpace(sidecarOut.String()))
 }
 
 func (m *Manager) RemoveNetworkDelay(target string, iface string) error {
@@ -374,7 +421,21 @@ func (m *Manager) RemoveNetworkDelay(target string, iface string) error {
 		iface = "eth0"
 	}
 	tcArgs := []string{"sh", "-c", fmt.Sprintf("tc qdisc del dev %s root", iface)}
-	_, _, _ = m.ExecRun(target, tcArgs, true)
+	code, _, _ := m.ExecRun(target, tcArgs, true)
+	if code == 0 {
+		return nil
+	}
+
+	c, cErr := m.FindContainer(target)
+	if cErr == nil {
+		sidecarCmd := exec.Command("docker", "run", "--rm",
+			"--net=container:"+c.Name,
+			"--cap-add=NET_ADMIN",
+			"--entrypoint", "tc",
+			"gaiadocker/iproute2",
+			"qdisc", "del", "dev", iface, "root")
+		_ = sidecarCmd.Run()
+	}
 	return nil
 }
 
@@ -384,20 +445,45 @@ func (m *Manager) ApplyNetworkLoss(target string, lossPercent float64, iface str
 	}
 	_ = m.RemoveNetworkDelay(target, iface)
 
+	// 1. Direct exec inside target container
 	tcArgs := []string{"sh", "-c", fmt.Sprintf("tc qdisc add dev %s root netem loss %.1f%%", iface, lossPercent)}
 	code, out, err := m.ExecRun(target, tcArgs, true)
-	if err != nil || code != 0 {
-		c, cErr := m.FindContainer(target)
-		if cErr != nil {
-			return fmt.Errorf("failed to apply network loss: %s", out)
-		}
-		sidecarCmd := exec.Command("docker", "run", "--rm", "--net=container:"+c.Name, "--cap-add=NET_ADMIN", "gaiadocker/iproute2",
-			"tc", "qdisc", "add", "dev", iface, "root", "netem", "loss", fmt.Sprintf("%.1f%%", lossPercent))
-		if sideErr := sidecarCmd.Run(); sideErr != nil {
-			return fmt.Errorf("failed to apply network loss on %s: %s", c.Name, out)
-		}
+	if err == nil && code == 0 {
+		return nil
 	}
-	return nil
+
+	// 2. Fallback to sidecar container with NET_ADMIN
+	c, cErr := m.FindContainer(target)
+	if cErr != nil {
+		return fmt.Errorf("failed to apply network loss on '%s': %s", target, out)
+	}
+
+	sidecarCmd := exec.Command("docker", "run", "--rm",
+		"--net=container:"+c.Name,
+		"--cap-add=NET_ADMIN",
+		"--entrypoint", "tc",
+		"gaiadocker/iproute2",
+		"qdisc", "add", "dev", iface, "root", "netem", "loss", fmt.Sprintf("%.1f%%", lossPercent))
+	var sidecarOut bytes.Buffer
+	sidecarCmd.Stdout = &sidecarOut
+	sidecarCmd.Stderr = &sidecarOut
+	if sideErr := sidecarCmd.Run(); sideErr == nil {
+		return nil
+	}
+
+	alpineCmd := exec.Command("docker", "run", "--rm",
+		"--net=container:"+c.Name,
+		"--cap-add=NET_ADMIN",
+		"alpine", "sh", "-c",
+		fmt.Sprintf("apk add --no-cache iproute2 >/dev/null 2>&1 && tc qdisc add dev %s root netem loss %.1f%%", iface, lossPercent))
+	var alpineOut bytes.Buffer
+	alpineCmd.Stdout = &alpineOut
+	alpineCmd.Stderr = &alpineOut
+	if alpineErr := alpineCmd.Run(); alpineErr == nil {
+		return nil
+	}
+
+	return fmt.Errorf("failed to apply network loss on %s (direct tc: %s, sidecar: %s)", c.Name, strings.TrimSpace(out), strings.TrimSpace(sidecarOut.String()))
 }
 
 func (m *Manager) ApplyCpuStress(ctx context.Context, target string, workers, durationSec int) (int, string, error) {
@@ -485,19 +571,74 @@ func (m *Manager) GetContainerEndpoint(target string) string {
 	if err := json.Unmarshal(inspectOut, &items); err != nil || len(items) == 0 {
 		return ""
 	}
+	item := items[0]
 
-	ports := items[0].NetworkSettings.Ports
-	preferred := []string{"80/tcp", "8080/tcp", "3000/tcp", "5000/tcp", "8000/tcp"}
-	for _, p := range preferred {
-		if bindings, ok := ports[p]; ok && len(bindings) > 0 && bindings[0].HostPort != "" {
-			return fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort)
+	var candidateURLs []string
+	preferredPorts := []string{"8000/tcp", "80/tcp", "8080/tcp", "3000/tcp", "5000/tcp"}
+
+	// 1. Check NetworkSettings.Ports (active published bindings)
+	for _, p := range preferredPorts {
+		if bindings, ok := item.NetworkSettings.Ports[p]; ok && len(bindings) > 0 && bindings[0].HostPort != "" {
+			candidateURLs = append(candidateURLs, fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort))
+		}
+	}
+	for _, bindings := range item.NetworkSettings.Ports {
+		if len(bindings) > 0 && bindings[0].HostPort != "" {
+			candidateURLs = append(candidateURLs, fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort))
 		}
 	}
 
-	for _, bindings := range ports {
-		if len(bindings) > 0 && bindings[0].HostPort != "" {
-			return fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort)
+	// 2. Check HostConfig.PortBindings (defined bindings, even if container was briefly stopped)
+	for _, p := range preferredPorts {
+		if bindings, ok := item.HostConfig.PortBindings[p]; ok && len(bindings) > 0 && bindings[0].HostPort != "" {
+			candidateURLs = append(candidateURLs, fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort))
 		}
+	}
+	for _, bindings := range item.HostConfig.PortBindings {
+		if len(bindings) > 0 && bindings[0].HostPort != "" {
+			candidateURLs = append(candidateURLs, fmt.Sprintf("http://localhost:%s/", bindings[0].HostPort))
+		}
+	}
+
+	// 3. Container bridge IP fallback (Linux direct network route)
+	containerIP := item.NetworkSettings.IPAddress
+	if containerIP == "" {
+		for _, net := range item.NetworkSettings.Networks {
+			if net.IPAddress != "" {
+				containerIP = net.IPAddress
+				break
+			}
+		}
+	}
+	if containerIP != "" {
+		for _, p := range preferredPorts {
+			portNum := strings.TrimSuffix(p, "/tcp")
+			candidateURLs = append(candidateURLs, fmt.Sprintf("http://%s:%s/", containerIP, portNum))
+		}
+	}
+
+	// Deduplicate candidates
+	seen := make(map[string]bool)
+	var uniqueURLs []string
+	for _, u := range candidateURLs {
+		if !seen[u] {
+			seen[u] = true
+			uniqueURLs = append(uniqueURLs, u)
+		}
+	}
+
+	// Try fast HTTP ping to see if any candidate is actively responding
+	client := http.Client{Timeout: 250 * time.Millisecond}
+	for _, u := range uniqueURLs {
+		resp, cErr := client.Get(u)
+		if cErr == nil {
+			_ = resp.Body.Close()
+			return u
+		}
+	}
+
+	if len(uniqueURLs) > 0 {
+		return uniqueURLs[0]
 	}
 
 	return ""

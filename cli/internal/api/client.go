@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -20,13 +19,7 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	rawURL := os.Getenv("API_KEY")
-	if rawURL == "" || (!strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://")) {
-		rawURL = "https://api.amalskumar.dev"
-	}
-	if rawURL == "" {
-		rawURL = config.GetBackendURL()
-	}
+	rawURL := config.GetBackendURL()
 	if rawURL == "" {
 		rawURL = config.DefaultBackend
 	}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	"noir-cli/internal/detector"
 	"noir-cli/internal/docker"
 	"noir-cli/internal/faults"
+	"noir-cli/internal/faults/types"
 	"noir-cli/internal/ui"
 )
 
@@ -264,7 +266,7 @@ func runFaultInject(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s\n", ui.StyleCyan.Render(fmt.Sprintf("Measuring baseline health on '%s'...", resolvedProbeURL)))
 		baseline := evaluator.MeasureBaseline(3, 0.3)
 		if healthy, ok := baseline["healthy"].(bool); ok && healthy {
-			fmt.Printf("  %s\n", ui.StyleGreen.Render(fmt.Sprintf("✔ Baseline steady state healthy (%vms avg)", baseline["avg_latency_ms"])))
+			fmt.Printf("  %s\n", ui.StyleGreen.Render(fmt.Sprintf("✔ Baseline steady state healthy (%s avg)", formatVal(baseline["avg_latency_ms"], "ms"))))
 		} else {
 			fmt.Printf("  %s\n", ui.StyleYellow.Render("⚠ Warning: Target endpoint did not respond with expected status"))
 		}
@@ -281,6 +283,18 @@ func runFaultInject(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("%s\n", ui.StyleCyan.Render("Verifying post-fault recovery (target RTO: 5.0s)..."))
 	recoveryMetrics := evaluator.MeasureRecovery(12.0, 5.0)
+
+	if result == nil {
+		errMsg := "Execution failure"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		result = &types.FaultResult{
+			Success:   false,
+			Error:     errMsg,
+			Recovered: false,
+		}
+	}
 
 	scorer := &faults.ResilienceScorer{}
 	resilienceReport := scorer.CalculateScore(
@@ -312,9 +326,9 @@ func runFaultInject(cmd *cobra.Command, args []string) {
 		"Grade %s — Score %s/100 (%s)\n\n"+
 			"Steady-State Probe: %s\n"+
 			"Fault Window Duration: %vs (configured: %ds)\n"+
-			"In-Fault Availability: %v%%\n"+
-			"In-Fault Latency P95: %vms\n"+
-			"Recovery Time (RTO): %vs\n"+
+			"In-Fault Availability: %s\n"+
+			"In-Fault Latency P95: %s\n"+
+			"Recovery Time (RTO): %s\n"+
 			"Rollback Cleaned Up: %v\n\n"+
 			"Architectural Recommendations:\n%s",
 		grade,
@@ -323,9 +337,9 @@ func runFaultInject(cmd *cobra.Command, args []string) {
 		resolvedProbeURL,
 		lifecycle["fault_window_duration_seconds"],
 		faultDuration,
-		inFaultMetrics["availability_percent"],
-		inFaultMetrics["p95_latency_ms"],
-		recoveryMetrics["rto_seconds"],
+		formatVal(inFaultMetrics["availability_percent"], "%"),
+		formatVal(inFaultMetrics["p95_latency_ms"], "ms"),
+		formatVal(recoveryMetrics["rto_seconds"], "s"),
 		result.Recovered,
 		strings.Join(recsStr, "\n"),
 	)
@@ -351,7 +365,9 @@ func runFaultInject(cmd *cobra.Command, args []string) {
 			"steady_state_baseline": evaluator.Baseline,
 			"experiment_metrics":    inFaultMetrics,
 			"recovery_metrics":      recoveryMetrics,
+			"raw_observations":      evaluator.AllRawObservations(),
 			"recommendations":       resilienceReport["recommendations"],
+			"lifecycle_timing":      lifecycle,
 		}
 		_, _ = client.SendRequest(fmt.Sprintf("/projects/%s/faults/%v/report/", projectID, faultRecordID), "POST", map[string]interface{}{
 			"status":        statusStr,
@@ -631,8 +647,20 @@ func executeQueuedFault(faultID int, faultType, target string, params map[string
 	if p, ok := params["probe_url"].(string); ok {
 		probeURL = p
 	}
+	endpoint := dm.GetContainerEndpoint(target)
 	if probeURL == "" {
-		probeURL = dm.GetContainerEndpoint(target)
+		probeURL = endpoint
+	} else if endpoint != "" && probeURL != endpoint {
+		testProbe := &http.Client{Timeout: 1 * time.Second}
+		if resp, err := testProbe.Get(probeURL); err != nil || resp.StatusCode >= 500 {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			emitLog(fmt.Sprintf("[STEADY STATE] Probe '%s' unreachable or failing. Using container endpoint '%s'.", probeURL, endpoint), "WARN")
+			probeURL = endpoint
+		} else {
+			resp.Body.Close()
+		}
 	}
 
 	evaluator := faults.NewSteadyStateEvaluator(probeURL, 200, target, dm)
@@ -649,11 +677,23 @@ func executeQueuedFault(faultID int, faultType, target string, params map[string
 	evaluator.StartInFaultProbing(1.0)
 	emitLog(fmt.Sprintf("Executing %s on target '%s'...", executor.DisplayName(), target), "INFO")
 
-	result, _ := executor.Execute(dm, target, params, execCtx)
+	result, execErr := executor.Execute(dm, target, params, execCtx)
 	faultWindowEnd := float64(time.Now().UnixNano()) / 1e9
 
 	inFaultMetrics := evaluator.StopInFaultProbing(faultWindowEnd)
 	lifecycle := evaluator.LifecycleTimestamps()
+
+	if result == nil {
+		errMsg := "Execution failure"
+		if execErr != nil {
+			errMsg = execErr.Error()
+		}
+		result = &types.FaultResult{
+			Success:   false,
+			Error:     errMsg,
+			Recovered: false,
+		}
+	}
 
 	wasCancelled := isCancelled() || (result != nil && result.Details != nil && result.Details["cancelled"] == true)
 
@@ -701,6 +741,7 @@ func executeQueuedFault(faultID int, faultType, target string, params map[string
 		"steady_state_baseline": evaluator.Baseline,
 		"experiment_metrics":    inFaultMetrics,
 		"recovery_metrics":      recoveryMetrics,
+		"raw_observations":      evaluator.AllRawObservations(),
 		"recommendations":       resilienceReport["recommendations"],
 		"lifecycle_timing":      lifecycle,
 	}
@@ -717,5 +758,29 @@ func executeQueuedFault(faultID int, faultType, target string, params map[string
 		fmt.Printf("  %s\n", ui.StyleYellow.Render(fmt.Sprintf("■ Fault #%d Cancelled & Cleaned Up", faultID)))
 	} else {
 		fmt.Printf("  %s\n", ui.StyleDanger.Render(fmt.Sprintf("✖ Fault #%d Failed: %s", faultID, result.Error)))
+	}
+}
+
+func formatVal(v interface{}, suffix string) string {
+	if v == nil {
+		return "N/A"
+	}
+	switch val := v.(type) {
+	case *float64:
+		if val == nil {
+			return "N/A"
+		}
+		return fmt.Sprintf("%.2f%s", *val, suffix)
+	case float64:
+		return fmt.Sprintf("%.2f%s", val, suffix)
+	case *int:
+		if val == nil {
+			return "N/A"
+		}
+		return fmt.Sprintf("%d%s", *val, suffix)
+	case int:
+		return fmt.Sprintf("%d%s", val, suffix)
+	default:
+		return fmt.Sprintf("%v%s", val, suffix)
 	}
 }

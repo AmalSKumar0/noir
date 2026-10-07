@@ -717,20 +717,32 @@ func (rs *ResilienceScorer) CalculateScore(
 	// Calculate Score Components
 	// 1. Availability (30 pts)
 	availScore := 0.0
+	var avVal *float64
 	if av, ok := expMetrics["availability_percent"].(*float64); ok && av != nil {
-		availScore = math.Round((*av/100.0)*30*10) / 10
+		avVal = av
+	} else if av, ok := expMetrics["availability_percent"].(float64); ok {
+		avVal = &av
+	}
+	if avVal != nil {
+		availScore = math.Round((*avVal/100.0)*30*10) / 10
 	}
 
 	// 2. Latency Degradation (20 pts)
 	latScore := 10.0
+	var multVal *float64
 	if mult, ok := expMetrics["latency_multiplier"].(*float64); ok && mult != nil {
-		if *mult <= 1.15 {
+		multVal = mult
+	} else if mult, ok := expMetrics["latency_multiplier"].(float64); ok {
+		multVal = &mult
+	}
+	if multVal != nil {
+		if *multVal <= 1.15 {
 			latScore = 20.0
-		} else if *mult <= 1.5 {
+		} else if *multVal <= 1.5 {
 			latScore = 17.0
-		} else if *mult <= 2.0 {
+		} else if *multVal <= 2.0 {
 			latScore = 13.0
-		} else if *mult <= 3.0 {
+		} else if *multVal <= 3.0 {
 			latScore = 8.0
 		} else {
 			latScore = 4.0
@@ -749,12 +761,22 @@ func (rs *ResilienceScorer) CalculateScore(
 		if !recOk {
 			recScore = 0.0
 		} else {
+			var rtoVal *float64
 			if rto, ok := recoveryMetrics["rto_seconds"].(float64); ok {
-				if rto <= 1.0 {
+				rtoVal = &rto
+			} else if rto, ok := recoveryMetrics["rto_seconds"].(*float64); ok && rto != nil {
+				rtoVal = rto
+			} else if rto, ok := recoveryMetrics["recovery_time_seconds"].(float64); ok {
+				rtoVal = &rto
+			} else if rto, ok := recoveryMetrics["recovery_time_seconds"].(*float64); ok && rto != nil {
+				rtoVal = rto
+			}
+			if rtoVal != nil {
+				if *rtoVal <= 1.0 {
 					recScore = 25.0
-				} else if rto <= 3.0 {
+				} else if *rtoVal <= 3.0 {
 					recScore = 20.0
-				} else if rto <= 5.0 {
+				} else if *rtoVal <= 5.0 {
 					recScore = 15.0
 				} else {
 					recScore = 8.0

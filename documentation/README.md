@@ -8,6 +8,7 @@ Welcome to the comprehensive architecture and engineering documentation for **No
 
 | Module | Document | Description |
 | :--- | :--- | :--- |
+| **00. System Overview** | [System Overview & Architecture](./00_system_overview.md) | High-level system architecture, problem domain (Why, What, When, How, Where), and measurement models |
 | **01. Authentication** | [Authentication Architecture](./01_authentication_architecture.md) | End-to-end multi-layer auth (JWT rotation, OS Keyring, RBAC, OAuth, Self-healing roles) |
 | **02. Lynx AST Engine** | [Lynx Profiler Architecture](./02_lynx_engine_architecture.md) | Zero-dependency static analysis engine, heuristic scoring, framework detection |
 | **03. Backend Architecture** | [Backend API & Telemetry Engine](./03_backend_architecture.md) | Django REST Framework architecture, Models, Channels WebSockets, Rationale & Data Flow |
