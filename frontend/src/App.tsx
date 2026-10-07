@@ -25,6 +25,7 @@ import ProjectReportsPage from './pages/ProjectReportsPage';
 import OrganizationProfile from './pages/OrganizationProfile';
 import UserProfile from './pages/UserProfile';
 import QuickstartPage from './pages/QuickstartPage';
+import CliDownloadPage from './pages/CliDownloadPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManageProjects from './pages/AdminManageProjects';
 import AdminProjectDetailPage from './pages/AdminProjectDetailPage';
@@ -35,7 +36,7 @@ import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
-import { checkAndRefreshToken } from './utils/auth';
+import { checkAndRefreshToken, isAuthenticated, getRoleHomePath } from './utils/auth';
 
 const pageTransition: any = { 
   duration: 0.16,
@@ -51,14 +52,18 @@ function AnimatedRoutes() {
         <Route 
           path="/" 
           element={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={pageTransition}
-            >
-              <Home />
-            </motion.div>
+            isAuthenticated() ? (
+              <Navigate to={getRoleHomePath()} replace />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={pageTransition}
+              >
+                <Home />
+              </motion.div>
+            )
           } 
         />
         <Route 
@@ -310,6 +315,24 @@ function AnimatedRoutes() {
             </motion.div>
           } 
         />
+
+        <Route 
+          path="/download" 
+          element={
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={pageTransition}
+            >
+              <CliDownloadPage />
+            </motion.div>
+          } 
+        />
+        <Route path="/cli" element={<Navigate to="/download" replace />} />
+        <Route path="/cli/download" element={<Navigate to="/download" replace />} />
+        <Route path="/dashboard/download" element={<Navigate to="/download" replace />} />
+        <Route path="/company/download" element={<Navigate to="/download" replace />} />
 
 
     

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Terminal, 
   Check, 
@@ -15,7 +16,8 @@ import {
   Zap, 
   Unlink, 
   Layers,
-  Code2
+  Code2,
+  Download
 } from 'lucide-react';
 import Modal from './Modal';
 
@@ -350,17 +352,27 @@ export default function QuickstartModal({
         )}
 
         {/* Footer */}
-        <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+        <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-[10px] font-mono text-stone-400">
-            Noir Agent CLI v1.0 &bull; Docker Container Engine Supported
+            Noir Agent CLI v2.0 (Go Native) &bull; Linux & Windows Supported
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
-          >
-            Close Guide
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/download"
+              onClick={onClose}
+              className="px-4 py-2 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download CLI</span>
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-full border border-white/10 text-stone-400 hover:text-white hover:border-white/20 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

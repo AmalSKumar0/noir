@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   ArrowRight,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -23,6 +24,7 @@ const tabs = [
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/companies', label: 'Companies', icon: Building2 },
   { to: '/admin/projects', label: 'Projects', icon: Folder },
+  { to: '/download', label: 'Download CLI', icon: Download },
 ];
 
 function getInitials() {

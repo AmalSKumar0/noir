@@ -21,7 +21,8 @@ import {
   Sparkles,
   ArrowUpRight,
   CheckCircle2,
-  Folder
+  Folder,
+  Download
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { getUserRole } from '../utils/auth';
@@ -222,18 +223,13 @@ export default function QuickstartPage({ isCompanyView = false }: { isCompanyVie
 
           {/* Quick Install Pill */}
           <div className="flex items-center gap-2">
-            <div className="h-8 px-2.5 rounded-md bg-[#0D0F17] border border-zinc-800 flex items-center gap-2 font-mono text-xs">
-              <span className="text-zinc-500 text-[10px] select-none">INSTALL:</span>
-              <span className="text-emerald-400 font-semibold">pip install noir-agent</span>
-              <button
-                type="button"
-                onClick={() => copyToClipboard('pip install noir-agent')}
-                className="text-zinc-400 hover:text-white p-0.5 transition-colors cursor-pointer"
-                title="Copy install command"
-              >
-                {copiedText === 'pip install noir-agent' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+            <Link
+              to="/download"
+              className="h-8 px-3 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm shadow-violet-900/30"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Go CLI</span>
+            </Link>
 
             <Link
               to="/dashboard"

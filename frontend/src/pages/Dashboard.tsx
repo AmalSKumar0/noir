@@ -17,7 +17,8 @@ import {
   Radio,
   RefreshCw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import UserLayout from '../components/UserLayout';
 import { Skeleton } from '../components/Skeleton';
@@ -612,6 +613,39 @@ export default function Dashboard() {
             </div>
           </div>
 
+        </div>
+
+        {/* =========================================================================
+            NOIR CLI AGENT (GO v2.0) QUICK DOWNLOAD STRIP
+           ========================================================================= */}
+        <div className="bg-gradient-to-r from-violet-950/40 via-[#0D0F17] to-indigo-950/30 border border-violet-500/20 rounded-lg p-3 px-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-md bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shrink-0">
+              <Terminal className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-100">Noir CLI Agent</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  v2.0 Go Native
+                </span>
+                <span className="text-[11px] text-zinc-500 hidden md:inline">Linux, Windows & macOS zero-dependency binaries</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Install directly to stream live container telemetry, inject chaos faults, and automate test audits.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Link
+              to="/download"
+              className="h-7 px-3 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm shadow-violet-900/30"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download & Install CLI</span>
+            </Link>
+          </div>
         </div>
 
         {/* =========================================================================

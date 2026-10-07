@@ -29,7 +29,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
   };
 
   return (
-    <div className="w-full flex flex-col font-sans transition-colors duration-500 bg-transparent text-white relative z-50">
+    <div className="w-full flex flex-col font-sans transition-colors duration-500 bg-transparent text-white absolute top-0 left-0 right-0 z-50">
       {/* Desktop Top Sliding Tray (>= md only) */}
       <div
         className={`hidden md:block w-full overflow-hidden transition-all duration-500 ease-in-out z-30 bg-black/50 backdrop-blur-2xl ${
@@ -63,6 +63,19 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-violet-400 hover:text-white block cursor-pointer"
+                  >
+                    {link}
+                  </motion.span>
+                </Link>
+              ) : link === 'Download Agent' ? (
+                <Link
+                  to="/download"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <motion.span
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="font-semibold uppercase tracking-widest text-xs md:text-sm transition-colors text-emerald-400 hover:text-white block cursor-pointer"
                   >
                     {link}
                   </motion.span>
@@ -249,6 +262,25 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }: { isMenuOpen: bool
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-violet-500/30 text-violet-200">
                           Register
+                        </span>
+                      </Link>
+                    );
+                  }
+
+                  if (link === 'Download Agent') {
+                    return (
+                      <Link
+                        key={link}
+                        to="/download"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center justify-between p-3 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-200 hover:text-white transition-all text-sm font-medium"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-emerald-400" />
+                          <span>{link}</span>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-200">
+                          Install
                         </span>
                       </Link>
                     );

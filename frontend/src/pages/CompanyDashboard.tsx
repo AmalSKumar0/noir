@@ -36,7 +36,8 @@ import {
   FolderGit2,
   FolderPlus,
   Edit3,
-  Server
+  Server,
+  Download
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -1230,12 +1231,21 @@ export default function CompanyDashboard() {
           {/* Body Content */}
           <div className="relative z-10 flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-4">
             <div className="p-3.5 rounded-2xl bg-black/50 border border-white/10 space-y-2">
-              <p className="text-[10px] font-mono text-violet-300 uppercase font-bold flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-violet-500/20 flex items-center justify-center text-[9px]">1</span>
-                Install CLI Agent
-              </p>
-              <pre className="p-2.5 rounded-xl bg-black/80 text-[10px] font-mono text-white/80 overflow-x-auto">
-                <code>npm install -g noir-agent</code>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-mono text-violet-300 uppercase font-bold flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-violet-500/20 flex items-center justify-center text-[9px]">1</span>
+                  Install Go CLI Agent (v2.0)
+                </p>
+                <Link
+                  to="/download"
+                  className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download Page &rarr;</span>
+                </Link>
+              </div>
+              <pre className="p-2.5 rounded-xl bg-black/80 text-[10px] font-mono text-emerald-300 overflow-x-auto">
+                <code>curl -fsSL {window.location.origin}/install.sh | bash</code>
               </pre>
             </div>
 

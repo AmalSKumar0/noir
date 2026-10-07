@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Marquee from '../components/Marquee';
@@ -7,12 +8,24 @@ import Projects from '../components/Projects';
 import CampaignBanner from '../components/CampaignBanner';
 import GetInvolved from '../components/GetInvolved';
 import Footer from '../components/Footer';
+import { isAuthenticated, getRoleHomePath } from '../utils/auth';
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate(getRoleHomePath(), { replace: true });
+    }
+  }, [navigate]);
+
+  if (isAuthenticated()) {
+    return null;
+  }
 
   return (
-    <main className="w-full flex flex-col items-center relative">
+    <main className="w-full flex flex-col items-center relative bg-[#03020E] text-white">
       <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <div className="w-full">
         <Hero />

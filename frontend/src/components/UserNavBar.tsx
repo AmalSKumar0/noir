@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Folder, Code2, Users, LogOut, Bell, Building2, User, Menu, X, ArrowRight } from 'lucide-react';
+import { Home, Folder, Code2, Users, LogOut, Bell, Building2, User, Menu, X, ArrowRight, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getUserRole, checkAndRefreshToken } from '../utils/auth';
 import { apiFetch, getApiBaseUrl } from '../utils/api';
@@ -21,7 +21,12 @@ export default function UserNavBar() {
   const role = getUserRole();
   const isCompany = role === 'company';
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/download') {
+      return location.pathname === '/download' || location.pathname.includes('/download') || location.pathname.includes('/cli');
+    }
+    return location.pathname === path;
+  };
 
   // Auto-close mobile menu on route changes
   useEffect(() => {
@@ -75,6 +80,7 @@ export default function UserNavBar() {
         { to: '/company/projects', icon: Folder, label: 'Projects' },
         { to: '/company/developers', icon: Users, label: 'Add & Manage Devs' },
         { to: '/company/quickstart', icon: Code2, label: 'Quick Start Guide' },
+        { to: '/download', icon: Download, label: 'Download CLI' },
         { to: '/profile', icon: User, label: 'My Profile' },
       ]
     : [
@@ -82,6 +88,7 @@ export default function UserNavBar() {
         { to: '/dashboard/projects', icon: Folder, label: 'Projects' },
         { to: '/organization', icon: Building2, label: 'Organization & Teams' },
         { to: '/quickstart', icon: Code2, label: 'Quick Start Guide' },
+        { to: '/download', icon: Download, label: 'Download CLI' },
         { to: '/profile', icon: User, label: 'My Profile' },
       ];
 
