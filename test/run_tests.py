@@ -21,14 +21,12 @@ from test import config
 from test.utils.seed_data import seed_test_database
 
 SUITE_MAPPING = {
-    "public": "test/suites/test_01_landing_and_public.py",
-    "contact": "test/suites/test_01_landing_and_public.py",
-    "auth": "test/suites/test_02_auth_and_registration.py",
-    "security": "test/suites/test_03_route_guards_and_security.py",
-    "developer": "test/suites/test_04_developer_flow.py",
-    "company": "test/suites/test_05_company_flow.py",
-    "admin": "test/suites/test_06_admin_flow.py",
-    "logout": "test/suites/test_07_notifications_and_logout.py",
+    "login": "test/suites/test_01_user_login.py",
+    "register": "test/suites/test_02_user_registration.py",
+    "landing": "test/suites/test_03_landing_navigation.py",
+    "dashboard": "test/suites/test_04_project_dashboard.py",
+    "fault": "test/suites/test_05_fault_simulation.py",
+    "all": "test/suites",
     "e2e": "test/suites",
 }
 
@@ -64,7 +62,7 @@ def main():
     parser = argparse.ArgumentParser(description="Noir Automated Selenium E2E Test Runner")
     parser.add_argument(
         "--suite",
-        choices=["all", "public", "contact", "auth", "security", "developer", "company", "admin", "logout", "e2e"],
+        choices=["all", "login", "register", "landing", "dashboard", "fault", "e2e"],
         default="all",
         help="Specify which test suite to run (default: all)",
     )

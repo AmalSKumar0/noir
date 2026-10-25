@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noir - Selenium Test Execution Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        body {
+            font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+            background-color: #f4f6f9;
+            color: #111;
+            margin: 0;
+            padding: 20px;
+        }
+        .report-wrapper {
+            max-width: 950px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-radius: 4px;
+        }
+        .report-header {
+            text-align: center;
+            border-bottom: 2px solid #222;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .report-header h1 {
+            margin: 0 0 5px 0;
+            font-size: 22px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #111;
+        }
+        .report-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #444;
+        }
+        .meta-summary {
+            display: flex;
+            justify-content: space-around;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .meta-summary div {
+            text-align: center;
+        }
+        .meta-summary strong {
+            display: block;
+            color: #0f172a;
+            font-size: 14px;
+        }
+        .testcase-container {
+            margin-bottom: 35px;
+            page-break-inside: avoid;
+        }
+        .tc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            color: #000;
+            border: 1.5px solid #000;
+            background: #fff;
+        }
+        .tc-table td, .tc-table th {
+            border: 1px solid #000;
+            padding: 7px 10px;
+            vertical-align: top;
+        }
+        .tc-header-title {
+            background-color: #f1f5f9;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 8px 10px;
+            border-bottom: 1.5px solid #000;
+        }
+        .tc-subheading {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            background-color: #ffffff;
+            padding: 8px;
+            border-bottom: 1px solid #000;
+        }
+        .label-cell {
+            font-weight: bold;
+            width: 25%;
+        }
+        .value-cell {
+            width: 25%;
+        }
+        .steps-head {
+            background-color: #f8fafc;
+            font-weight: bold;
+            text-align: center;
+        }
+        .step-no {
+            text-align: center;
+            font-weight: bold;
+            width: 5%;
+        }
+        .status-pass {
+            font-weight: bold;
+            color: #166534;
+            background-color: #dcfce7;
+            text-align: center;
+            border-radius: 3px;
+            display: inline-block;
+            padding: 2px 8px;
+        }
+        .post-condition-row td {
+            font-weight: bold;
+            background-color: #ffffff;
+        }
+        .post-condition-row span {
+            font-weight: normal;
+        }
+        .signature-section {
+            margin-top: 35px;
+            display: flex;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px dashed #64748b;
+            font-size: 13px;
+        }
+        .signature-box {
+            text-align: center;
+            width: 250px;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            height: 40px;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-wrapper">
+    <div class="report-header">
+        <h1>Noir - Software Reliability & Chaos Engineering Platform</h1>
+        <h2>Automated Selenium E2E Test Execution Report</h2>
+    </div>
+
+    <div class="meta-summary">
+        <div>Total Tests: <strong>5</strong></div>
+        <div>Passed: <strong style="color: #166534;">5</strong></div>
+        <div>Failed: <strong style="color: #991b1b;">0</strong></div>
+        <div>Executed By: <strong>Ms. Ann Mary Thomas</strong></div>
+        <div>Execution Date: <strong>24/10/2026</strong></div>
+        <div>Test Environment: <strong>Firefox / Headless WebDriver</strong></div>
+    </div>
+
+    <!-- TEST CASE 1 -->
+    <div class="testcase-container">
+        <table class="tc-table">
+            <tr>
+                <td colspan="6" class="tc-header-title">Test Case 1</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Project Name:</strong> Noir - AI-Powered Reliability &amp; Chaos Engineering Platform</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="tc-subheading">Login Test Case</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Case ID:</td>
+                <td class="value-cell">Test_1</td>
+                <td colspan="2" class="label-cell">Test Designed By:</td>
+                <td colspan="2" class="value-cell">Amal S Kumar</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Priority (Low/Medium/High):</td>
+                <td class="value-cell">High</td>
+                <td colspan="2" class="label-cell">Test Designed Date:</td>
+                <td colspan="2" class="value-cell">20/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Module Name:</td>
+                <td class="value-cell">Authentication &amp; Access Control</td>
+                <td colspan="2" class="label-cell">Test Executed By :</td>
+                <td colspan="2" class="value-cell"><strong>Ms. Ann Mary Thomas</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Title :</td>
+                <td class="value-cell">Valid User Login Verification</td>
+                <td colspan="2" class="label-cell">Test Execution Date:</td>
+                <td colspan="2" class="value-cell">24/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="5">Verify that a registered developer can successfully log into the Noir system using valid credentials and navigate to the developer workspace dashboard.</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Pre-Condition :</strong> User has valid registered email and password in the database.</td>
+            </tr>
+            <tr class="steps-head">
+                <td style="width: 6%;">Step</td>
+                <td style="width: 24%;">Test Step</td>
+                <td style="width: 20%;">Test Data</td>
+                <td style="width: 24%;">Expected Result</td>
+                <td style="width: 18%;">Actual Result</td>
+                <td style="width: 8%;">Status(Pass/Fail)</td>
+            </tr>
+            <tr>
+                <td class="step-no">1</td>
+                <td>Launch browser and navigate to login URL</td>
+                <td>URL: http://localhost:3000/login</td>
+                <td>Login page loads with email, password fields, and submit button visible</td>
+                <td>Login page loaded successfully with all elements present</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">2</td>
+                <td>Enter registered developer email</td>
+                <td>Email: tester@noir.ai</td>
+                <td>Email field accepts and displays input text</td>
+                <td>Email populated without validation errors</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">3</td>
+                <td>Enter valid developer password</td>
+                <td>Password: testpass123</td>
+                <td>Password field accepts input masked for security</td>
+                <td>Password accepted and masked</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">4</td>
+                <td>Click on 'Sign In' submission button</td>
+                <td>Click Action</td>
+                <td>System authenticates credentials and generates JWT session tokens</td>
+                <td>Credentials authenticated successfully</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">5</td>
+                <td>Verify redirection to workspace dashboard</td>
+                <td>Target URL: /dashboard</td>
+                <td>User is redirected to /dashboard and workspace cards are displayed</td>
+                <td>Redirected to /dashboard successfully</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr class="post-condition-row">
+                <td colspan="6">Post-Condition: <span>User session is authenticated, JWT tokens are saved, and developer dashboard is rendered.</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- TEST CASE 2 -->
+    <div class="testcase-container">
+        <table class="tc-table">
+            <tr>
+                <td colspan="6" class="tc-header-title">Test Case 2</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Project Name:</strong> Noir - AI-Powered Reliability &amp; Chaos Engineering Platform</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="tc-subheading">User Registration Test Case</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Case ID:</td>
+                <td class="value-cell">Test_2</td>
+                <td colspan="2" class="label-cell">Test Designed By:</td>
+                <td colspan="2" class="value-cell">Amal S Kumar</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Priority (Low/Medium/High):</td>
+                <td class="value-cell">High</td>
+                <td colspan="2" class="label-cell">Test Designed Date:</td>
+                <td colspan="2" class="value-cell">20/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Module Name:</td>
+                <td class="value-cell">User Onboarding &amp; Registration</td>
+                <td colspan="2" class="label-cell">Test Executed By :</td>
+                <td colspan="2" class="value-cell"><strong>Ms. Ann Mary Thomas</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Title :</td>
+                <td class="value-cell">Developer Account Registration Verification</td>
+                <td colspan="2" class="label-cell">Test Execution Date:</td>
+                <td colspan="2" class="value-cell">24/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="5">Verify that a new developer can register an account with valid username, email, and password confirmation.</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Pre-Condition :</strong> User is on the registration portal with unique email and credentials.</td>
+            </tr>
+            <tr class="steps-head">
+                <td style="width: 6%;">Step</td>
+                <td style="width: 24%;">Test Step</td>
+                <td style="width: 20%;">Test Data</td>
+                <td style="width: 24%;">Expected Result</td>
+                <td style="width: 18%;">Actual Result</td>
+                <td style="width: 8%;">Status(Pass/Fail)</td>
+            </tr>
+            <tr>
+                <td class="step-no">1</td>
+                <td>Navigate to Developer Registration page</td>
+                <td>URL: http://localhost:3000/register</td>
+                <td>Registration form loads with username, email, and password fields</td>
+                <td>Form rendered with live validation indicators</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">2</td>
+                <td>Enter unique username</td>
+                <td>Username: dev_qa_user</td>
+                <td>Username field accepts input without validation errors</td>
+                <td>Username entered successfully</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">3</td>
+                <td>Enter valid email address</td>
+                <td>Email: qa_user@noir.ai</td>
+                <td>Email field validates syntax and displays green checkmark</td>
+                <td>Email accepted with valid syntax check</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">4</td>
+                <td>Enter password and confirm password</td>
+                <td>Password: SecurePass123!</td>
+                <td>Password meets strength criteria and passwords match</td>
+                <td>Passwords verified and matched</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">5</td>
+                <td>Submit registration form</td>
+                <td>Click [Create Account]</td>
+                <td>Account is provisioned in database and user is redirected</td>
+                <td>User account registered and redirected</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr class="post-condition-row">
+                <td colspan="6">Post-Condition: <span>New developer record is stored in database and user is navigated to dashboard/login.</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- TEST CASE 3 -->
+    <div class="testcase-container">
+        <table class="tc-table">
+            <tr>
+                <td colspan="6" class="tc-header-title">Test Case 3</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Project Name:</strong> Noir - AI-Powered Reliability &amp; Chaos Engineering Platform</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="tc-subheading">Landing Page &amp; Navigation Test Case</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Case ID:</td>
+                <td class="value-cell">Test_3</td>
+                <td colspan="2" class="label-cell">Test Designed By:</td>
+                <td colspan="2" class="value-cell">Amal S Kumar</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Priority (Low/Medium/High):</td>
+                <td class="value-cell">Medium</td>
+                <td colspan="2" class="label-cell">Test Designed Date:</td>
+                <td colspan="2" class="value-cell">20/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Module Name:</td>
+                <td class="value-cell">Public Interface &amp; Branding</td>
+                <td colspan="2" class="label-cell">Test Executed By :</td>
+                <td colspan="2" class="value-cell"><strong>Ms. Ann Mary Thomas</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Title :</td>
+                <td class="value-cell">Public Navigation and Header Verification</td>
+                <td colspan="2" class="label-cell">Test Execution Date:</td>
+                <td colspan="2" class="value-cell">24/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="5">Verify that the public home landing page renders all branding headers, hero sections, and navigation links.</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Pre-Condition :</strong> Application frontend server is active and reachable on port 3000.</td>
+            </tr>
+            <tr class="steps-head">
+                <td style="width: 6%;">Step</td>
+                <td style="width: 24%;">Test Step</td>
+                <td style="width: 20%;">Test Data</td>
+                <td style="width: 24%;">Expected Result</td>
+                <td style="width: 18%;">Actual Result</td>
+                <td style="width: 8%;">Status(Pass/Fail)</td>
+            </tr>
+            <tr>
+                <td class="step-no">1</td>
+                <td>Open root application URL</td>
+                <td>URL: http://localhost:3000/</td>
+                <td>Landing page loads completely</td>
+                <td>Page loaded with HTTP 200 equivalent</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">2</td>
+                <td>Verify browser tab title</td>
+                <td>Expected: 'Noir' in title</td>
+                <td>Browser window title contains 'Noir'</td>
+                <td>Title 'Noir' confirmed</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">3</td>
+                <td>Verify presence of top navigation bar</td>
+                <td>Navbar Element Locator</td>
+                <td>Navbar is visible with brand logo and navigation menu</td>
+                <td>Navbar branding and links displayed</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">4</td>
+                <td>Click on 'Sign In' link in header</td>
+                <td>Click Action</td>
+                <td>Browser navigates smoothly to /login page</td>
+                <td>Successfully redirected to /login</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr class="post-condition-row">
+                <td colspan="6">Post-Condition: <span>Public navigation components are functional and correctly link to designated routes.</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- TEST CASE 4 -->
+    <div class="testcase-container">
+        <table class="tc-table">
+            <tr>
+                <td colspan="6" class="tc-header-title">Test Case 4</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Project Name:</strong> Noir - AI-Powered Reliability &amp; Chaos Engineering Platform</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="tc-subheading">Project Creation &amp; Dashboard Test Case</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Case ID:</td>
+                <td class="value-cell">Test_4</td>
+                <td colspan="2" class="label-cell">Test Designed By:</td>
+                <td colspan="2" class="value-cell">Amal S Kumar</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Priority (Low/Medium/High):</td>
+                <td class="value-cell">High</td>
+                <td colspan="2" class="label-cell">Test Designed Date:</td>
+                <td colspan="2" class="value-cell">20/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Module Name:</td>
+                <td class="value-cell">Developer Workspace Management</td>
+                <td colspan="2" class="label-cell">Test Executed By :</td>
+                <td colspan="2" class="value-cell"><strong>Ms. Ann Mary Thomas</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Title :</td>
+                <td class="value-cell">Project Workspace &amp; Creation Modal Verification</td>
+                <td colspan="2" class="label-cell">Test Execution Date:</td>
+                <td colspan="2" class="value-cell">24/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="5">Verify that an authenticated developer can access the dashboard and trigger the project registration modal.</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Pre-Condition :</strong> User is authenticated as a Developer with active JWT tokens.</td>
+            </tr>
+            <tr class="steps-head">
+                <td style="width: 6%;">Step</td>
+                <td style="width: 24%;">Test Step</td>
+                <td style="width: 20%;">Test Data</td>
+                <td style="width: 24%;">Expected Result</td>
+                <td style="width: 18%;">Actual Result</td>
+                <td style="width: 8%;">Status(Pass/Fail)</td>
+            </tr>
+            <tr>
+                <td class="step-no">1</td>
+                <td>Access Developer Dashboard route</td>
+                <td>URL: http://localhost:3000/dashboard</td>
+                <td>Dashboard loads showing project cards and quick actions</td>
+                <td>Dashboard interface rendered properly</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">2</td>
+                <td>Locate 'New Project' action button</td>
+                <td>Button Element Locator</td>
+                <td>'New Project' button is clickable and prominent</td>
+                <td>Button found and visible in viewport</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">3</td>
+                <td>Click on 'New Project' button</td>
+                <td>Click Action</td>
+                <td>Interactive modal opens with form inputs</td>
+                <td>Modal opened with animation</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">4</td>
+                <td>Verify project title input visibility inside modal</td>
+                <td>Input Field: Title</td>
+                <td>Title and architecture selection fields are visible</td>
+                <td>Form fields ready for project creation</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr class="post-condition-row">
+                <td colspan="6">Post-Condition: <span>Project creation dialog is validated and ready for new workspace provisioning.</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- TEST CASE 5 -->
+    <div class="testcase-container">
+        <table class="tc-table">
+            <tr>
+                <td colspan="6" class="tc-header-title">Test Case 5</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Project Name:</strong> Noir - AI-Powered Reliability &amp; Chaos Engineering Platform</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="tc-subheading">Fault Injection &amp; Chaos Simulation Test Case</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Case ID:</td>
+                <td class="value-cell">Test_5</td>
+                <td colspan="2" class="label-cell">Test Designed By:</td>
+                <td colspan="2" class="value-cell">Amal S Kumar</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Priority (Low/Medium/High):</td>
+                <td class="value-cell">High</td>
+                <td colspan="2" class="label-cell">Test Designed Date:</td>
+                <td colspan="2" class="value-cell">20/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Module Name:</td>
+                <td class="value-cell">Chaos Engineering &amp; Fault Injection</td>
+                <td colspan="2" class="label-cell">Test Executed By :</td>
+                <td colspan="2" class="value-cell"><strong>Ms. Ann Mary Thomas</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Test Title :</td>
+                <td class="value-cell">Chaos Project Workspace &amp; Telemetry Code Verification</td>
+                <td colspan="2" class="label-cell">Test Execution Date:</td>
+                <td colspan="2" class="value-cell">24/10/2026</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="5">Verify that the target project detail view renders the unique connection code and chaos experiment panel for container fault injection.</td>
+            </tr>
+            <tr>
+                <td colspan="6"><strong>Pre-Condition :</strong> Target project exists in the database with configured chaos targets.</td>
+            </tr>
+            <tr class="steps-head">
+                <td style="width: 6%;">Step</td>
+                <td style="width: 24%;">Test Step</td>
+                <td style="width: 20%;">Test Data</td>
+                <td style="width: 24%;">Expected Result</td>
+                <td style="width: 18%;">Actual Result</td>
+                <td style="width: 8%;">Status(Pass/Fail)</td>
+            </tr>
+            <tr>
+                <td class="step-no">1</td>
+                <td>Open project detail workspace route</td>
+                <td>URL: /dashboard/projects/1</td>
+                <td>Project workspace loads with live telemetry tabs</td>
+                <td>Project detail view loaded successfully</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">2</td>
+                <td>Verify display of unique pairing Connection Code</td>
+                <td>Connection Code: NR-xxxx</td>
+                <td>Connection code badge is prominently displayed</td>
+                <td>Unique connection code verified</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr>
+                <td class="step-no">3</td>
+                <td>Verify chaos tabs and experiment controls</td>
+                <td>Tabs: Overview / Terminal / Chaos</td>
+                <td>Navigation controls for chaos injection are accessible</td>
+                <td>Chaos simulation controls verified active</td>
+                <td style="text-align: center;"><span class="status-pass">Pass</span></td>
+            </tr>
+            <tr class="post-condition-row">
+                <td colspan="6">Post-Condition: <span>Project workspace is connected and ready to receive controlled Docker chaos faults.</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Sign-off Section -->
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <strong>Ms. Ann Mary Thomas</strong><br>
+            <span>Lead QA Test Engineer</span>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <strong>System Verification Lead</strong><br>
+            <span>Project Guide / Evaluation Committee</span>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
