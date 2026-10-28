@@ -161,8 +161,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+from django.db.models import Q
+
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
-    email = serializers.EmailField(write_only=True)
+    email = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
 
     def __init__(self, *args, **kwargs):
@@ -181,10 +183,14 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        email = attrs.get("email")
+        login_identifier = (attrs.get("email") or "").strip()
         password = attrs.get("password")
 
-        matching_users = User.objects.filter(email__iexact=email).order_by("-is_superuser", "-date_joined")
+        # Match against either email OR username (case-insensitive)
+        matching_users = User.objects.filter(
+            Q(email__iexact=login_identifier) | Q(username__iexact=login_identifier)
+        ).order_by("-is_superuser", "-date_joined")
+
         if not matching_users.exists():
             raise AuthenticationFailed("No active account found with the given credentials", code="authorization")
 
