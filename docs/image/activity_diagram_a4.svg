@@ -1,0 +1,511 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1754" width="1240" height="1754">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EFF6FF"/>
+    </linearGradient>
+
+    <!-- Component Header Gradients -->
+    <linearGradient id="actHeaderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <linearGradient id="actParallelGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+
+    <linearGradient id="actParallelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#6D28D9"/>
+    </linearGradient>
+
+    <linearGradient id="objNodeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#0F766E"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <filter id="cardShadow" x="-3%" y="-3%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.06"/>
+    </filter>
+    <filter id="badgeShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0F172A" flood-opacity="0.18"/>
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowSolid" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1E293B"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowDashed" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#EA580C"/>
+    </marker>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1240" height="1754" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Blueprint Grid Pattern -->
+  <g opacity="0.035" stroke="#0F172A" stroke-width="1">
+    <line x1="0" y1="0" x2="0" y2="1754" /><line x1="40" y1="0" x2="40" y2="1754" /><line x1="80" y1="0" x2="80" y2="1754" /><line x1="120" y1="0" x2="120" y2="1754" /><line x1="160" y1="0" x2="160" y2="1754" /><line x1="200" y1="0" x2="200" y2="1754" /><line x1="240" y1="0" x2="240" y2="1754" /><line x1="280" y1="0" x2="280" y2="1754" /><line x1="320" y1="0" x2="320" y2="1754" /><line x1="360" y1="0" x2="360" y2="1754" /><line x1="400" y1="0" x2="400" y2="1754" /><line x1="440" y1="0" x2="440" y2="1754" /><line x1="480" y1="0" x2="480" y2="1754" /><line x1="520" y1="0" x2="520" y2="1754" /><line x1="560" y1="0" x2="560" y2="1754" /><line x1="600" y1="0" x2="600" y2="1754" /><line x1="640" y1="0" x2="640" y2="1754" /><line x1="680" y1="0" x2="680" y2="1754" /><line x1="720" y1="0" x2="720" y2="1754" /><line x1="760" y1="0" x2="760" y2="1754" /><line x1="800" y1="0" x2="800" y2="1754" /><line x1="840" y1="0" x2="840" y2="1754" /><line x1="880" y1="0" x2="880" y2="1754" /><line x1="920" y1="0" x2="920" y2="1754" /><line x1="960" y1="0" x2="960" y2="1754" /><line x1="1000" y1="0" x2="1000" y2="1754" /><line x1="1040" y1="0" x2="1040" y2="1754" /><line x1="1080" y1="0" x2="1080" y2="1754" /><line x1="1120" y1="0" x2="1120" y2="1754" /><line x1="1160" y1="0" x2="1160" y2="1754" /><line x1="1200" y1="0" x2="1200" y2="1754" />
+    <line x1="0" y1="0" x2="1240" y2="0" /><line x1="0" y1="40" x2="1240" y2="40" /><line x1="0" y1="80" x2="1240" y2="80" /><line x1="0" y1="120" x2="1240" y2="120" /><line x1="0" y1="160" x2="1240" y2="160" /><line x1="0" y1="200" x2="1240" y2="200" /><line x1="0" y1="240" x2="1240" y2="240" /><line x1="0" y1="280" x2="1240" y2="280" /><line x1="0" y1="320" x2="1240" y2="320" /><line x1="0" y1="360" x2="1240" y2="360" /><line x1="0" y1="400" x2="1240" y2="400" /><line x1="0" y1="440" x2="1240" y2="440" /><line x1="0" y1="480" x2="1240" y2="480" /><line x1="0" y1="520" x2="1240" y2="520" /><line x1="0" y1="560" x2="1240" y2="560" /><line x1="0" y1="600" x2="1240" y2="600" /><line x1="0" y1="640" x2="1240" y2="640" /><line x1="0" y1="680" x2="1240" y2="680" /><line x1="0" y1="720" x2="1240" y2="720" /><line x1="0" y1="760" x2="1240" y2="760" /><line x1="0" y1="800" x2="1240" y2="800" /><line x1="0" y1="840" x2="1240" y2="840" /><line x1="0" y1="880" x2="1240" y2="880" /><line x1="0" y1="920" x2="1240" y2="920" /><line x1="0" y1="960" x2="1240" y2="960" /><line x1="0" y1="1000" x2="1240" y2="1000" /><line x1="0" y1="1040" x2="1240" y2="1040" /><line x1="0" y1="1080" x2="1240" y2="1080" /><line x1="0" y1="1120" x2="1240" y2="1120" /><line x1="0" y1="1160" x2="1240" y2="1160" /><line x1="0" y1="1200" x2="1240" y2="1200" /><line x1="0" y1="1240" x2="1240" y2="1240" /><line x1="0" y1="1280" x2="1240" y2="1280" /><line x1="0" y1="1320" x2="1240" y2="1320" /><line x1="0" y1="1360" x2="1240" y2="1360" /><line x1="0" y1="1400" x2="1240" y2="1400" /><line x1="0" y1="1440" x2="1240" y2="1440" /><line x1="0" y1="1480" x2="1240" y2="1480" /><line x1="0" y1="1520" x2="1240" y2="1520" /><line x1="0" y1="1560" x2="1240" y2="1560" /><line x1="0" y1="1600" x2="1240" y2="1600" /><line x1="0" y1="1640" x2="1240" y2="1640" /><line x1="0" y1="1680" x2="1240" y2="1680" /><line x1="0" y1="1720" x2="1240" y2="1720" />
+  </g>
+
+  <!-- Outer A4 Margin Boundary Guide (Printable Area 210 x 297 mm) -->
+  <rect x="32" y="32" width="1176" height="1690" rx="12" fill="none" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="6,4" opacity="0.5"/>
+
+  <!-- ========================================== -->
+  <!-- HEADER SECTION -->
+  <!-- ========================================== -->
+  <g transform="translate(60, 52)">
+    <!-- Top Pill Tag -->
+    <rect x="0" y="0" width="290" height="26" rx="13" fill="#DBEAFE"/>
+    <text x="14" y="17" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="700" fill="#1D4ED8" letter-spacing="1">UML 2.5 BEHAVIORAL DIAGRAM</text>
+    
+    <!-- Title -->
+    <text x="0" y="64" font-family="'DejaVu Sans', sans-serif" font-size="34" font-weight="800" fill="#0F172A" letter-spacing="-0.5">Activity Diagram</text>
+    <text x="360" y="64" font-family="'DejaVu Sans', sans-serif" font-size="22" font-weight="500" fill="#64748B">(Workflow &amp; Control Flow Modeling)</text>
+
+    <!-- Definition & Conceptual Overview Box -->
+    <g transform="translate(0, 84)">
+      <rect x="0" y="0" width="1120" height="116" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="6" height="116" rx="3" fill="#2563EB"/>
+      
+      <text x="24" y="26" font-family="'DejaVu Sans', sans-serif" font-size="12" font-weight="800" fill="#1E293B" letter-spacing="0.5">WORKFLOW ARCHITECTURE &amp; PROCESS CONTROL FLOW:</text>
+      <text x="24" y="50" font-family="'DejaVu Sans', sans-serif" font-size="12.5" fill="#334155">
+        An <tspan font-weight="700" fill="#0F172A">Activity Diagram</tspan> is a UML behavioral diagram that represents the <tspan font-weight="700" fill="#2563EB">flow of activities and control</tspan> within a system. It illustrates the sequence
+      </text>
+      <text x="24" y="72" font-family="'DejaVu Sans', sans-serif" font-size="12.5" fill="#334155">
+        of actions from the <tspan font-weight="700" fill="#0F172A">initial node</tspan> to the <tspan font-weight="700" fill="#0F172A">final node</tspan>, including decision paths, branching, merging, and <tspan font-weight="700" fill="#0F172A">parallel execution (fork/join)</tspan>.
+      </text>
+      <text x="24" y="94" font-family="'DejaVu Sans', sans-serif" font-size="12.5" fill="#334155">
+        Each activity represents a task or operation, control flows specify execution order, and object flows trace data state transformations.
+      </text>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- MAIN ACTIVITY DIAGRAM CANVAS -->
+  <!-- ========================================== -->
+  <g transform="translate(60, 276)">
+    <!-- Canvas Frame -->
+    <rect x="0" y="0" width="1120" height="780" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5" filter="url(#shadow)"/>
+    
+    <!-- Canvas Header Bar -->
+    <path d="M 0 12 Q 0 0 12 0 L 1108 0 Q 1120 0 1120 12 L 1120 40 L 0 40 Z" fill="#F8FAFC"/>
+    <line x1="0" y1="40" x2="1120" y2="40" stroke="#E2E8F0" stroke-width="1.5"/>
+    <circle cx="20" cy="20" r="5" fill="#EF4444"/>
+    <circle cx="36" cy="20" r="5" fill="#F59E0B"/>
+    <circle cx="52" cy="20" r="5" fill="#10B981"/>
+    <text x="74" y="24" font-family="'DejaVu Sans', sans-serif" font-size="12" font-weight="700" fill="#475569">EXAMPLE WORKFLOW: E-Commerce Checkout &amp; Order Fulfillment Process</text>
+    <rect x="920" y="9" width="180" height="22" rx="11" fill="#EFF6FF"/>
+    <text x="938" y="24" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="700" fill="#2563EB">CONTROL FLOW VIEW</text>
+
+    <!-- ========================================== -->
+    <!-- DIAGRAM WORKFLOW ELEMENTS -->
+    <!-- ========================================== -->
+
+    <!-- 1. INITIAL NODE -->
+    <g transform="translate(560, 60)">
+      <circle cx="0" cy="0" r="14" fill="#0F172A" filter="url(#badgeShadow)"/>
+    </g>
+
+    <!-- Flow: Initial Node -> Activity 1 -->
+    <line x1="560" y1="74" x2="560" y2="105" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- 2. MERGE NODE (Merge retry path into main flow) -->
+    <g transform="translate(560, 120)">
+      <polygon points="0,-15 22,0 0,15 -22,0" fill="#FFFFFF" stroke="#475569" stroke-width="2" filter="url(#cardShadow)"/>
+    </g>
+
+    <!-- Flow: Merge Node -> Activity 1 -->
+    <line x1="560" y1="135" x2="560" y2="162" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- 3. ACTIVITY 1: Submit Order & Payment Details -->
+    <g transform="translate(440, 165)">
+      <rect x="0" y="0" width="240" height="52" rx="14" fill="#FFFFFF" stroke="#2563EB" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="120" y="24" font-family="'DejaVu Sans', sans-serif" font-size="12" font-weight="700" fill="#0F172A" text-anchor="middle">Submit Order &amp; Payment</text>
+      <text x="120" y="40" font-family="'DejaVu Sans', sans-serif" font-size="10" fill="#64748B" text-anchor="middle">Receive customer cart &amp; credentials</text>
+    </g>
+
+    <!-- Flow: Activity 1 -> Decision Node -->
+    <line x1="560" y1="217" x2="560" y2="250" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- 4. DECISION NODE: Check Payment Validity -->
+    <g transform="translate(560, 270)">
+      <polygon points="0,-20 28,0 0,20 -28,0" fill="#FFFFFF" stroke="#EA580C" stroke-width="2" filter="url(#cardShadow)"/>
+    </g>
+
+    <!-- Branch A: [Payment Invalid] -> Activity (Prompt Retry) -> Loops back to Merge Node -->
+    <line x1="588" y1="270" x2="740" y2="270" stroke="#EA580C" stroke-width="2" marker-end="url(#arrowOrange)"/>
+    <rect x="600" y="248" width="115" height="18" rx="4" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1"/>
+    <text x="657" y="261" font-family="'DejaVu Sans', sans-serif" font-size="9" font-weight="700" fill="#C2410C" text-anchor="middle">[Payment Invalid]</text>
+
+    <!-- Retry Activity -->
+    <g transform="translate(745, 245)">
+      <rect x="0" y="0" width="170" height="50" rx="12" fill="#FFFFFF" stroke="#EA580C" stroke-width="1.8" filter="url(#cardShadow)"/>
+      <text x="85" y="22" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="700" fill="#0F172A" text-anchor="middle">Prompt for Retry</text>
+      <text x="85" y="38" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Request valid payment card</text>
+    </g>
+
+    <!-- Loopback from Retry Activity up and into Merge Node -->
+    <path d="M 830 245 L 830 120 L 585 120" fill="none" stroke="#EA580C" stroke-width="2" marker-end="url(#arrowOrange)"/>
+    <rect x="670" y="108" width="90" height="18" rx="4" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1"/>
+    <text x="715" y="121" font-family="'DejaVu Sans', sans-serif" font-size="9" font-weight="700" fill="#C2410C" text-anchor="middle">[Retry &lt; 3]</text>
+
+    <!-- Branch B: [Payment Approved] -> Continues downward to Fork Node -->
+    <line x1="560" y1="290" x2="560" y2="355" stroke="#16A34A" stroke-width="2" marker-end="url(#arrowSolid)"/>
+    <rect x="568" y="306" width="128" height="18" rx="4" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1"/>
+    <text x="632" y="319" font-family="'DejaVu Sans', sans-serif" font-size="9" font-weight="700" fill="#15803D" text-anchor="middle">[Payment Approved]</text>
+
+    <!-- 5. FORK NODE: Divides single flow into 2 concurrent parallel flows -->
+    <g transform="translate(310, 358)">
+      <rect x="0" y="0" width="500" height="7" rx="3.5" fill="#0F172A" filter="url(#cardShadow)"/>
+    </g>
+
+    <!-- Parallel Branch 1 (Left - Inventory & Logistics) -->
+    <line x1="410" y1="365" x2="410" y2="400" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Activity 2a: Deduct Inventory & Pack Items -->
+    <g transform="translate(300, 403)">
+      <rect x="0" y="0" width="220" height="52" rx="14" fill="#FFFFFF" stroke="#0284C7" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="110" y="24" font-family="'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="middle">Reserve &amp; Pack Items</text>
+      <text x="110" y="40" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Warehouse fulfillment center</text>
+    </g>
+
+    <!-- Flow: Activity 2a -> Activity 2b -->
+    <line x1="410" y1="455" x2="410" y2="490" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Activity 2b: Dispatch Carrier Shipment -->
+    <g transform="translate(300, 493)">
+      <rect x="0" y="0" width="220" height="52" rx="14" fill="#FFFFFF" stroke="#0284C7" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="110" y="24" font-family="'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="middle">Dispatch Carrier Shipment</text>
+      <text x="110" y="40" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Assign tracking ID &amp; courier</text>
+    </g>
+
+    <!-- Parallel Branch 2 (Right - Billing & Financials) -->
+    <line x1="710" y1="365" x2="710" y2="400" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Activity 3a: Process Transaction & Taxes -->
+    <g transform="translate(600, 403)">
+      <rect x="0" y="0" width="220" height="52" rx="14" fill="#FFFFFF" stroke="#7C3AED" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="110" y="24" font-family="'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="middle">Process Transaction &amp; Taxes</text>
+      <text x="110" y="40" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Charge credit card &amp; record VAT</text>
+    </g>
+
+    <!-- Flow: Activity 3a -> Activity 3b -->
+    <line x1="710" y1="455" x2="710" y2="490" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Activity 3b: Generate Digital Invoice -->
+    <g transform="translate(600, 493)">
+      <rect x="0" y="0" width="220" height="52" rx="14" fill="#FFFFFF" stroke="#7C3AED" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="110" y="24" font-family="'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="middle">Generate Digital Invoice</text>
+      <text x="110" y="40" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Create verified PDF receipt</text>
+    </g>
+
+    <!-- 6. OBJECT FLOW (Data/Object movement shown by dashed arrow) -->
+    <!-- Object Node: Invoice [Paid] -->
+    <g transform="translate(865, 497)">
+      <rect x="0" y="0" width="165" height="44" rx="4" fill="#FFFFFF" stroke="#0D9488" stroke-width="1.8" filter="url(#cardShadow)"/>
+      <text x="82" y="20" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="700" fill="#0F766E" text-anchor="middle">Invoice</text>
+      <text x="82" y="34" font-family="'DejaVu Sans', sans-serif" font-size="9" font-weight="600" fill="#0D9488" text-anchor="middle">[Status: Paid &amp; Signed]</text>
+    </g>
+    <!-- Dashed Object Flow arrow from Activity 3b to Object Node -->
+    <line x1="820" y1="519" x2="860" y2="519" stroke="#0D9488" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrowDashed)"/>
+
+    <!-- 7. JOIN NODE: Combines parallel flows into a single synchronized flow -->
+    <g transform="translate(310, 573)">
+      <rect x="0" y="0" width="500" height="7" rx="3.5" fill="#0F172A" filter="url(#cardShadow)"/>
+    </g>
+
+    <!-- Flow into Join: From Branch 1 (410, 545) to (410, 573) -->
+    <line x1="410" y1="545" x2="410" y2="570" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+    <!-- Flow into Join: From Branch 2 (710, 545) to (710, 573) -->
+    <line x1="710" y1="545" x2="710" y2="570" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Flow: Join Node out (560, 580) to Activity 4 -->
+    <line x1="560" y1="580" x2="560" y2="605" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- Activity 4: Send Order Confirmation & Tracking Email -->
+    <g transform="translate(430, 608)">
+      <rect x="0" y="0" width="260" height="52" rx="14" fill="#FFFFFF" stroke="#16A34A" stroke-width="2" filter="url(#cardShadow)"/>
+      <text x="130" y="24" font-family="'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#0F172A" text-anchor="middle">Send Confirmation &amp; Tracking</text>
+      <text x="130" y="40" font-family="'DejaVu Sans', sans-serif" font-size="9.5" fill="#64748B" text-anchor="middle">Email customer shipment details</text>
+    </g>
+
+    <!-- Flow: Activity 4 -> Final Node -->
+    <line x1="560" y1="660" x2="560" y2="685" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+    <!-- 8. FINAL NODE (Solid circle surrounded by outer circle - bullseye) -->
+    <g transform="translate(560, 705)">
+      <circle cx="0" cy="0" r="16" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.5"/>
+      <circle cx="0" cy="0" r="10" fill="#0F172A"/>
+    </g>
+
+    <!-- ========================================== -->
+    <!-- CALLOUT PIN BADGES (The 9 Key Components) -->
+    <!-- ========================================== -->
+
+    <!-- Callout 1: Initial Node -->
+    <g transform="translate(360, 48)">
+      <rect x="0" y="0" width="125" height="24" rx="12" fill="#0F172A" filter="url(#badgeShadow)"/>
+      <text x="62" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">① Initial Node</text>
+      <line x1="125" y1="12" x2="185" y2="12" stroke="#0F172A" stroke-width="2"/>
+      <circle cx="185" cy="12" r="3" fill="#0F172A"/>
+    </g>
+
+    <!-- Callout 2: Activity -->
+    <g transform="translate(195, 178)">
+      <rect x="0" y="0" width="105" height="24" rx="12" fill="#2563EB" filter="url(#badgeShadow)"/>
+      <text x="52" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">② Activity</text>
+      <line x1="105" y1="12" x2="242" y2="12" stroke="#2563EB" stroke-width="2"/>
+      <circle cx="242" cy="12" r="3" fill="#2563EB"/>
+    </g>
+
+    <!-- Callout 3: Control Flow -->
+    <g transform="translate(380, 222)">
+      <rect x="0" y="0" width="125" height="24" rx="12" fill="#1E293B" filter="url(#badgeShadow)"/>
+      <text x="62" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">③ Control Flow</text>
+      <line x1="125" y1="12" x2="175" y2="12" stroke="#1E293B" stroke-width="2"/>
+      <circle cx="175" cy="12" r="3" fill="#1E293B"/>
+    </g>
+
+    <!-- Callout 4: Decision Node -->
+    <g transform="translate(345, 268)">
+      <rect x="0" y="0" width="135" height="24" rx="12" fill="#EA580C" filter="url(#badgeShadow)"/>
+      <text x="67" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">④ Decision Node</text>
+      <line x1="135" y1="12" x2="185" y2="12" stroke="#EA580C" stroke-width="2"/>
+      <circle cx="185" cy="12" r="3" fill="#EA580C"/>
+    </g>
+
+    <!-- Callout 5: Merge Node -->
+    <g transform="translate(365, 108)">
+      <rect x="0" y="0" width="120" height="24" rx="12" fill="#475569" filter="url(#badgeShadow)"/>
+      <text x="60" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">⑤ Merge Node</text>
+      <line x1="120" y1="12" x2="170" y2="12" stroke="#475569" stroke-width="2"/>
+      <circle cx="170" cy="12" r="3" fill="#475569"/>
+    </g>
+
+    <!-- Callout 6: Fork Node -->
+    <g transform="translate(145, 348)">
+      <rect x="0" y="0" width="115" height="24" rx="12" fill="#0F172A" filter="url(#badgeShadow)"/>
+      <text x="57" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">⑥ Fork Node</text>
+      <line x1="115" y1="12" x2="162" y2="12" stroke="#0F172A" stroke-width="2"/>
+      <circle cx="162" cy="12" r="3" fill="#0F172A"/>
+    </g>
+
+    <!-- Callout 7: Join Node -->
+    <g transform="translate(145, 563)">
+      <rect x="0" y="0" width="115" height="24" rx="12" fill="#0F172A" filter="url(#badgeShadow)"/>
+      <text x="57" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">⑦ Join Node</text>
+      <line x1="115" y1="12" x2="162" y2="12" stroke="#0F172A" stroke-width="2"/>
+      <circle cx="162" cy="12" r="3" fill="#0F172A"/>
+    </g>
+
+    <!-- Callout 8: Final Node -->
+    <g transform="translate(390, 693)">
+      <rect x="0" y="0" width="115" height="24" rx="12" fill="#0F172A" filter="url(#badgeShadow)"/>
+      <text x="57" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">⑧ Final Node</text>
+      <line x1="115" y1="12" x2="152" y2="12" stroke="#0F172A" stroke-width="2"/>
+      <circle cx="152" cy="12" r="3" fill="#0F172A"/>
+    </g>
+
+    <!-- Callout 9: Object Flow -->
+    <g transform="translate(890, 445)">
+      <rect x="0" y="0" width="125" height="24" rx="12" fill="#0D9488" filter="url(#badgeShadow)"/>
+      <text x="62" y="16" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">⑨ Object Flow</text>
+      <line x1="62" y1="24" x2="62" y2="48" stroke="#0D9488" stroke-width="2"/>
+      <circle cx="62" cy="48" r="3" fill="#0D9488"/>
+    </g>
+
+    <!-- Diagram Explanatory Footer Subpanel inside Canvas -->
+    <g transform="translate(24, 730)">
+      <rect x="0" y="0" width="1072" height="38" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+      <text x="20" y="24" font-family="'DejaVu Sans', sans-serif" font-size="10" font-weight="700" fill="#1E293B">
+        <tspan fill="#2563EB">CONTROL DYNAMICS:</tspan> Starts at Initial Node → Validates via Decision Diamond → Splits via Fork Bar → Syncs at Join Bar → Ends at Final Node.
+      </text>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- KEY COMPONENTS REFERENCE SECTION (3x3 Grid) -->
+  <!-- ========================================== -->
+  <g transform="translate(60, 1080)">
+    <!-- Section Title -->
+    <text x="0" y="24" font-family="'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#0F172A">Key Components of an Activity Diagram</text>
+    <text x="420" y="24" font-family="'DejaVu Sans', sans-serif" font-size="12" fill="#64748B">The nine foundational building blocks specified in UML behavioral standards</text>
+
+    <!-- ROW 1: Initial Node, Activity, Control Flow -->
+    <!-- Card 1: Initial Node -->
+    <g transform="translate(0, 40)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#0F172A"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#0F172A" text-anchor="middle">1</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Initial Node</text>
+      <circle cx="320" cy="30" r="9" fill="#0F172A"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents the starting point of the
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">activity workflow. Initiates control flow upon execution.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#64748B">Notation: Solid black circle (●)</text>
+    </g>
+
+    <!-- Card 2: Activity -->
+    <g transform="translate(382, 40)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#2563EB"/>
+      <circle cx="28" cy="30" r="13" fill="#DBEAFE"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#1D4ED8" text-anchor="middle">2</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Activity (Action)</text>
+      <rect x="260" y="18" width="80" height="24" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+      <text x="300" y="34" font-family="'DejaVu Sans', sans-serif" font-size="9" font-weight="700" fill="#1D4ED8" text-anchor="middle">Action</text>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents a single task or operation
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">performed by the system, an entity, or a participant.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#2563EB">Notation: Rounded rectangle</text>
+    </g>
+
+    <!-- Card 3: Control Flow -->
+    <g transform="translate(765, 40)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#1E293B"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#1E293B" text-anchor="middle">3</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Control Flow</text>
+      <line x1="265" y1="30" x2="335" y2="30" stroke="#1E293B" stroke-width="2" marker-end="url(#arrowSolid)"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents the sequential order and
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">pipeline precedence between activities.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#1E293B">Notation: Directed solid arrow (→)</text>
+    </g>
+
+    <!-- ROW 2: Decision Node, Merge Node, Fork Node -->
+    <!-- Card 4: Decision Node -->
+    <g transform="translate(0, 172)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#EA580C"/>
+      <circle cx="28" cy="30" r="13" fill="#FFEDD5"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#C2410C" text-anchor="middle">4</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Decision Node</text>
+      <polygon points="305,18 322,30 305,42 288,30" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents a conditional branching point
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">where control follows one of multiple guarded paths.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#C2410C">Notation: Diamond shape with guard [conditions]</text>
+    </g>
+
+    <!-- Card 5: Merge Node -->
+    <g transform="translate(382, 172)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#475569"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#475569" text-anchor="middle">5</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Merge Node</text>
+      <polygon points="305,18 322,30 305,42 288,30" fill="#F8FAFC" stroke="#475569" stroke-width="1.5"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Combines multiple alternative activity
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">flows into a single unified flow without synchronization.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#475569">Notation: Diamond shape (multiple in, one out)</text>
+    </g>
+
+    <!-- Card 6: Fork Node -->
+    <g transform="translate(765, 172)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#0F172A"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#0F172A" text-anchor="middle">6</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Fork Node</text>
+      <rect x="270" y="27" width="65" height="6" rx="3" fill="#0F172A"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Splits a single incoming activity flow into
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">multiple concurrent, parallel execution flows.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#0F172A">Notation: Thick solid horizontal or vertical bar</text>
+    </g>
+
+    <!-- ROW 3: Join Node, Final Node, Object Flow -->
+    <!-- Card 7: Join Node -->
+    <g transform="translate(0, 304)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#0F172A"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#0F172A" text-anchor="middle">7</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Join Node</text>
+      <rect x="270" y="27" width="65" height="6" rx="3" fill="#0F172A"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Synchronizes and merges multiple
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">parallel flows, waiting until ALL inputs reach the node.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#0F172A">Notation: Thick solid bar (synchronization point)</text>
+    </g>
+
+    <!-- Card 8: Final Node -->
+    <g transform="translate(382, 304)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#0F172A"/>
+      <circle cx="28" cy="30" r="13" fill="#F1F5F9"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#0F172A" text-anchor="middle">8</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Final Node</text>
+      <circle cx="305" cy="30" r="12" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/>
+      <circle cx="305" cy="30" r="7" fill="#0F172A"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents the complete termination
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">and conclusion of all flows in the activity diagram.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#0F172A">Notation: Bullseye (solid circle inside outer ring)</text>
+    </g>
+
+    <!-- Card 9: Object Flow -->
+    <g transform="translate(765, 304)">
+      <rect x="0" y="0" width="355" height="120" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <rect x="0" y="0" width="355" height="5" rx="2.5" fill="#0D9488"/>
+      <circle cx="28" cy="30" r="13" fill="#CCFBF1"/>
+      <text x="28" y="35" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="800" fill="#0F766E" text-anchor="middle">9</text>
+      <text x="52" y="34" font-family="'DejaVu Sans', sans-serif" font-size="13.5" font-weight="800" fill="#0F172A">Object Flow</text>
+      <line x1="265" y1="30" x2="335" y2="30" stroke="#0D9488" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrowDashed)"/>
+      <text x="18" y="62" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">
+        <tspan font-weight="700" fill="#0F172A">Definition:</tspan> Represents the transit and transformation
+      </text>
+      <text x="18" y="78" font-family="'DejaVu Sans', sans-serif" font-size="11" fill="#334155">of data objects or state artifacts between operations.</text>
+      <text x="18" y="100" font-family="'DejaVu Sans', sans-serif" font-size="10.5" font-weight="600" fill="#0D9488">Notation: Dashed directed arrow to/from object node</text>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- FOOTER & PRINT METRICS -->
+  <!-- ========================================== -->
+  <g transform="translate(60, 1515)">
+    <!-- Comparison Banner -->
+    <rect x="0" y="0" width="1120" height="96" rx="10" fill="#1E293B"/>
+    <text x="24" y="28" font-family="'DejaVu Sans', sans-serif" font-size="12" font-weight="800" fill="#38BDF8">ARCHITECTURAL COMPARISON: ACTIVITY VS. STATE MACHINE &amp; SEQUENCE DIAGRAMS</text>
+    <text x="24" y="52" font-family="'DejaVu Sans', sans-serif" font-size="11.5" fill="#E2E8F0">
+      • <tspan font-weight="700" fill="#FFFFFF">Activity Diagram:</tspan> Emphasizes <tspan fill="#38BDF8">computational workflows, parallel execution (fork/join), and data pipelines</tspan> across a business process.
+    </text>
+    <text x="24" y="74" font-family="'DejaVu Sans', sans-serif" font-size="11.5" fill="#E2E8F0">
+      • <tspan font-weight="700" fill="#FFFFFF">State Machine / Sequence:</tspan> Focuses on <tspan fill="#38BDF8">event-driven discrete state changes</tspan> or chronological object message passing along lifelines.
+    </text>
+
+    <!-- Bottom Print Meta Bar -->
+    <g transform="translate(0, 120)">
+      <text x="0" y="12" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="600" fill="#64748B">Standard A4 Sheet Format (210 mm × 297 mm) • Aspect Ratio 1:√2 (1:1.414) • 300 DPI High-Resolution Ready</text>
+      <text x="1120" y="12" font-family="'DejaVu Sans', sans-serif" font-size="11" font-weight="700" fill="#2563EB" text-anchor="end">UML SPECIFICATION CHEAT SHEET</text>
+    </g>
+  </g>
+
+</svg>
