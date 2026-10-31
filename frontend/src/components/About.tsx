@@ -11,7 +11,7 @@ export default function About() {
         transition={{ duration: 0.6 }}
         className="md:w-1/3 pt-2"
       >
-        <p className="text-stone-400 font-medium font-mono text-xs uppercase tracking-[0.15em] leading-relaxed max-w-sm">
+        <p className="text-slate-600 dark:text-stone-400 font-medium font-mono text-xs uppercase tracking-[0.15em] leading-relaxed max-w-sm">
           NOIR is an advanced autonomous simulation platform designed to stress-test microservices, inject precise failures, and assess software structural integrity under extreme chaos conditions.
         </p>
       </motion.div>
@@ -22,14 +22,14 @@ export default function About() {
         transition={{ duration: 0.6, delay: 0.2 }}
         className="md:w-2/3"
       >
-        <h2 className="text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight mb-10 max-w-2xl leading-[1.1] text-white">
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight mb-10 max-w-2xl leading-[1.1] text-slate-900 dark:text-white">
           We ensure your distributed systems maintain absolute resilience.
         </h2>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <button className="bg-[#7C3AED] hover:bg-[#6D28D9] transition-all duration-300 text-white px-8 py-3 rounded-full font-medium shadow-[0_4px_20px_rgba(124,58,237,0.25)] hover:shadow-[0_4px_25px_rgba(124,58,237,0.4)]">
+          <button className="bg-[#7C3AED] hover:bg-[#6D28D9] transition-all duration-300 text-white px-8 py-3 rounded-full font-medium shadow-[0_4px_20px_rgba(124,58,237,0.25)] hover:shadow-[0_4px_25px_rgba(124,58,237,0.4)] cursor-pointer">
             Explore Architecture
           </button>
-          <button className="flex items-center gap-2 font-medium text-stone-300 hover:text-white transition-colors group">
+          <button className="flex items-center gap-2 font-medium text-slate-700 hover:text-slate-950 dark:text-stone-300 dark:hover:text-white transition-colors group cursor-pointer">
             Analyze Scenarios <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
         </div>

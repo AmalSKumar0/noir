@@ -7,9 +7,150 @@
   --animate-marquee: marquee 90s linear infinite;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* CSS Theme Variables */
+:root {
+  --color-scheme: light;
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f1f5f9;
+  --bg-surface-subtle: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-primary: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --hero-bg: radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.12) 0%, rgba(224, 231, 255, 0.45) 35%, rgba(248, 250, 252, 1) 100%);
+  --user-layout-bg: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.08), rgba(248, 250, 252, 0));
+  --admin-outer-bg: radial-gradient(circle at 50% -12%, rgba(196, 181, 253, 0.35) 0%, rgba(237, 233, 254, 0.45) 45%, rgba(248, 247, 255, 1) 90%);
+}
+
+.dark {
+  --color-scheme: dark;
+  --bg-app: #000000;
+  --bg-surface: #090A0F;
+  --bg-surface-elevated: #0e1017;
+  --bg-surface-subtle: #141024;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border-primary: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --hero-bg: radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.22) 0%, rgba(99, 102, 241, 0.08) 35%, rgba(3, 2, 14, 1) 100%);
+  --user-layout-bg: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), rgba(255, 255, 255, 0));
+  --admin-outer-bg: radial-gradient(circle at 50% -12%, rgba(196, 181, 253, 0.18) 0%, rgba(147, 112, 219, 0.06) 42%, rgba(5, 5, 8, 1) 90%);
+}
+
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
+}
+
+/* =========================================================================
+   LIGHT MODE DESIGN SYSTEM OVERRIDES
+   When html is not dark (.light or :not(.dark)), systematically adapt
+   containers, cards, inputs, and text while preserving dark terminals/code.
+   ========================================================================= */
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+/* Primary Card & Surface Backgrounds in Light Mode */
+html:not(.dark) [class*="bg-[#0D0F17]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#090A0F]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#0e1017]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#0a0812]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#100C1F]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#141024]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-[#1A1838]"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-zinc-900"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *, button[class*="bg-zinc-900"], a[class*="bg-zinc-900"]),
+html:not(.dark) [class*="bg-zinc-950"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-stone-900"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="bg-stone-950"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *) {
+  background-color: #ffffff;
+}
+
+/* Elevated/Subtle Surface Backgrounds in Light Mode */
+html:not(.dark) .bg-white\/\[0\.02\],
+html:not(.dark) .bg-white\/\[0\.03\],
+html:not(.dark) .bg-white\/5 {
+  background-color: rgba(241, 245, 249, 0.7);
+}
+
+html:not(.dark) .bg-zinc-900\/80,
+html:not(.dark) .bg-zinc-900\/90,
+html:not(.dark) .bg-zinc-900\/60,
+html:not(.dark) .bg-stone-900\/40,
+html:not(.dark) .bg-stone-900\/60,
+html:not(.dark) .bg-stone-950\/60,
+html:not(.dark) .bg-stone-950\/80 {
+  background-color: #f8fafc;
+}
+
+/* Border Adaptations in Light Mode */
+html:not(.dark) [class*="border-zinc-800"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-zinc-750"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-zinc-700"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-stone-800"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-stone-850"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-stone-900"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-white/5"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-white/10"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-white/15"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-white/20"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-[#c4b5fd]/20"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="border-[#c4b5fd]/30"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *) {
+  border-color: #e2e8f0;
+}
+
+/* Typography Overrides in Light Mode */
+html:not(.dark) [class*="text-zinc-100"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *, button[class*="bg-violet"], button[class*="bg-indigo"], [class*="bg-[#7C3AED]"]),
+html:not(.dark) [class*="text-zinc-200"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *, button[class*="bg-violet"], button[class*="bg-indigo"], [class*="bg-[#7C3AED]"]),
+html:not(.dark) [class*="text-zinc-300"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *, button[class*="bg-violet"], button[class*="bg-indigo"], [class*="bg-[#7C3AED]"]),
+html:not(.dark) [class*="text-stone-100"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="text-stone-200"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="text-stone-300"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *) {
+  color: #1e293b;
+}
+
+html:not(.dark) [class*="text-zinc-400"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="text-zinc-500"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="text-stone-400"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *),
+html:not(.dark) [class*="text-stone-500"]:not(.preserve-dark, .preserve-dark *, .terminal-window, .terminal-window *) {
+  color: #475569;
+}
+
+/* Form Inputs in Light Mode */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not(.preserve-dark),
+html:not(.dark) select:not(.preserve-dark),
+html:not(.dark) textarea:not(.preserve-dark) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Light Mode Card Shadows */
+html:not(.dark) .shadow-2xl:not(.preserve-dark),
+html:not(.dark) [class*="shadow-[0_24px"]:not(.preserve-dark) {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Light mode table headers and alternating rows */
+html:not(.dark) table th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) table td {
+  border-color: #f1f5f9 !important;
 }
 
 /* Print Styles for Executive Reports */

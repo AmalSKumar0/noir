@@ -189,7 +189,7 @@ export default function LiveStreamTerminal({
 
       <div 
         ref={terminalRef}
-        className="bg-[#090A0F] border border-zinc-800/80 rounded-md p-3 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text"
+        className="bg-[#090A0F] border border-zinc-800/80 rounded-md p-3 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text preserve-dark"
       >
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 space-y-1.5 py-6">

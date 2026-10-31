@@ -8,9 +8,9 @@ interface UserLayoutProps {
 export default function UserLayout({ children }: UserLayoutProps) {
   return (
     <div 
-      className="min-h-screen font-sans text-zinc-100 selection:bg-violet-500/30 bg-[#090A0F] overflow-x-hidden pb-10"
+      className="min-h-screen font-sans text-slate-900 dark:text-zinc-100 selection:bg-violet-500/20 dark:selection:bg-violet-500/30 bg-[#f8fafc] dark:bg-[#090A0F] overflow-x-hidden pb-10 transition-colors duration-200"
       style={{
-        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), rgba(255, 255, 255, 0))'
+        backgroundImage: 'var(--user-layout-bg)'
       }}
     >
       <UserNavBar />

@@ -49,9 +49,9 @@ export default function Hero() {
       ref={containerRef} 
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-white pt-28 pb-16 md:py-0"
+      className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-slate-900 dark:text-white pt-28 pb-16 md:py-0 transition-colors duration-200"
       style={{
-        background: 'radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.22) 0%, rgba(99, 102, 241, 0.08) 35%, rgba(3, 2, 14, 1) 100%)'
+        background: 'var(--hero-bg)'
       }}
     >
       {/* Interactive Canvas (Subtle floating cosmic stars/particles) */}
@@ -98,7 +98,7 @@ export default function Hero() {
                   hidden: { opacity: 0, y: 25 },
                   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.4, 0.1, 1] } },
                 }}
-                className="font-semibold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70"
+                className="font-semibold text-slate-950 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-b dark:from-white dark:to-white/70"
               >
                 NOIR
               </motion.span>
@@ -110,7 +110,7 @@ export default function Hero() {
       hidden: { opacity: 0, y: 20 },
       visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
     }}
-    className="block text-white/80"
+    className="block text-slate-800 dark:text-white/80"
   >
     The autonomous
   </motion.span>
@@ -120,7 +120,7 @@ export default function Hero() {
       hidden: { opacity: 0, y: 20 },
       visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
     }}
-    className="block text-white/80"
+    className="block text-slate-800 dark:text-white/80"
   >
     reliability engineer.
   </motion.span>
@@ -129,7 +129,7 @@ export default function Hero() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-            className="text-stone-400 text-sm md:text-base lg:text-lg max-w-xl leading-relaxed font-sans font-light tracking-wide"
+            className="text-slate-600 dark:text-stone-400 text-sm md:text-base lg:text-lg max-w-xl leading-relaxed font-sans font-light tracking-wide"
           >
             Noir is an AI-assisted reliability engineering platform that automates fault injection, monitors application behavior, and generates actionable insights to identify reliability issues before deployment.
           </motion.p>
@@ -210,11 +210,11 @@ export default function Hero() {
             <motion.button
               whileHover={{ 
                 scale: 1.05, 
-                boxShadow: "0 0 50px rgba(167, 139, 250, 0.5)",
+                boxShadow: "0 0 40px rgba(30, 58, 138, 0.3)",
               }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="px-11 py-5 rounded-full bg-white text-black font-semibold text-xs md:text-sm uppercase tracking-[0.2em] shadow-[0_15px_45px_rgba(139,92,246,0.25)] border border-white select-none cursor-pointer transform-gpu"
+              className="px-11 py-5 rounded-full bg-transparent text-blue-900 border-2 border-blue-900 hover:bg-blue-900/5 hover:text-blue-950 hover:border-blue-950 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-400/10 dark:hover:text-blue-300 dark:hover:border-blue-300 font-semibold text-xs md:text-sm uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(30,58,138,0.15)] select-none cursor-pointer transform-gpu transition-all backdrop-blur-[2px]"
             >
              GET STARTED
             </motion.button>

@@ -4,6 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Noir: Meet the extreme</title>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('noir_theme');
+          var theme = (saved === 'dark' || saved === 'light') ? saved : 'light';
+          var docEl = document.documentElement;
+          if (theme === 'dark') {
+            docEl.classList.add('dark');
+            docEl.classList.remove('light');
+            docEl.setAttribute('data-theme', 'dark');
+            docEl.style.colorScheme = 'dark';
+          } else {
+            docEl.classList.add('light');
+            docEl.classList.remove('dark');
+            docEl.setAttribute('data-theme', 'light');
+            docEl.style.colorScheme = 'light';
+          }
+        } catch (e) {
+          document.documentElement.classList.add('light');
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

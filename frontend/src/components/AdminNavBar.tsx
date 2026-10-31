@@ -18,6 +18,7 @@ import {
   Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ThemeToggle from './ThemeToggle';
 
 const tabs = [
   { to: '/admin/dashboard', label: 'Overview', icon: Home },
@@ -58,7 +59,7 @@ export default function AdminNavbar() {
   }, [location.pathname]);
 
   const iconBtn =
-    'w-9 h-9 rounded-full bg-[#141024]/80 border border-[#c4b5fd]/20 text-[#d8b4fe]/80 hover:text-white hover:bg-[#c4b5fd]/20 hover:border-[#c4b5fd]/45 transition-colors flex items-center justify-center';
+    'w-9 h-9 rounded-full bg-white dark:bg-[#141024]/80 border border-purple-200 dark:border-[#c4b5fd]/20 text-purple-700 dark:text-[#d8b4fe]/80 hover:text-purple-900 dark:hover:text-white hover:bg-purple-50 dark:hover:bg-[#c4b5fd]/20 hover:border-purple-300 dark:hover:border-[#c4b5fd]/45 transition-colors flex items-center justify-center cursor-pointer shadow-xs';
 
   return (
     <header className="px-4 sm:px-6 md:px-8 pt-3 sm:pt-4 md:pt-5 pb-2 relative z-50">
@@ -69,15 +70,15 @@ export default function AdminNavbar() {
           className="flex items-center gap-2 shrink-0 group"
           onClick={() => setIsMobileMenuOpen(false)}
         >
-          <Sparkles className="w-4 h-4 text-[#c4b5fd] group-hover:text-[#e9d5ff] transition-colors" strokeWidth={1.75} />
-          <span className="text-sm font-semibold tracking-tight text-white">noir</span>
-          <span className="text-[10px] tracking-wider uppercase font-semibold px-2.5 py-0.5 rounded-full bg-[#c4b5fd]/15 text-[#e9d5ff] border border-[#c4b5fd]/30 shadow-[0_0_10px_rgba(196,181,253,0.15)]">
+          <Sparkles className="w-4 h-4 text-purple-600 dark:text-[#c4b5fd] group-hover:text-purple-700 dark:group-hover:text-[#e9d5ff] transition-colors" strokeWidth={1.75} />
+          <span className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white">noir</span>
+          <span className="text-[10px] tracking-wider uppercase font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:bg-[#c4b5fd]/15 dark:text-[#e9d5ff] border border-purple-300/40 dark:border-[#c4b5fd]/30 shadow-xs">
             Admin
           </span>
         </Link>
 
         {/* Desktop Navigation Tabs (hidden on mobile) */}
-        <nav className="hidden md:flex items-center bg-black/70 border border-[#c4b5fd]/20 rounded-full p-1 shadow-inner">
+        <nav className="hidden md:flex items-center bg-slate-100/90 dark:bg-black/70 border border-slate-200 dark:border-[#c4b5fd]/20 rounded-full p-1 shadow-inner">
           {tabs.map((tab) => {
             const active = location.pathname === tab.to;
             return (
@@ -86,8 +87,8 @@ export default function AdminNavbar() {
                 to={tab.to}
                 className={`px-5 py-1.5 rounded-full text-[13px] font-medium transition-all ${
                   active
-                    ? 'bg-gradient-to-r from-[#b185db] to-[#c4b5fd] text-[#0a0812] font-semibold shadow-[0_0_20px_rgba(196,181,253,0.45)]'
-                    : 'text-[#e9d5ff]/60 hover:text-white hover:bg-[#c4b5fd]/10'
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white dark:from-[#b185db] dark:to-[#c4b5fd] dark:text-[#0a0812] font-semibold shadow-md dark:shadow-[0_0_20px_rgba(196,181,253,0.45)]'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-white dark:text-[#e9d5ff]/60 dark:hover:text-white dark:hover:bg-[#c4b5fd]/10'
                 }`}
               >
                 {tab.label}
@@ -98,6 +99,8 @@ export default function AdminNavbar() {
 
         {/* Desktop Controls (hidden on mobile) */}
         <div className="hidden md:flex items-center gap-1.5 sm:gap-2">
+          <ThemeToggle variant="icon" />
+
           <button type="button" className={`${iconBtn} hidden sm:flex`} aria-label="Search">
             <Search className="w-4 h-4" strokeWidth={1.6} />
           </button>
@@ -124,14 +127,16 @@ export default function AdminNavbar() {
           >
             <LogOut className="w-4 h-4" strokeWidth={1.6} />
           </button>
-          <div className="w-9 h-9 rounded-full overflow-hidden border border-[#c4b5fd]/40 bg-gradient-to-br from-[#3b2d54] to-[#161224] flex items-center justify-center text-[11px] font-semibold text-[#f3e8ff] shadow-[0_0_14px_rgba(196,181,253,0.25)] ml-1">
+          <div className="w-9 h-9 rounded-full overflow-hidden border border-purple-300/60 dark:border-[#c4b5fd]/40 bg-gradient-to-br from-violet-100 to-purple-200 dark:from-[#3b2d54] dark:to-[#161224] flex items-center justify-center text-[11px] font-semibold text-purple-900 dark:text-[#f3e8ff] shadow-xs ml-1">
             {initials}
           </div>
         </div>
 
         {/* Mobile Header Controls (md:hidden) */}
         <div className="flex md:hidden items-center gap-2">
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#c4b5fd]/40 bg-gradient-to-br from-[#3b2d54] to-[#161224] flex items-center justify-center text-[10px] font-semibold text-[#f3e8ff]">
+          <ThemeToggle variant="compact" />
+
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-300 dark:border-[#c4b5fd]/40 bg-gradient-to-br from-violet-100 to-purple-200 dark:from-[#3b2d54] dark:to-[#161224] flex items-center justify-center text-[10px] font-semibold text-purple-900 dark:text-[#f3e8ff]">
             {initials}
           </div>
 
@@ -140,14 +145,14 @@ export default function AdminNavbar() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.92 }}
-            className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#141024]/90 border border-[#c4b5fd]/30 text-[#e9d5ff] hover:text-white transition-all shadow-md focus:outline-none"
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-white dark:bg-[#141024]/90 border border-purple-200 dark:border-[#c4b5fd]/30 text-purple-700 dark:text-[#e9d5ff] hover:text-purple-950 dark:hover:text-white transition-all shadow-sm focus:outline-none"
             aria-label="Toggle navigation menu"
             aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? (
-              <X className="w-4.5 h-4.5 text-[#c4b5fd]" />
+              <X className="w-4.5 h-4.5 text-purple-600 dark:text-[#c4b5fd]" />
             ) : (
-              <Menu className="w-4.5 h-4.5 text-[#e9d5ff]" />
+              <Menu className="w-4.5 h-4.5 text-purple-700 dark:text-[#e9d5ff]" />
             )}
           </motion.button>
         </div>
@@ -173,13 +178,16 @@ export default function AdminNavbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="md:hidden absolute top-full left-0 right-0 mx-4 mt-2 bg-[#0d0a1a]/95 backdrop-blur-2xl border border-[#c4b5fd]/30 rounded-2xl p-4 shadow-[0_24px_50px_rgba(0,0,0,0.9),0_0_40px_rgba(196,181,253,0.18)] z-50 flex flex-col gap-3"
+              className="md:hidden absolute top-full left-0 right-0 mx-4 mt-2 bg-white/95 dark:bg-[#0d0a1a]/95 backdrop-blur-2xl border border-purple-200 dark:border-[#c4b5fd]/30 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 text-slate-900 dark:text-white"
             >
-              <div className="flex items-center justify-between pb-2.5 border-b border-[#c4b5fd]/20">
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-[#d8b4fe]/80">Admin Navigation</span>
-                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-[#c4b5fd]/20 text-[#e9d5ff] border border-[#c4b5fd]/30">
-                  Superadmin
-                </span>
+              <div className="flex items-center justify-between pb-2.5 border-b border-purple-200/60 dark:border-[#c4b5fd]/20">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-[#d8b4fe]/80">Admin Navigation</span>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle variant="segmented" />
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:bg-[#c4b5fd]/20 dark:text-[#e9d5ff] border border-purple-300/40 dark:border-[#c4b5fd]/30">
+                    Admin
+                  </span>
+                </div>
               </div>
 
               {/* Navigation Tabs */}
@@ -194,15 +202,15 @@ export default function AdminNavbar() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center justify-between p-3 rounded-xl transition-all text-sm font-medium ${
                         active
-                          ? 'bg-gradient-to-r from-[#b185db]/25 to-[#c4b5fd]/25 border border-[#c4b5fd]/50 text-white shadow-[0_0_15px_rgba(196,181,253,0.25)]'
-                          : 'bg-[#141024]/60 hover:bg-[#c4b5fd]/15 border border-[#c4b5fd]/15 text-[#e9d5ff]/70 hover:text-white'
+                          ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md'
+                          : 'bg-slate-100 hover:bg-purple-50 dark:bg-[#141024]/60 dark:hover:bg-[#c4b5fd]/15 border border-slate-200/80 dark:border-[#c4b5fd]/15 text-slate-700 dark:text-[#e9d5ff]/70 hover:text-purple-900 dark:hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className={`w-4 h-4 ${active ? 'text-[#c4b5fd]' : 'text-[#d8b4fe]/60'}`} strokeWidth={1.75} />
+                        <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-purple-600 dark:text-[#d8b4fe]/60'}`} strokeWidth={1.75} />
                         <span>{tab.label}</span>
                       </div>
-                      <ArrowRight className={`w-3.5 h-3.5 ${active ? 'text-[#c4b5fd]' : 'text-[#d8b4fe]/30'}`} />
+                      <ArrowRight className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-slate-400 dark:text-[#d8b4fe]/30'}`} />
                     </Link>
                   );
                 })}

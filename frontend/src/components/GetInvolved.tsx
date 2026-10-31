@@ -25,7 +25,7 @@ export default function GetInvolved() {
   const [openIndex, setOpenIndex] = useState(1);
 
   return (
-    <section className="px-6 md:px-12 py-24 w-full max-w-[1400px] mx-auto flex flex-col md:flex-row gap-12 md:gap-16 text-white">
+    <section className="px-6 md:px-12 py-24 w-full max-w-[1400px] mx-auto flex flex-col md:flex-row gap-12 md:gap-16 text-slate-900 dark:text-white transition-colors duration-200">
       <motion.div 
         initial={{ opacity: 0, x: -30 }}
         whileInView={{ opacity: 1, x: 0 }}
@@ -34,10 +34,10 @@ export default function GetInvolved() {
         className="md:w-1/3 flex flex-col justify-between"
       >
         <div>
-          <h2 className="text-4xl md:text-5xl font-medium tracking-tight flex items-center gap-4 text-white">
-            Get Started <ArrowUpRight className="w-8 h-8 md:w-10 md:h-10 text-violet-500" />
+          <h2 className="text-4xl md:text-5xl font-medium tracking-tight flex items-center gap-4 text-slate-950 dark:text-white">
+            Get Started <ArrowUpRight className="w-8 h-8 md:w-10 md:h-10 text-violet-600 dark:text-violet-500" />
           </h2>
-          <p className="text-stone-400 text-sm leading-relaxed mt-6 max-w-[280px] font-mono">
+          <p className="text-slate-600 dark:text-stone-400 text-sm leading-relaxed mt-6 max-w-[280px] font-mono">
             Integrate fault injection pipelines into your continuous delivery workflows in 4 simple steps.
           </p>
         </div>
@@ -55,15 +55,15 @@ export default function GetInvolved() {
               transition={{ duration: 0.5, delay: idx * 0.1 }}
               className={`rounded-3xl p-6 md:p-8 transition-all duration-350 cursor-pointer border ${
                 isOpen 
-                  ? 'bg-gradient-to-r from-violet-950/40 to-stone-900/60 border-violet-500/30' 
-                  : 'bg-stone-950/60 hover:bg-stone-900/40 border-stone-900 hover:border-stone-800'
+                  ? 'bg-gradient-to-r from-violet-50 to-purple-50/60 dark:from-violet-950/40 dark:to-stone-900/60 border-violet-400/40 dark:border-violet-500/30 shadow-sm' 
+                  : 'bg-white hover:bg-slate-50/80 dark:bg-stone-950/60 dark:hover:bg-stone-900/40 border-slate-200 dark:border-stone-900 dark:hover:border-stone-800 shadow-xs'
               }`}
               onClick={() => setOpenIndex(isOpen ? -1 : idx)}
             >
               <div className="flex items-center justify-between">
-                <h3 className={`text-lg md:text-xl font-medium transition-colors ${isOpen ? 'text-white font-semibold' : 'text-stone-300'}`}>{item.title}</h3>
+                <h3 className={`text-lg md:text-xl font-medium transition-colors ${isOpen ? 'text-slate-950 dark:text-white font-semibold' : 'text-slate-700 dark:text-stone-300'}`}>{item.title}</h3>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border transition-all duration-300 ${
-                  isOpen ? 'bg-violet-600 border-violet-500 text-white' : 'bg-stone-900 border-stone-800 text-stone-400'
+                  isOpen ? 'bg-violet-600 border-violet-500 text-white shadow-sm' : 'bg-slate-100 dark:bg-stone-900 border-slate-200 dark:border-stone-800 text-slate-600 dark:text-stone-400'
                 }`}>
                    {isOpen ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                 </div>
@@ -78,7 +78,7 @@ export default function GetInvolved() {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
-                    <p className="text-stone-300 text-sm leading-relaxed max-w-2xl pr-8 md:pr-12 font-mono">
+                    <p className="text-slate-600 dark:text-stone-300 text-sm leading-relaxed max-w-2xl pr-8 md:pr-12 font-mono">
                       {item.content}
                     </p>
                   </motion.div>

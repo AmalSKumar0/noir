@@ -25,7 +25,7 @@ export default function Home() {
   }
 
   return (
-    <main className="w-full flex flex-col items-center relative bg-[#03020E] text-white">
+    <main className="w-full flex flex-col items-center relative bg-slate-50 text-slate-900 dark:bg-[#03020E] dark:text-white transition-colors duration-200 overflow-x-hidden">
       <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <div className="w-full">
         <Hero />

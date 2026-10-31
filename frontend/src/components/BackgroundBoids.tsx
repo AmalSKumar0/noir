@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, MouseEvent } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 interface Boid {
   char: string;
@@ -13,6 +14,7 @@ interface Boid {
 
 export default function BackgroundBoids({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: number, y: number }> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { isDark } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,7 +52,7 @@ export default function BackgroundBoids({ mouseRef }: { mouseRef: React.MutableR
         
         const size = Math.random() * 5 + 4;
         
-        const colors = [
+        const darkColors = [
           'rgba(255, 255, 255, 0.85)',
           'rgba(167, 139, 250, 0.8)',
           'rgba(139, 92, 246, 0.75)',
@@ -58,6 +60,17 @@ export default function BackgroundBoids({ mouseRef }: { mouseRef: React.MutableR
           'rgba(99, 102, 241, 0.7)',
           'rgba(14, 165, 233, 0.65)'
         ];
+
+        const lightColors = [
+          'rgba(109, 40, 217, 0.75)',
+          'rgba(124, 58, 237, 0.7)',
+          'rgba(79, 70, 229, 0.65)',
+          'rgba(15, 23, 42, 0.55)',
+          'rgba(139, 92, 246, 0.7)',
+          'rgba(2, 132, 199, 0.65)'
+        ];
+
+        const colors = isDark ? darkColors : lightColors;
         const color = colors[Math.floor(Math.random() * colors.length)];
 
         particles.push({
@@ -194,7 +207,7 @@ export default function BackgroundBoids({ mouseRef }: { mouseRef: React.MutableR
       window.removeEventListener('resize', resizeCanvas);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [isDark]);
 
   return (
     <canvas 

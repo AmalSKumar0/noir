@@ -924,7 +924,7 @@ export default function Dashboard() {
           {/* Terminal Screen (Real Logs / Inactive Daemon Status) */}
           <div 
             ref={terminalRef}
-            className="bg-[#090A0F] border border-zinc-800/80 rounded-md p-3.5 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text"
+            className="preserve-dark bg-[#090A0F] border border-zinc-800/80 rounded-md p-3.5 font-mono text-[11px] text-zinc-300 h-64 overflow-y-auto space-y-1 shadow-inner select-text"
           >
             {logs.length === 0 ? (
               daemonStatus?.is_active ? (

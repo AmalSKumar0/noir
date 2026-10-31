@@ -37,6 +37,7 @@ import Loader from './components/Loader';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { checkAndRefreshToken, isAuthenticated, getRoleHomePath } from './utils/auth';
+import { ThemeProvider } from './context/ThemeContext';
 
 const pageTransition: any = { 
   duration: 0.16,
@@ -663,16 +664,18 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white font-sans selection:bg-violet-600 selection:text-white overflow-x-hidden">
-      <BrowserRouter>
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <Loader key="loader" onComplete={() => setIsLoading(false)} />
-          ) : (
-            <AnimatedRoutes />
-          )}
-        </AnimatePresence>
-      </BrowserRouter>
-    </div>
+    <ThemeProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#000000] dark:text-white font-sans selection:bg-violet-600 selection:text-white overflow-x-hidden transition-colors duration-200">
+        <BrowserRouter>
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <Loader key="loader" onComplete={() => setIsLoading(false)} />
+            ) : (
+              <AnimatedRoutes />
+            )}
+          </AnimatePresence>
+        </BrowserRouter>
+      </div>
+    </ThemeProvider>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, Github } from 'lucide-react';
 import BackgroundBoids from './BackgroundBoids';
+import ThemeToggle from './ThemeToggle';
 
 interface AuthLayoutProps {
   title: React.ReactNode;
@@ -44,29 +45,38 @@ export default function AuthLayout({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#000000] text-white font-sans selection:bg-violet-600 selection:text-white"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#000000] dark:text-white font-sans selection:bg-violet-600 selection:text-white transition-colors duration-200"
     >
       {/* Background Boids */}
       <BackgroundBoids mouseRef={mouseRef} />
 
       {/* Ambient Glows */}
       <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/15 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-900/20 blur-[120px] rounded-full"></div>
+        <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/10 dark:bg-violet-600/15 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-900/20 blur-[120px] rounded-full"></div>
       </div>
 
-      {/* Back to Home Button */}
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-        className="absolute top-8 left-8 z-50"
-      >
-        <Link to="/" className="flex items-center gap-2 text-stone-400 hover:text-white transition-colors text-sm font-mono tracking-wide">
-          <ArrowLeft className="w-4 h-4" />
-          BACK TO HOME
-        </Link>
-      </motion.div>
+      {/* Top Navigation Bar: Back & Theme Toggle */}
+      <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-50">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <Link to="/" className="flex items-center gap-2 text-slate-600 hover:text-slate-950 dark:text-stone-400 dark:hover:text-white transition-colors text-sm font-mono tracking-wide">
+            <ArrowLeft className="w-4 h-4" />
+            BACK TO HOME
+          </Link>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <ThemeToggle variant="pill" />
+        </motion.div>
+      </div>
 
       <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center min-h-screen py-24 z-20">
         
@@ -79,7 +89,7 @@ export default function AuthLayout({
         >
           <div className="relative z-10 w-full max-w-lg">
             {/* Logo / Brand */}
-            <div className="flex flex-col text-white font-bold leading-[0.8] tracking-tighter mb-8 w-fit" style={{ fontSize: '32px' }}>
+            <div className="flex flex-col text-slate-950 dark:text-white font-bold leading-[0.8] tracking-tighter mb-8 w-fit" style={{ fontSize: '32px' }}>
               <div className="relative">
                 <div className="absolute -top-2 left-0 w-4 h-[3px] bg-violet-600"></div>
                 NO
@@ -89,10 +99,10 @@ export default function AuthLayout({
               </div>
             </div>
             
-            <h1 className="text-5xl sm:text-6xl xl:text-7xl font-light tracking-tighter leading-[1.1] mb-6 text-white font-sans">
+            <h1 className="text-5xl sm:text-6xl xl:text-7xl font-light tracking-tighter leading-[1.1] mb-6 text-slate-950 dark:text-white font-sans">
               {title}
             </h1>
-            <p className="text-stone-400 text-base md:text-lg max-w-md leading-relaxed font-sans font-light tracking-wide mb-12">
+            <p className="text-slate-600 dark:text-stone-400 text-base md:text-lg max-w-md leading-relaxed font-sans font-light tracking-wide mb-12">
               {description}
             </p>
 
@@ -107,7 +117,7 @@ export default function AuthLayout({
                     onClick={onGithubLogin}
                     disabled={isGithubLoading}
                     type="button"
-                    className="w-full py-3.5 rounded-full bg-stone-900/40 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full py-3.5 rounded-full bg-white dark:bg-stone-900/40 backdrop-blur-md border border-slate-300 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:border-slate-400 dark:hover:border-white/20 text-slate-800 dark:text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300 shadow-xs disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isGithubLoading ? (
                       <>
@@ -131,7 +141,7 @@ export default function AuthLayout({
                     onClick={onGoogleLogin}
                     type="button"
                     disabled={isGoogleLoading}
-                    className="w-full py-3.5 rounded-full bg-stone-900/40 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full py-3.5 rounded-full bg-white dark:bg-stone-900/40 backdrop-blur-md border border-slate-300 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:border-slate-400 dark:hover:border-white/20 text-slate-800 dark:text-white font-medium text-sm flex items-center justify-center gap-3 transition-colors duration-300 shadow-xs disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isGoogleLoading ? (
                       <>

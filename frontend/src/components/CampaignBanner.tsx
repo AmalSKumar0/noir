@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 
 export default function CampaignBanner() {
   return (
-    <section className="py-24 w-full overflow-hidden flex justify-center items-center bg-[#000000]">
+    <section className="py-24 w-full overflow-hidden flex justify-center items-center bg-slate-50 dark:bg-[#000000] transition-colors duration-200">
       <div className="flex items-center justify-center whitespace-nowrap relative">
         {/* Decorative elements */}
         <motion.div 
@@ -45,7 +45,7 @@ export default function CampaignBanner() {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.1 }}
-          className="text-7xl md:text-[9rem] font-bold tracking-tighter text-white ml-4 md:ml-8 relative z-10 uppercase"
+          className="text-7xl md:text-[9rem] font-bold tracking-tighter text-slate-900 dark:text-white ml-4 md:ml-8 relative z-10 uppercase transition-colors duration-200"
         >
           ENGINE
         </motion.span>
